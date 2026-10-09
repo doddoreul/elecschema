@@ -220,3 +220,5 @@ tbody tr:hover { background: #f9fafb; }
 .sym-wrap { cursor: grab; }
 .sym-wrap.selected rect.outline { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 4 3; }
 .sym-wrap text { font-family: sans-serif; }
+.lbl-head { font-size: 10px; fill: #fff; font-weight: 600; }
+.circuit-head { cursor: pointer; }

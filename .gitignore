@@ -13,6 +13,12 @@ re.out
 .DS_Store
 Thumbs.db
 
+# Outils de verification visuelle (dev seulement)
+capture.js
+capture.png
+serve-test.js
+test-render.html
+
 # Editeurs
 .vscode/
 .idea/

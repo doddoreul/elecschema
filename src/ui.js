@@ -2,7 +2,7 @@
 // Toute mutation du projet passe par setState() pour rester synchronisé.
 
 import { emptyProject, createCircuit, syncIdCounter, nextId } from './model.js';
-import { renderSchema, SHEET_W, SHEET_H, phaseBalance } from './render.js';
+import { renderSchema, sheetSize, phaseBalance } from './render.js';
 import { SYMBOLS, SYMBOL_CATEGORIES, symbolName } from './symbols.js';
 import { validate, RULES_BE, RULE_SEVERITY } from './rules-be.js';
 import { CIRCUIT_TYPES, RATINGS, RCD_VALUES, DEFAULT_ICB, isProtection } from './standards.js';
@@ -17,7 +17,7 @@ let dirty = false;
 let selectedComponentId = null;
 let selectedCircuitId = null;
 let selectedSupply = false;
-const view = { x: 0, y: 0, w: SHEET_W, h: SHEET_H };
+let view = { x: 0, y: 0, w: 2100, h: 1100 };
 
 /* --------------------------------------------------- historique (annuler/rétablir) */
 
@@ -568,9 +568,12 @@ function circuitAt(e) {
 svgEl.addEventListener('click', (e) => {
   const supply = e.target.closest('[data-supply]');
   if (supply) { selectSupply(true); return; }
-  const g = e.target.closest('[data-comp]');
+  const comp = e.target.closest('[data-comp]');
+  if (comp) { selectSupply(false); selectComponent(Number(comp.dataset.comp)); return; }
+  const circ = e.target.closest('[data-circuit]');
+  if (circ) { selectSupply(false); selectCircuit(Number(circ.dataset.circuit)); return; }
   selectSupply(false);
-  selectComponent(g ? Number(g.dataset.comp) : null);
+  selectComponent(null);
 });
 
 /* -------------------------------------------------------------------- zoom */
@@ -578,14 +581,17 @@ svgEl.addEventListener('click', (e) => {
 const zoomLabel = $('#zoom-label');
 
 function applyView() {
-  const pct = Math.round((SHEET_W / view.w) * 100);
+  const s = sheetSize(project);
+  const pct = Math.round((s.w / view.w) * 100);
   zoomLabel.textContent = pct + ' %';
   refreshAll();
 }
 
-function zoomBy(factor, cx = SHEET_W / 2, cy = SHEET_H / 2) {
-  const w = Math.min(SHEET_W * 2, Math.max(240, view.w / factor));
-  const h = (w / SHEET_W) * SHEET_H;
+function zoomBy(factor, cx, cy) {
+  const s = sheetSize(project);
+  if (cx == null) { cx = view.x + view.w / 2; cy = view.y + view.h / 2; }
+  const w = Math.min(s.w * 1.5, Math.max(300, view.w / factor));
+  const h = (w / s.w) * s.h;
   const r = (view.w - w) / view.w;
   view.x += (cx - view.x) * r;
   view.y += (cy - view.y) * r;
@@ -605,7 +611,11 @@ svgEl.addEventListener('wheel', (e) => {
 
 $('#btn-zoom-in').addEventListener('click', () => zoomBy(1.3));
 $('#btn-zoom-out').addEventListener('click', () => zoomBy(1 / 1.3));
-$('#btn-zoom-reset').addEventListener('click', () => { view.x = 0; view.y = 0; view.w = SHEET_W; view.h = SHEET_H; applyView(); });
+$('#btn-zoom-reset').addEventListener('click', () => {
+  const s = sheetSize(project);
+  view.x = 0; view.y = 0; view.w = s.w; view.h = s.h;
+  applyView();
+});
 
 /* ---------------------------------------------------- déplacement (pan) */
 
