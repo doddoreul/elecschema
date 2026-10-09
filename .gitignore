@@ -1,0 +1,19 @@
+# Dependances
+node_modules/
+
+# Artefacts de build
+dist/
+*.blockmap
+
+# Fichiers de travail
+*.log
+rc.out
+run.out
+re.out
+.DS_Store
+Thumbs.db
+
+# Editeurs
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self'">
+  <title>ElecSchema — schéma unifilaire domestique</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="toolbar">
+    <strong class="brand">ElecSchema</strong>
+    <span class="scope">Domestique · Belgique · RGIE/AREI</span>
+    <span class="spacer"></span>
+    <button id="btn-new" title="Nouveau projet (Ctrl+N)">Nouveau</button>
+    <button id="btn-open" title="Ouvrir un projet (Ctrl+O)">Ouvrir…</button>
+    <button id="btn-save" title="Enregistrer (Ctrl+S)">Enregistrer…</button>
+    <button id="btn-undo" title="Annuler (Ctrl+Z)" disabled>↶</button>
+    <button id="btn-redo" title="Rétablir (Ctrl+Maj+Z)" disabled>↷</button>
+    <span class="spacer"></span>
+    <span id="recent-label" class="recents-label">Récents</span>
+    <select id="recent-select" class="recents" title="Projets récents"></select>
+    <button id="btn-pdf" title="Exporter le schéma en PDF">PDF…</button>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" role="tab" data-tab="info" aria-selected="true">Informations sur l'installation</button>
+    <button class="tab" role="tab" data-tab="schema" aria-selected="false">Schéma unifilaire</button>
+    <button class="tab disabled" role="tab" data-tab="plan" aria-selected="false" disabled title="Prévu dans une version ultérieure">Schéma d'implantation</button>
+    <button class="tab" role="tab" data-tab="bom" aria-selected="false">Liste des composants</button>
+  </nav>
+
+  <div class="content">
+
+    <!-- ONGLET 1 : INFORMATIONS -->
+    <section class="pane active" data-pane="info">
+      <div class="form-grid">
+        <fieldset>
+          <legend>Chantier</legend>
+          <label>Dénomination<input data-info="chantier.denomination" type="text"></label>
+          <label>Adresse<input data-info="chantier.adresse" type="text"></label>
+          <div class="row">
+            <label>Code postal<input data-info="chantier.codePostal" type="text" maxlength="4"></label>
+            <label>Localité<input data-info="chantier.localite" type="text"></label>
+          </div>
+          <label>Date des travaux<input data-info="chantier.dateTravaux" type="date"></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Projet</legend>
+          <label>Domaine<input data-info="projet.domaine" type="text" value="DOMESTIQUE" readonly></label>
+          <label>Version<input data-info="projet.version" type="text" value="1"></label>
+          <label>Type d'alimentation
+            <select data-info="projet.typeAlim">
+              <option value="MONO">Monophasé</option>
+              <option value="TRI">Triphasé 400 V 3N~</option>
+            </select>
+          </label>
+          <div class="row">
+            <label>Créé le<input data-info="projet.dateCreation" type="date"></label>
+            <label>Modifié le<input data-info="projet.dateModification" type="date"></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Occupant des lieux</legend>
+          <div class="row">
+            <label>Nom<input data-info="occupant.nom" type="text"></label>
+            <label>Prénom<input data-info="occupant.prenom" type="text"></label>
+          </div>
+          <div class="row">
+            <label>Téléphone<input data-info="occupant.telephone" type="text"></label>
+            <label>E-mail<input data-info="occupant.email" type="email"></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Installateur</legend>
+          <label>Société<input data-info="installateur.societe" type="text"></label>
+          <div class="row">
+            <label>N° TVA<input data-info="installateur.numeroTVA" type="text"></label>
+            <label>Contact<input data-info="installateur.contact" type="text"></label>
+          </div>
+          <label>Adresse<input data-info="installateur.adresse" type="text"></label>
+          <div class="row">
+            <label>Téléphone<input data-info="installateur.telephone" type="text"></label>
+            <label>E-mail<input data-info="installateur.email" type="email"></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Dessinateur des plans</legend>
+          <div class="row">
+            <label>Nom<input data-info="dessinateur.nom" type="text"></label>
+            <label>Société<input data-info="dessinateur.societe" type="text"></label>
+          </div>
+          <div class="row">
+            <label>Téléphone<input data-info="dessinateur.telephone" type="text"></label>
+            <label>E-mail<input data-info="dessinateur.email" type="email"></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Organisme de contrôle <span class="opt">(optionnel)</span></legend>
+          <label>Organisme<input data-info="controle.organisme" type="text"></label>
+          <label>Contact<input data-info="controle.contact" type="text"></label>
+          <label>Date prévue<input data-info="controle.datePrevue" type="date"></label>
+        </fieldset>
+
+        <fieldset class="wide">
+          <legend>Remarques</legend>
+          <textarea data-info="remarques" rows="4" placeholder="Particularités de l'installation, contraintes de chantier…"></textarea>
+        </fieldset>
+      </div>
+    </section>
+
+    <!-- ONGLET 2 : SCHÉMA UNIFILAIRE -->
+    <section class="pane" data-pane="schema">
+      <div class="workspace">
+        <aside class="palette">
+          <h3>Symboles RGIE</h3>
+          <div id="palette-groups"></div>
+          <hr>
+          <h3>Circuits</h3>
+          <div id="circuit-list"></div>
+          <div id="balance" class="balance"></div>
+          <hr>
+          <button id="btn-add-circuit" class="primary">+ Ajouter un circuit</button>
+          <p class="hint">Glissez un symbole sur une colonne de circuit. Cliquez un symbole pour le sélectionner. <kbd>Suppr</kbd> supprime. <kbd>Échap</kbd> désélectionne. Molette = zoom, espace+glisser = déplacer.</p>
+          <div class="zoom-row">
+            <button id="btn-zoom-out">−</button>
+            <span id="zoom-label">100 %</span>
+            <button id="btn-zoom-in">+</button>
+            <button id="btn-zoom-reset">Ajuster</button>
+          </div>
+        </aside>
+        <main class="canvas-wrap">
+          <div class="sheet-head">
+            <h2>Schéma unifilaire</h2>
+            <div id="sheet-meta" class="sheet-meta"></div>
+          </div>
+          <div id="issues" class="issues" hidden></div>
+          <div id="canvas-host" class="canvas-host">
+            <svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="1400" height="900"></svg>
+            <p id="empty-state" class="empty-state">Aucun circuit. Cliquez sur « + Ajouter un circuit » pour commencer.</p>
+          </div>
+        </main>
+        <aside class="props" id="props">
+          <h3>Propriétés</h3>
+          <div id="props-empty" class="hint">Sélectionnez un circuit ou un symbole.</div>
+
+          <div id="props-circuit" hidden>
+            <label>Nom<input id="c-name" type="text"></label>
+            <label>Description<input id="c-desc" type="text" placeholder="ex. Prises séjour + cuisine"></label>
+            <label>Type
+              <select id="c-type">
+                <option value="eclairage">Éclairage</option>
+                <option value="prise">Prises de courant</option>
+                <option value="mixte">Mixte</option>
+              </select>
+            </label>
+            <label>Raccordé à la phase<select id="c-phase">
+              <option value="L1">L1</option><option value="L2">L2</option><option value="L3">L3</option>
+            </select></label>
+            <label>Phases<select id="c-phases"><option value="1">Monophasé</option><option value="3">Triphasé 3~</option></select></label>
+            <p class="hint">Circuit vide : glissez-y des symboles depuis la palette.</p>
+          </div>
+
+          <div id="props-component" hidden>
+            <label>Symbole<input id="p-type" type="text" readonly></label>
+            <label>Repère<input id="p-label" type="text" maxlength="20"></label>
+            <label class="check"><input id="p-locked" type="checkbox"> Verrouiller le repère</label>
+            <label>Caractéristique<input id="p-detail" type="text" maxlength="30" placeholder="ex. 16A, double"></label>
+            <label>Phases<select id="p-phases"><option value="1">1~</option><option value="3">3~</option></select></label>
+            <fieldset class="mini" id="p-prot-box" hidden>
+              <legend>Protection</legend>
+              <div class="row2">
+                <label>Calibre (A)<select id="p-prot-rating"></select></label>
+                <label>Courbe<select id="p-prot-curve"><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></label>
+              </div>
+              <label>Différentiel (mA)<select id="p-prot-diff"><option value="">aucun</option></select></label>
+              <label>Pouvoir de coupure (A)<input id="p-prot-icb" type="number" min="1000" max="25000" step="500"></label>
+            </fieldset>
+            <div class="mini-actions">
+              <button id="p-up" title="Monter">↑</button>
+              <button id="p-down" title="Descendre">↓</button>
+              <button id="p-dup">Dupliquer</button>
+              <button id="p-del" class="danger">Supprimer</button>
+            </div>
+          </div>
+
+          <div id="props-supply" hidden>
+            <label>Élément d'arrivée<input id="s-label" type="text" maxlength="20"></label>
+            <label>Désignation<input id="s-detail" type="text" maxlength="30" placeholder="ex. Compteur kWh"></label>
+            <p class="hint">L'élément d'arrivée est unique : il alimente le bus placé en tête de schéma.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ONGLET 3 : IMPLANTATION (plus tard) -->
+    <section class="pane" data-pane="plan">
+      <div class="placeholder">
+        <h2>Schéma d'implantation</h2>
+        <p>Fonction prévue dans une version ultérieure. Contient le plan de position des appareillages dans l'habitation.</p>
+      </div>
+    </section>
+
+  <!-- ONGLET 4 : LISTE DES COMPOSANTS -->
+    <section class="pane" data-pane="bom">
+      <div class="bom-head">
+        <h2>Liste des composants</h2>
+        <div>
+          <button id="btn-bom-csv">Exporter CSV…</button>
+          <span id="bom-count" class="count"></span>
+          <span id="bom-groups" class="count"></span>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="bom-table">
+          <thead>
+            <tr><th>Repère</th><th>Circuit</th><th>Symbole</th><th>Caractéristique</th><th>Ph.</th><th>Phase</th><th>Type</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p id="bom-empty" class="hint">Aucun composant.</p>
+      </div>
+
+      <h3 class="bom-sub">Matériel regroupé</h3>
+      <div class="table-wrap">
+        <table id="bom-grouped">
+          <thead>
+            <tr><th>Désignation</th><th>Caractéristique</th><th>Quantité</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p id="bom-g-empty" class="hint">Aucun matériel.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <footer class="statusbar">
+    <span id="status">Prêt.</span>
+    <span class="spacer"></span>
+    <span id="project-file" class="file-name"></span>
+  </footer>
+
+  <div id="dialog" class="dialog-backdrop" hidden>
+    <div class="dialog">
+      <h3 id="dialog-title">Titre</h3>
+      <div id="dialog-body"></div>
+      <div class="dialog-actions">
+        <button id="dialog-cancel">Annuler</button>
+        <button id="dialog-ok" class="primary">Valider</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="ui.js" type="module"></script>
+</body>
+</html>
