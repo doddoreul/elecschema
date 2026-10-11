@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+  <title>breaker.svg</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <path d="M9.376 12.046 L21.176 12.046 L21.176 28.209 L9.376 28.209 Z" fill="#ffffff"/>
+    <path d="M20 40 L20 28 M20 12 L20 0" fill="none" stroke="#111827" stroke-width="2"/>
+    <path d="M20.154 28.636 L12.125 13.56 Z" fill="#ffffff" stroke="#111827" stroke-width="2" stroke-miterlimit="10"/>
+    <path d="M13.013 19.174 L14.676 18.299 L12.625 14.402 L10.962 15.277 Z" fill="#ffffff" stroke="#111827" stroke-width="2" stroke-miterlimit="10"/>
+  </g>
+</svg>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+  <title>switch_double.svg</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <g>
+      <path d="M19.532 17.085 L9.405 2.495" fill="none" stroke="#111827" stroke-width="2"/>
+      <path d="M16.532 20.085 C16.532 18.428 17.875 17.085 19.532 17.085 C21.189 17.085 22.532 18.428 22.532 20.085 C22.532 21.742 21.189 23.085 19.532 23.085 C17.875 23.085 16.532 21.742 16.532 20.085 Z" fill="none" stroke="#111827" stroke-width="2"/>
+      <path d="M16.532 20.085 C16.532 18.428 17.875 17.085 19.532 17.085 C21.189 17.085 22.532 18.428 22.532 20.085 C22.532 21.742 21.189 23.085 19.532 23.085 C17.875 23.085 16.532 21.742 16.532 20.085 Z" fill="none" stroke="#111827" stroke-width="2"/>
+      <path d="M5.271 5.398 L9.405 2.495" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="square" stroke-linejoin="round"/>
+      <path d="M20.466 17.281 L30.593 2.691" fill="none" stroke="#111827" stroke-width="2"/>
+      <path d="M34.729 5.595 L30.593 2.691" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="square" stroke-linejoin="round"/>
+    </g>
+  </g>
+</svg>

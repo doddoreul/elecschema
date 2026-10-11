@@ -119,13 +119,16 @@
         <aside class="palette">
           <h3>Symboles RGIE</h3>
           <div id="palette-groups"></div>
+          <div id="anchor-menu" class="anchor-menu" hidden>
+            <div class="anchor-menu-head">Ajouter sur ce point d’ancrage</div>
+            <div class="anchor-menu-list"></div>
+            <p class="hint">Choisissez un élément récent, ou cliquez ailleurs pour annuler.</p>
+          </div>
           <hr>
-          <h3>Circuits</h3>
-          <div id="circuit-list"></div>
-          <div id="balance" class="balance"></div>
-          <hr>
-          <button id="btn-add-circuit" class="primary">+ Ajouter un circuit</button>
-          <p class="hint">Glissez un symbole sur une colonne de circuit. Cliquez un symbole pour le sélectionner. <kbd>Suppr</kbd> supprime. <kbd>Échap</kbd> désélectionne. Molette = zoom, espace+glisser = déplacer.</p>
+          <h3>Éléments posés</h3>
+          <div id="element-list"></div>
+          <button id="btn-add-node" class="primary">+ Ajouter un node</button>
+          <p class="hint">Cliquez un « + » d'ancrage puis un symbole (ou glissez un symbole). Le « + » au milieu d'un conducteur insère un node. <kbd>Suppr</kbd> supprime. <kbd>Échap</kbd> désélectionne. Molette = zoom, clic sur le fond = déplacer.</p>
           <div class="zoom-row">
             <button id="btn-zoom-out">−</button>
             <span id="zoom-label">100 %</span>
@@ -138,61 +141,65 @@
             <h2>Schéma unifilaire</h2>
             <div id="sheet-meta" class="sheet-meta"></div>
           </div>
-          <div id="issues" class="issues" hidden></div>
           <div id="canvas-host" class="canvas-host">
             <svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="1400" height="900"></svg>
-            <p id="empty-state" class="empty-state">Aucun circuit. Cliquez sur « + Ajouter un circuit » pour commencer.</p>
+            <p id="empty-state" class="empty-state">Aucun élément. Cliquez le « + » à droite du compteur, puis choisissez un symbole.</p>
           </div>
         </main>
         <aside class="props" id="props">
           <h3>Propriétés</h3>
-          <div id="props-empty" class="hint">Sélectionnez un circuit ou un symbole.</div>
+          <div id="props-empty" class="hint">Sélectionnez un élément.</div>
 
-          <div id="props-circuit" hidden>
-            <label>Nom<input id="c-name" type="text"></label>
-            <label>Description<input id="c-desc" type="text" placeholder="ex. Prises séjour + cuisine"></label>
-            <label>Type
-              <select id="c-type">
-                <option value="eclairage">Éclairage</option>
-                <option value="prise">Prises de courant</option>
-                <option value="mixte">Mixte</option>
-              </select>
-            </label>
-            <label>Raccordé à la phase<select id="c-phase">
-              <option value="L1">L1</option><option value="L2">L2</option><option value="L3">L3</option>
+          <div id="props-element" hidden>
+            <label>Type<input id="e-type" type="text" readonly></label>
+            <label id="e-label-lbl">Repère<input id="e-label" type="text" maxlength="20"></label>
+            <label class="check" id="e-locked-lbl"><input id="e-locked" type="checkbox"> Verrouiller le repère</label>
+            <label id="e-detail-lbl">Désignation<input id="e-detail" type="text" maxlength="30" placeholder="ex. Compteur kWh"></label>
+            <label id="e-orient-lbl">Orientation<select id="e-orient">
+              <option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="-90">-90°</option>
             </select></label>
-            <label>Phases<select id="c-phases"><option value="1">Monophasé</option><option value="3">Triphasé 3~</option></select></label>
-            <p class="hint">Circuit vide : glissez-y des symboles depuis la palette.</p>
-          </div>
-
-          <div id="props-component" hidden>
-            <label>Symbole<input id="p-type" type="text" readonly></label>
-            <label>Repère<input id="p-label" type="text" maxlength="20"></label>
-            <label class="check"><input id="p-locked" type="checkbox"> Verrouiller le repère</label>
-            <label>Caractéristique<input id="p-detail" type="text" maxlength="30" placeholder="ex. 16A, double"></label>
-            <label>Phases<select id="p-phases"><option value="1">1~</option><option value="3">3~</option></select></label>
-            <fieldset class="mini" id="p-prot-box" hidden>
+            <label id="e-labelpos-lbl">Position du texte<select id="e-labelpos">
+              <option value="right">Droite</option><option value="left">Gauche</option><option value="top">Haut</option><option value="bottom">Bas</option>
+            </select></label>
+            <label id="e-labeloffset-lbl">Distance du texte
+              <input id="e-labeloffset" type="range" min="-24" max="60" step="1" value="-5">
+              <output id="e-labeloffset-val">-5 px</output>
+            </label>
+            <label id="e-labelrot-lbl">Orientation du texte<select id="e-labelrot">
+              <option value="auto">Automatique</option><option value="0">0 deg</option><option value="90">90 deg</option><option value="180">180 deg</option><option value="-90">-90 deg</option>
+            </select></label>
+            <label class="check" id="e-showlabel-lbl"><input id="e-showlabel" type="checkbox"> Afficher le repère sur le schéma</label>
+            <fieldset class="mini" id="e-prot-box" hidden>
               <legend>Protection</legend>
-              <div class="row2">
-                <label>Calibre (A)<select id="p-prot-rating"></select></label>
-                <label>Courbe<select id="p-prot-curve"><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></label>
-              </div>
-              <label>Différentiel (mA)<select id="p-prot-diff"><option value="">aucun</option></select></label>
-              <label>Pouvoir de coupure (A)<input id="p-prot-icb" type="number" min="1000" max="25000" step="500"></label>
+              <label id="e-rating-lbl">Calibre (A)<select id="e-rating"></select></label>
+              <label id="e-poles-lbl">Nombre de pôles<select id="e-poles">
+                <option value="1P">1P</option><option value="2P">2P</option><option value="3P">3P</option><option value="4P">4P</option>
+              </select></label>
+              <label id="e-rcdtype-lbl">Type<select id="e-rcdtype">
+                <option value="AC">AC</option><option value="A">A</option><option value="F">F</option><option value="Hpi">Hpi</option>
+              </select></label>
+              <label id="e-diff-lbl">Sensibilité<select id="e-diff"></select></label>
+              <label id="e-curve-lbl">Courbe<select id="e-curve"><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></label>
+              <label id="e-icb-lbl">Pouvoir de coupure (A)<input id="e-icb" type="number"></label>
+            </fieldset>
+            <label id="e-switchtype-lbl">Type d'interrupteur<select id="e-switchtype"></select></label>
+            <label id="e-sockettype-lbl">Type de prise<select id="e-sockettype"></select></label>
+            <label id="e-count-lbl">Nombre de prises<input id="e-count" type="number" min="1" max="12"></label>
+            <fieldset class="mini" id="e-fil-box" hidden>
+              <legend>Fil / câble</legend>
+              <label>Nombre de conducteurs<input id="e-fil-n" type="number" min="2" max="8"></label>
+              <label class="check"><input id="e-fil-terre" type="checkbox"> Avec conducteur de terre</label>
+              <label>Section<select id="e-fil-section"></select></label>
+              <label>Type de câble<select id="e-fil-cable"></select></label>
+              <label>Type de montage<select id="e-fil-montage"></select></label>
             </fieldset>
             <div class="mini-actions">
-              <button id="p-up" title="Monter">↑</button>
-              <button id="p-down" title="Descendre">↓</button>
-              <button id="p-dup">Dupliquer</button>
-              <button id="p-del" class="danger">Supprimer</button>
+              <button id="e-del" class="danger">Supprimer</button>
             </div>
+            <p class="hint">À la suppression, les enfants de l'élément remontent à son parent.</p>
           </div>
-
-          <div id="props-supply" hidden>
-            <label>Élément d'arrivée<input id="s-label" type="text" maxlength="20"></label>
-            <label>Désignation<input id="s-detail" type="text" maxlength="30" placeholder="ex. Compteur kWh"></label>
-            <p class="hint">L'élément d'arrivée est unique : il alimente le bus placé en tête de schéma.</p>
-          </div>
+          <div class="controls-head">Contrôles</div>
+          <div id="issues" class="issues" hidden></div>
         </aside>
       </div>
     </section>
@@ -218,7 +225,7 @@
       <div class="table-wrap">
         <table id="bom-table">
           <thead>
-            <tr><th>Repère</th><th>Circuit</th><th>Symbole</th><th>Caractéristique</th><th>Ph.</th><th>Phase</th><th>Type</th></tr>
+            <tr><th>Repère</th><th>Emplacement</th><th>Symbole</th><th>Caractéristique</th><th>Type</th></tr>
           </thead>
           <tbody></tbody>
         </table>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 40 40">
+  <defs>
+    <style>
+      .cls-1{fill:none;stroke:#000000;stroke-width:2;stroke-miterlimit:10}
+      .cls-2{fill:#ffffff;stroke:#000000;stroke-width:2;stroke-miterlimit:10}
+    </style>
+  </defs>
+  <title>switch_inverter.svg</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <path d="M20.006 19.986 L8.244 8.223" class="cls-1"/>
+    <path d="M9.51 8.371 L12.682 5.199" class="cls-1"/>
+    <path d="M19.994 20.014 L31.756 31.777" class="cls-1"/>
+    <path d="M30.49 31.629 L27.318 34.801" class="cls-1"/>
+    <path d="M16.352 20.057 C16.352 18.066 17.966 16.452 19.956 16.452 C21.947 16.452 23.561 18.066 23.561 20.057 C23.561 22.047 21.947 23.661 19.956 23.661 C17.966 23.661 16.352 22.047 16.352 20.057 Z" class="cls-2"/>
+    <path d="M19.994 19.986 L31.756 8.223" class="cls-1"/>
+    <path d="M30.49 8.371 L27.318 5.199" class="cls-1"/>
+    <path d="M20.006 20.014 L8.244 31.777" class="cls-1"/>
+    <path d="M9.51 31.629 L12.682 34.801" class="cls-1"/>
+    <path d="M23.648 20.057 C23.648 18.066 22.034 16.452 20.044 16.452 C18.053 16.452 16.439 18.066 16.439 20.057 C16.439 22.047 18.053 23.661 20.044 23.661 C22.034 23.661 23.648 22.047 23.648 20.057 Z" class="cls-2"/>
+  </g>
+</svg>

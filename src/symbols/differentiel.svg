@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+  <title>differentiel.svg</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <path d="M11.083 10.984 L23.831 10.984 L23.831 28.437 L11.083 28.437 Z" fill="#ffffff"/>
+    <path d="M20 40 L20 28 M20 12 L20 0" fill="none" stroke="#111827" stroke-width="2"/>
+    <path d="M16.143 12 L23.857 12" fill="none" stroke="#111827" stroke-width="2" stroke-miterlimit="10"/>
+    <path d="M20 12 L16.88 15.12" fill="none" stroke="#111827" stroke-width="2" stroke-miterlimit="10"/>
+    <path d="M20 11.897 L23.223 15.12" fill="none" stroke="#111827" stroke-width="2" stroke-miterlimit="10"/>
+    <path d="M20.154 28.636 L12.125 13.56 Z" fill="#ffffff" stroke="#111827" stroke-width="2" stroke-miterlimit="10"/>
+  </g>
+</svg>

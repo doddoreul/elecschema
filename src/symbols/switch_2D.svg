@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+  <title>switch_2D.svg</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <path d="M19.977 20.002 L8.214 8.239" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+    <path d="M9.48 8.387 L12.652 5.215" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+    <path d="M19.965 20.03 L31.727 31.793" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+    <path d="M30.461 31.645 L27.289 34.817" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+    <path d="M16.322 20.073 C16.322 18.082 17.936 16.468 19.927 16.468 C21.918 16.468 23.531 18.082 23.531 20.073 C23.531 22.064 21.918 23.677 19.927 23.677 C17.936 23.677 16.322 22.064 16.322 20.073 Z" fill="#ffffff" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+  </g>
+</svg>

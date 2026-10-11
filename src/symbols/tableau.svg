@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="24" viewBox="0 0 64 24">
+  <title>tableau.svg</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <!-- barre du tableau : plus épaisse que les conducteurs (2pt -> 5pt) -->
+    <rect x="1" y="9.5" width="62" height="5" rx="1.5" fill="#111827"/>
+    <!-- épaississement aux extrémités (aspect de jeu de barres) -->
+    <rect x="1" y="6.5" width="4" height="11" rx="1.5" fill="#111827"/>
+    <rect x="59" y="6.5" width="4" height="11" rx="1.5" fill="#111827"/>
+  </g>
+</svg>

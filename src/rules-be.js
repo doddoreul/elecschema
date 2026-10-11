@@ -5,44 +5,50 @@
 // a été confronté au document officiel. Aucune règle n'est validée ici sans
 // vérification manuelle par un professionnel.
 
+import { nodeById } from './model.js';
+
 export const RULE_SEVERITY = { ERROR: 'erreur', WARN: 'avertissement', INFO: 'info' };
 
-const protSymbols = (c) => (c.components || []).filter((x) => ['breaker', 'rcd', 'fuse'].includes(x.symbolType));
+const PROT = ['breaker', 'rcd', 'fuse'];
+const isProt = (e) => PROT.includes(e.symbolType);
+
+/** Remonte la chaîne des parents jusqu'au compteur. */
+function ancestors(project, node) {
+  const out = [];
+  const seen = new Set();
+  let cur = node;
+  while (cur && cur.parent != null && !seen.has(cur.id)) {
+    seen.add(cur.id);
+    cur = nodeById(project, cur.parent);
+    if (cur) out.push(cur);
+  }
+  return out;
+}
+
+function hasUpstreamRcd30(project, node) {
+  return ancestors(project, node).some((a) => a.symbolType === 'rcd' && Number(a.params?.diff) === 30);
+}
 
 export const RULES_BE = [
   {
     id: 'BE-01',
     severity: RULE_SEVERITY.ERROR,
-    message: 'Circuit sans aucun symbole',
+    message: 'Schéma sans élément',
     source: 'Cohérence du schéma unifilaire',
     verified: false,
-    check: (p) =>
-      (p.circuits || [])
-        .filter((c) => (c.components || []).length === 0)
-        .map((c) => ({ circuitId: c.id, message: `Le circuit « ${c.name} » est vide.` })),
-  },
-  {
-    id: 'BE-02',
-    severity: RULE_SEVERITY.WARN,
-    message: 'Circuit sans protection',
-    source: 'RGIE/AREI — protection contre les surintensités',
-    verified: false,
-    check: (p) =>
-      (p.circuits || [])
-        .filter((c) => protSymbols(c).length === 0)
-        .map((c) => ({ circuitId: c.id, message: `« ${c.name} » : aucun symbole de protection posé.` })),
+    check: (p) => ((p.elements || []).length === 0
+      ? [{ elementId: null, message: 'Aucun élément raccordé au compteur.' }] : []),
   },
   {
     id: 'BE-03',
     severity: RULE_SEVERITY.WARN,
-    message: 'Prises sans différentiel 30 mA',
+    message: 'Prise sans différentiel 30 mA en amont',
     source: 'RGIE/AREI — protection complémentaire par DDR 30 mA sur circuits de prises',
     verified: false,
-    check: (p) =>
-      (p.circuits || [])
-        .filter((c) => c.typeKey === 'prise' || c.typeKey === 'mixte')
-        .filter((c) => !protSymbols(c).some((x) => Number(x.params?.diff) === 30))
-        .map((c) => ({ circuitId: c.id, message: `« ${c.name} » : aucun Δ30 mA détecté.` })),
+    check: (p) => (p.elements || [])
+      .filter((e) => e.symbolType === 'socket')
+      .filter((e) => !hasUpstreamRcd30(p, e))
+      .map((e) => ({ elementId: e.id, message: `« ${e.label || 'prise'} » : aucun Δ30 mA en amont.` })),
   },
   {
     id: 'BE-04',
@@ -50,34 +56,30 @@ export const RULES_BE = [
     message: 'Protection sans calibre',
     source: 'Lisibilité du dossier',
     verified: false,
-    check: (p) => {
-      const out = [];
-      for (const c of p.circuits || []) {
-        for (const x of protSymbols(c)) {
-          const rating = Number(x.params?.rating);
-          const diff = Number(x.params?.diff);
-          if (x.symbolType === 'rcd' && !Number.isNaN(diff)) continue;
-          if (Number.isNaN(rating) || rating <= 0) {
-            out.push({ circuitId: c.id, message: `« ${c.name} » : le symbole ${x.label} n'a pas de calibre.` });
-          }
-        }
-      }
-      return out;
-    },
+    check: (p) => (p.elements || [])
+      .filter(isProt)
+      .filter((e) => {
+        const pa = e.params || {};
+        if (e.symbolType === 'rcd') return !(Number(pa.diff) > 0) && !(Number(pa.rating) > 0);
+        return !(Number(pa.rating) > 0);
+      })
+      .map((e) => ({ elementId: e.id, message: `« ${e.label || e.symbolType} » : pas de calibre.` })),
   },
   {
     id: 'BE-05',
     severity: RULE_SEVERITY.WARN,
-    message: 'Nom de circuit en double',
+    message: 'Repère en double',
     source: 'Convention interne',
     verified: false,
     check: (p) => {
       const seen = new Map();
-      for (const c of p.circuits || []) seen.set(c.name, (seen.get(c.name) || 0) + 1);
-      const out = [];
-      for (const [name, n] of seen) {
-        if (n > 1) out.push({ circuitId: null, message: `${n} circuits s'appellent « ${name} ».` });
+      for (const e of p.elements || []) {
+        const l = (e.label || '').trim();
+        if (!l) continue;
+        seen.set(l, (seen.get(l) || 0) + 1);
       }
+      const out = [];
+      for (const [label, n] of seen) if (n > 1) out.push({ elementId: null, message: `${n} éléments ont le repère « ${label} ».` });
       return out;
     },
   },
@@ -87,33 +89,10 @@ export const RULES_BE = [
     message: 'Symbole sans repère',
     source: 'Convention de repérage',
     verified: false,
-    check: (p) => {
-      const out = [];
-      for (const c of p.circuits || []) {
-        for (const comp of c.components || []) {
-          if (!comp.label || !comp.label.trim()) {
-            out.push({ circuitId: c.id, message: `Symbole sans repère dans « ${c.name} ».` });
-          }
-        }
-      }
-      return out;
-    },
-  },
-  {
-    id: 'BE-07',
-    severity: RULE_SEVERITY.WARN,
-    message: 'Déséquilibre des phases',
-    source: 'Bonne pratique — répartition de charge sur L1/L2/L3',
-    verified: false,
-    check: (p) => {
-      if (p.info?.projet?.typeAlim !== 'TRI') return [];
-      const b = { L1: 0, L2: 0, L3: 0 };
-      for (const c of p.circuits || []) b[c.phase || 'L1'] += 1;
-      const vals = Object.values(b);
-      const spread = Math.max(...vals) - Math.min(...vals);
-      if (spread <= 1) return [];
-      return [{ circuitId: null, message: `Écart de ${spread} circuits entre L1/L2/L3 (L1 ${b.L1} · L2 ${b.L2} · L3 ${b.L3}).` }];
-    },
+    check: (p) => (p.elements || [])
+      .filter((e) => e.symbolType !== 'node' && e.symbolType !== 'fil')
+      .filter((e) => !(e.label || '').trim())
+      .map((e) => ({ elementId: e.id, message: `Symbole sans repère (${e.symbolType}).` })),
   },
   {
     id: 'BE-08',
@@ -128,7 +107,7 @@ export const RULES_BE = [
       if (!i.installateur?.societe) missing.push('société installatrice');
       if (!i.dessinateur?.nom) missing.push('dessinateur');
       if (missing.length === 0) return [];
-      return [{ circuitId: null, message: `Informations manquantes : ${missing.join(', ')}.` }];
+      return [{ elementId: null, message: `Informations manquantes : ${missing.join(', ')}.` }];
     },
   },
 ];
@@ -141,7 +120,7 @@ export function validate(project, rules = RULES_BE) {
     try {
       hits = rule.check(project) || [];
     } catch (err) {
-      hits = [{ circuitId: null, message: `Règle ${rule.id} en erreur : ${err.message}` }];
+      hits = [{ elementId: null, message: `Règle ${rule.id} en erreur : ${err.message}` }];
     }
     for (const hit of hits) issues.push({ rule, ...hit });
   }

@@ -1,7 +1,7 @@
 {
   "name": "elecschema",
   "productName": "ElecSchema",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Éditeur de schémas unifilaires pour installations domestiques (RGIE/AREI, Belgique). 100 % local.",
   "author": "Usage personnel",
@@ -29,9 +29,20 @@
     "win": {
       "signAndEditExecutable": false,
       "verifyUpdateCodeSignature": false,
+      "publisherName": "ElecSchema",
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {

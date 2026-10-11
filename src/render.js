@@ -1,36 +1,23 @@
-// Rendu SVG du schéma unifilaire, calque sur la mise en page de reference :
-//   - un circuit par colonne, numeroote en haut
-//   - protection en tete de colonne
-//   - rail vertical, symboles poses perpendiculairement (rotation -90 deg)
-//   - bus horizontal en bas, avec lettre de groupe
-//   - cartouche a colonnes en pied de feuille
+// Rendu SVG unifilaire — arbre d'éléments par points d'ancrage.
+//   Le compteur (racine) est placé en bas à gauche ; chaque élément s'ancre
+//   dans un point libre de son parent, dans une direction cardinale.
+//   Un « node » (4 ancrages) peut être inséré entre deux éléments.
+// Aucun rendu classique/développé : uniquement le schéma unifilaire.
 
-import { symbolOf } from './symbols.js';
-import { CIRCUIT_TYPES, DEFAULT_ICB } from './standards.js';
+import { symbolOf, symbolUrl, socketUrl, switchUrl, filUrl } from './symbols.js';
+import { anchorsOf } from './standards.js';
+import { nodeById } from './model.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 
-const SHEET_W = 2100;
-const SHEET_H = 1160;
+const CW = 64;          // pas horizontal entre deux cellules
+const CH = 56;          // pas vertical entre deux cellules
+const MARGIN = 40;      // marge gauche/droite
+const TOP_PAD = 18;     // petite marge (tete/cartouche hors canvas, dans le PDF)
+const BOTTOM_PAD = 18;  // petite marge (pied hors canvas, dans le PDF)
 
-const X0 = 210;            // premiere colonne de circuit
-const COL_W = 116;
-const COL_GAP = 8;
-const RAIL_OFF = 16;       // rail depuis le bord gauche de la colonne
-const BRANCH_GAP = 16;     // rail -> centre du symbole
-
-const Y_NUM = 152;         // boite du numero de circuit
-const NUM_H = 30;
-const Y_PROT = 198;        // bloc protection
-const PROT_H = 64;
-const Y_RAIL_TOP = 276;    // haut du rail
-const STEP = 62;           // ecart entre deux branches
-const MIN_H = 900;
-const MIN_W = 900;
-const BUS_GAP = 90;        // ecart entre le dernier symbole et le bus
-const CART_H = 222;        // hauteur du cartouche
-
-const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const DIR = { right: [1, 0], left: [-1, 0], top: [0, -1], bottom: [0, 1] };
+const DIR_ORDER = ['right', 'top', 'bottom', 'left'];
 
 function el(name, attrs = {}, parent) {
   const n = document.createElementNS(NS, name);
@@ -39,277 +26,266 @@ function el(name, attrs = {}, parent) {
   return n;
 }
 
-function txt(parent, x, y, content, cls = 'lbl', anchor = 'middle') {
+function txt(parent, x, y, content, cls = 'lbl', anchor = 'start') {
   const t = el('text', { x, y, class: cls, 'text-anchor': anchor }, parent);
   t.textContent = content;
   return t;
 }
 
-function phaseTicks(parent, cx, y, phases) {
-  if (phases <= 1) return;
-  let s = '<g stroke="#111827" stroke-width="1.4">';
-  for (let i = 0; i < phases; i++) {
-    const ox = (i - (phases - 1) / 2) * 7;
-    s += `<line x1="${cx + ox - 5}" y1="${y + 5}" x2="${cx + ox + 5}" y2="${y - 5}"/>`;
+/* ------------------------------------------------------------- mise en page */
+
+/** Place l'arbre sur une grille : un élément par cellule, sans recouvrement. */
+function computeLayout(project) {
+  const pos = new Map();          // id -> { x, y }
+  const occupied = new Set();     // "x,y"
+  const key = (x, y) => x + ',' + y;
+
+  const place = (node, x, y) => {
+    occupied.add(key(x, y));
+    pos.set(node.id, { x, y });
+    for (const dir of DIR_ORDER) {
+      const cid = (node.children || {})[dir];
+      if (cid == null) continue;
+      const child = nodeById(project, cid);
+      if (!child) continue;
+      const [dx, dy] = DIR[dir];
+      let nx = x + dx, ny = y + dy, guard = 0;
+      while (occupied.has(key(nx, ny)) && guard++ < 1000) { nx += dx; ny += dy; }
+      place(child, nx, ny);
+    }
+  };
+  if (project.supply) place(project.supply, 0, 0);
+
+  let minX = 0, maxX = 0, minY = 0, maxY = 0;
+  for (const { x, y } of pos.values()) {
+    minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y); maxY = Math.max(maxY, y);
   }
-  s += '</g>';
-  parent.insertAdjacentHTML('beforeend', s);
+  if (pos.size === 0) { minX = maxX = minY = maxY = 0; }
+
+  const px = (x) => MARGIN + (x - minX) * CW + CW / 2;
+  const py = (y) => TOP_PAD + (y - minY) * CH + CH / 2;
+  const W = (maxX - minX + 1) * CW + 2 * MARGIN;
+  const H = (maxY - minY + 1) * CH + TOP_PAD + BOTTOM_PAD;
+  return { pos, px, py, W, H };
 }
 
-function phaseMarker(parent, x, y, phases) {
-  const g = el('g', {}, parent);
-  el('line', { x1: x - 7, y1: y + 7, x2: x + 7, y2: y - 7, class: 'wire' }, g);
-  if (phases > 1) txt(g, x + 14, y + 4, phases + '~', 'lbl-sm', 'start');
-}
-
-/** Lettre de groupe A, B, C... a partir de l'index. */
-function groupLetter(index) {
-  return String.fromCharCode(65 + (index % 26));
-}
-
-/**
- * Dessine un symbole ROTATE DE -90 DEG : les ports haut/bas du symbole
- * deviennent gauche/droite, ce qui correspond a une branche horizontale.
- */
-export function drawSymbol(parent, comp, cx, cy, selected) {
-  const def = symbolOf(comp.symbolType);
-  const outer = el('g', {
-    transform: `translate(${cx},${cy})`,
-    class: 'sym-wrap' + (selected ? ' selected' : ''),
-    'data-comp': comp.id,
-  }, parent);
-
-  // zone cliquable = boite englobante apres rotation
-  el('rect', {
-    class: 'outline', x: -def.h / 2 - 5, y: -def.w / 2 - 5,
-    width: def.h + 10, height: def.w + 10, fill: 'none', stroke: 'transparent',
-  }, outer);
-
-  const inner = el('g', { transform: 'rotate(-90)' }, outer);
-  const g = el('g', { transform: `translate(${-def.w / 2},${-def.h / 2})` }, inner);
-  g.insertAdjacentHTML('beforeend', def.shape);
-  if (comp.phases > 1) phaseTicks(g, def.w / 2, def.h + 24, comp.phases);
-  return outer;
-}
-
-/** Texte de protection affiche sous un symbole de protection. */
-function protectionText(comp) {
-  const p = comp.params || {};
-  if (p.diff != null && p.diff !== '') return `Δ ${p.diff} mA`;
-  if (p.rating != null && p.rating !== '') return `${p.rating} A` + (p.icb ? ` / ${p.icb}` : '');
-  return '';
-}
-
-/** Repartition des circuits par phase. */
-export function phaseBalance(project) {
-  const counts = { L1: 0, L2: 0, L3: 0 };
-  for (const c of project.circuits || []) counts[c.phase || 'L1'] += 1;
-  return counts;
-}
-
-/** Dimensions de la feuille et position du bus, calculees d'apres le contenu reel. */
 export function sheetSize(project) {
-  const circuits = project.circuits || [];
-  const w = Math.max(MIN_W, X0 + circuits.length * (COL_W + COL_GAP) + 40);
-  const maxComps = circuits.reduce((m, c) => Math.max(m, (c.components || []).length), 0);
-  const railBottom = Y_RAIL_TOP + Math.max(maxComps - 1, 0) * STEP;
-  const bus = railBottom + BUS_GAP;
-  const h = Math.max(MIN_H, bus + 150 + CART_H);
-  return { w, h, bus };
+  const L = computeLayout(project);
+  return { w: Math.max(560, L.W), h: Math.max(380, L.H) };
+}
+
+/* ---------------------------------------------------------------------- dessin */
+
+export function deviceDetail(node) {
+  const p = node.params || {};
+  switch (node.symbolType) {
+    case 'rcd': {
+      const poles = node.poles || '2P';
+      const diff = p.diff != null ? '\u0394' + p.diff + 'mA' : '';
+      const rating = p.rating != null ? poles + ' - ' + p.rating + 'A' : poles;
+      const t = p.type ? 'Type ' + p.type : '';
+      return [diff, rating, t].filter(Boolean).join('\n');
+    }
+    case 'breaker': {
+      const poles = node.poles || '1P';
+      const cal = (p.curve || '') + (p.rating != null ? p.rating + 'A' : '');
+      return cal ? (poles + ' - ' + cal) : poles;
+    }
+    case 'fuse':
+      return [(p.rating != null ? p.rating + 'A' : '')].filter(Boolean).join('');
+    case 'socket':
+      return '';
+    case 'fil': {
+      const c = node.cable || {};
+      const section = c.section != null ? String(c.section).replace('.', ',') + 'mm²' : '';
+      return [c.type, section].filter(Boolean).join(' ');
+    }
+    default:
+      return node.detail || '';
+  }
+}
+
+/** Place repère + caractéristique dans le repère LOCAL de l'élément (tourne avec lui) :
+ *  rotation du bloc = orient - 90° (à 0° : à droite, texte -90° ; à 90° : en bas, texte 0° ;
+ *  à 180° : à gauche, texte 90° ; à -90° : au-dessus, texte 180°). */
+function placeLabel(g, node, def, cls = 'lbl') {
+  if (node.symbolType === 'node') return;   // un node n'a aucune propriété affichée
+  const det = deviceDetail(node);
+  // Repère masqué par défaut : ne s'affiche que si l'option est explicitement activée.
+  const showRep = node.showLabel === true;
+  const lab = showRep ? node.label : '';
+  if (!lab && !det) return;
+  const pos = node.labelPos || 'bottom';
+  // Distance réglable du bloc de texte au bord du symbole, sur un seul axe (pixels).
+  const off = node.labelOffset == null ? -5 : Number(node.labelOffset);
+  const w2 = def.w / 2, h2 = def.h / 2;
+  let lx, ly, dx, dy;
+  if (pos === 'left') { lx = -(w2 + off); ly = 0; dx = lx; dy = 14; }
+  else if (pos === 'top') { lx = 0; ly = -(h2 + off); dx = 0; dy = -(h2 + off) - 14; }
+  else { lx = 0; ly = h2 + off; dx = 0; dy = h2 + off + 14; }
+  // Orientation du bloc de texte : la position suit l'element, la rotation est normale.
+  // Automatique : orient - 90, normalise pour ne jamais 'retourner' le texte.
+  // Automatique : orient - 90°, normalise pour ne jamais 'retourner' le texte.
+  const orient = node.orient || 0;
+  let rot;
+  const manuel = node.labelRot != null && node.labelRot !== 'auto';
+  if (manuel) rot = Number(node.labelRot);
+  else { rot = orient - 90; if (rot < -90) rot += 180; }
+  const spinRot = rot - orient;
+  const spin = el('g', { transform: 'rotate(' + spinRot + ')' }, g);
+  if (lab) txt(spin, lx, ly, lab, cls, 'middle');
+  if (det) txt(spin, dx, dy, det, 'lbl-sm', 'middle');
+}
+
+function symbolGroup(svg, def, href, cx, cy, selected, attrs, orient = 0) {
+  const g = el('g', { transform: `translate(${cx},${cy})`, class: 'sym-wrap' + (selected ? ' selected' : ''), ...attrs }, svg);
+  // le groupe pivoté contient TOUT l'élément (image + zone cliquable) :
+  // quand on l'oriente (ex. un fil 40x80 mis à l'horizontale), la hitbox suit.
+  const rot = el('g', { transform: `rotate(${orient})`, class: 'sym-rot' }, g);
+  el('rect', { class: 'outline', x: -def.w / 2 - 6, y: -def.h / 2 - 6, width: def.w + 12, height: def.h + 12, fill: 'transparent', stroke: 'transparent' }, rot);
+  rot.appendChild(el('image', { href, x: -def.w / 2, y: -def.h / 2, width: def.w, height: def.h, class: 'sym-img' }));
+  return { g, rot };
+}
+
+/** Petite croix cliquable (« + ») pour un point d'ancrage ou une insertion. */
+function plusMark(svg, cx, cy, cls, attrs) {
+  const g = el('g', { class: 'plus ' + cls, transform: `translate(${cx},${cy})`, ...attrs }, svg);
+  el('circle', { r: 15, class: 'plus-hit', fill: 'transparent' }, g);
+  el('circle', { r: 10, class: 'plus-bg' }, g);
+  el('line', { x1: -5, y1: 0, x2: 5, y2: 0, class: 'plus-bar' }, g);
+  el('line', { x1: 0, y1: -5, x2: 0, y2: 5, class: 'plus-bar' }, g);
+  return g;
+}
+
+/** Demi-dimensions du corps d'un symbole (le compteur est plus large qu'une cellule). */
+function halfOf(project, id) {
+  const n = nodeById(project, id);
+  if (!n || n.symbolType === 'compteur') return { w: 44, h: 32 };
+  const def = symbolOf(n.symbolType);
+  return { w: (def.w || 40) / 2, h: (def.h || 40) / 2 };
 }
 
 export function renderSchema(svg, project, opts = {}) {
-  const size = sheetSize(project);
-  const SHEET_W = size.w;
-  const SHEET_H = size.h;
-  const Y_BUS = size.bus;
-
-  svg.innerHTML = '';
-  svg.setAttribute('width', SHEET_W);
-  svg.setAttribute('height', SHEET_H);
-  svg.setAttribute('viewBox', opts.viewBox || `0 0 ${SHEET_W} ${SHEET_H}`);
-
-  const circuits = project.circuits || [];
-  const tri = project.info.projet.typeAlim === 'TRI';
+  const L = computeLayout(project);
+  const { pos, px, py, W, H } = L;
   const info = project.info;
 
-  const emptyEl = document.getElementById('empty-state');
-  if (emptyEl) emptyEl.hidden = circuits.length > 0;
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', opts.viewBox || `0 0 ${W} ${H}`);
 
-  // ---- cadre ----
-  el('rect', { x: 8, y: 8, width: SHEET_W - 16, height: SHEET_H - 16, fill: 'none', stroke: '#d1d5db' }, svg);
-  el('rect', { x: 16, y: 16, width: SHEET_W - 32, height: SHEET_H - 32, fill: 'none', stroke: '#111827', 'stroke-width': 1.5 }, svg);
+  const elements = project.elements || [];
+  const emptyEl = document.getElementById('empty-state');
+  if (emptyEl) emptyEl.hidden = elements.length > 0;
 
   // ---- titre ----
-  txt(svg, 30, 48, 'SCHÉMA UNIFILAIRE — INSTALLATION DOMESTIQUE', 'lbl', 'start');
-  txt(svg, 30, 66, `${info.chantier.denomination || 'Sans titre'} · ${info.chantier.adresse || ''} ${info.chantier.codePostal || ''} ${info.chantier.localite || ''}`.trim(),
-    'lbl-sm', 'start');
+  // (le titre, le cartouche et le pied sont hors canvas : voir le PDF / le bandeau HTML)
 
-  // ---- element d'arrivee (gauche) ----
-  const supply = project.supply || {};
-  const selSup = opts.selectedSupply === true;
-  const sg = el('g', { class: 'sym-wrap', 'data-supply': '1' }, svg);
-  if (selSup) el('rect', { x: 44, y: 84, width: 116, height: 60, fill: 'none', stroke: '#2563eb', 'stroke-width': 1.6, 'stroke-dasharray': '4 3', rx: 5 }, sg);
-  el('rect', { x: 50, y: 90, width: 104, height: 48, fill: '#fff', stroke: '#111827', 'stroke-width': 1.5 }, sg);
-  txt(sg, 102, 108, supply.label || 'W1', 'lbl-sm');
-  txt(sg, 102, 126, tri ? '230/400 V ~' : '230 V ~', 'lbl-sm');
+  // ---- conducteurs (parent -> enfant) ----
+  for (const node of elements) {
+    const p = nodeById(project, node.parent);
+    const a = p && pos.get(p.id) ? pos.get(p.id) : null;
+    const b = pos.get(node.id);
+    if (!a || !b) continue;
+    el('line', { x1: px(a.x), y1: py(a.y), x2: px(b.x), y2: py(b.y), class: 'bus' }, svg);
+  }
+  // conducteur compteur -> premier élément
+  for (const dir of DIR_ORDER) {
+    const cid = (project.supply.children || {})[dir];
+    if (cid == null) continue;
+    const b = pos.get(cid);
+    const a = pos.get(project.supply.id);
+    if (a && b) el('line', { x1: px(a.x), y1: py(a.y), x2: px(b.x), y2: py(b.y), class: 'bus' }, svg);
+  }
 
-  // ---- liaison arrivee -> bus du bas (colonne d'alimentation) ----
-  const supplyX = 102;
-  el('line', { x1: supplyX, y1: 138, x2: supplyX, y2: Y_BUS, class: 'bus' }, svg);
-  txt(svg, 128, 300, supply.detail || 'Compteur kWh', 'lbl-sm', 'start');
+  // (les « + » d'ancrage et d'insertion sont dessinés après les symboles,
+  //  pour rester au premier plan — cf. plus bas)
 
-  // ---- bus horizontal : trace apres les fonds de colonne pour rester visible ----
-  const busEnd = circuits.length
-    ? X0 + circuits.length * (COL_W + COL_GAP) - COL_GAP
-    : supplyX;
+  // ---- compteur (bas à gauche) ----
+  const sc = pos.get(project.supply.id);
+  if (sc) {
+    const cx = px(sc.x), cy = py(sc.y);
+    const sup = project.supply;
+    const g = el('g', { class: 'sym-wrap' + ((opts.selectedIds ? opts.selectedIds.has(sup.id) : opts.selectedId === sup.id) ? ' selected' : ''), transform: `translate(${cx},${cy})`, 'data-el': sup.id }, svg);
+    const srot = el('g', { transform: `rotate(${sup.orient || 0})`, class: 'sym-rot' }, g);
+    el('rect', { class: 'outline', x: -44, y: -32, width: 88, height: 64, fill: 'transparent', stroke: 'transparent' }, srot);
+    srot.appendChild(el('rect', { x: -38, y: -26, width: 76, height: 52, rx: 4, fill: '#fff', stroke: '#111827', 'stroke-width': 1.6 }));
+    // distance réglable du libellé, sur l'axe vertical
+    const so = sup.labelOffset == null ? -5 : Number(sup.labelOffset);
+    if (sup.showLabel === true && (sup.label || '').trim()) txt(g, 0, -4 - so, sup.label, 'lbl', 'middle');
+    txt(g, 0, 12 + so, sup.detail || '', 'lbl-sm', 'middle');
+  }
 
-  // ---- circuits ----
-  circuits.forEach((circ, i) => {
-    const x = X0 + i * (COL_W + COL_GAP);
-    const railX = x + RAIL_OFF;
-    const n = (circ.components || []).length;
-    const railBottom = Y_RAIL_TOP + Math.max(n - 1, 0) * STEP;
-    const isCircuitSelected = opts.selectedCircuitId === circ.id;
-    const letter = groupLetter(i);
+  // ---- éléments ----
+  for (const node of elements) {
+    const c = pos.get(node.id);
+    if (!c) continue;
+    const cx = px(c.x), cy = py(c.y);
+    const sel = opts.selectedIds ? opts.selectedIds.has(node.id) : opts.selectedId === node.id;
+    const def = symbolOf(node.symbolType);
+    const href = node.symbolType === 'socket' ? socketUrl(node.socketType)
+      : node.symbolType === 'switch' ? switchUrl(node.switchType)
+      : node.symbolType === 'fil' ? filUrl(node)
+      : symbolUrl(node.symbolType);
+    const { g, rot } = symbolGroup(svg, def, href, cx, cy, sel, { 'data-el': node.id }, node.orient || 0);
+    placeLabel(rot, node, def);
+  }
 
-    // fond de colonne = zone de depot + cible de clic
-    const col = el('g', { class: 'circuit-col', 'data-circuit': circ.id }, svg);
-    const colTop = Y_NUM - 4;
-    const colH = Math.max(Y_BUS - colTop, 120);
-    el('rect', {
-      class: 'bg', x, y: colTop, width: COL_W, height: colH,
-      fill: isCircuitSelected ? '#dbeafe' : '#fafafa',
-      stroke: isCircuitSelected ? '#2563eb' : '#e5e7eb',
-      'stroke-width': isCircuitSelected ? 1.6 : 1, rx: 6,
-    }, col);
-
-    // numero de circuit (en-tete cliquable)
-    const head = el('g', { class: 'circuit-head', 'data-circuit': circ.id, style: 'cursor:pointer' }, svg);
-    el('line', { x1: railX, y1: Y_NUM + NUM_H, x2: railX, y2: Y_RAIL_TOP, class: 'wire' }, head);
-    el('rect', {
-      x: x + COL_W / 2 - 16, y: Y_NUM, width: 32, height: NUM_H,
-      fill: '#fff', stroke: '#111827', 'stroke-width': 1.4, rx: 3,
-    }, head);
-    txt(head, x + COL_W / 2, Y_NUM + 21, String(i + 1), 'lbl');
-
-    // bloc protection en tete de colonne : symbole sur le rail, texte centre dessous
-    const prot = (circ.components || []).find((c) => ['breaker', 'rcd', 'fuse'].includes(c.symbolType));
-    if (prot) {
-      const cy = Y_PROT + 16;
-      const pcx = railX + BRANCH_GAP + 20;
-      drawSymbol(head, prot, pcx, cy, false);
-      const l1 = [];
-      if (prot.params?.rating != null) l1.push(`${prot.params.rating} A`);
-      if (prot.params?.curve) l1.push(prot.params.curve);
-      if (prot.params?.diff != null) l1.push(`Δ${prot.params.diff}`);
-      if (l1.length) txt(head, pcx, Y_PROT + 48, l1.join(' '), 'lbl-sm');
-      if (prot.params?.icb) txt(head, pcx, Y_PROT + 61, `${prot.params.icb} A`, 'lbl-sm');
-    } else {
-      txt(head, railX + 36, Y_PROT + 24, 'protection', 'lbl-sm', 'start');
+  // ---- insertion de node au milieu de chaque conducteur ----
+  //      Dernière couche : toujours cliquable, même au-dessus du symbole du compteur.
+  const drawMid = (pid, dir) => {
+    const a = pos.get(pid);
+    const cid = (nodeById(project, pid)?.children || {})[dir];
+    const b = cid != null ? pos.get(cid) : null;
+    if (!a || !b) return;
+    const x1 = px(a.x), y1 = py(a.y), x2 = px(b.x), y2 = py(b.y);
+    const [dx, dy] = DIR[dir];
+    const vx = x2 - x1, vy = y2 - y1;
+    const span = Math.abs(dx * vx) + Math.abs(dy * vy);
+    const halfP = halfOf(project, pid), halfC = halfOf(project, cid);
+    const padP = dx ? halfP.w : halfP.h;
+    const padC = dx ? halfC.w : halfC.h;
+    let t = 0.5;
+    if (span > 0) {
+      // on décale vers l'enfant tant que le « + » serait sous le parent
+      const min = Math.min(0.85, (padP + 5) / span);
+      t = Math.max(0.5, min);
+      // ... sans le placer sous l'enfant
+      const max = Math.max(0.15, 1 - (padC + 5) / span);
+      t = Math.min(t, max);
     }
+    plusMark(svg, x1 + vx * t, y1 + vy * t, 'ui-only link-add', { 'data-link': `${pid}:${dir}` });
+  };
 
-    // lettre de groupe sur le bus
-    txt(svg, x + COL_W / 2, Y_BUS + 18, letter, 'lbl');
-    el('line', { x1: railX, y1: railBottom, x2: railX, y2: Y_BUS, class: 'bus' }, svg);
+  // ---- points d'ancrage libres : visibles seulement si l'élément est sélectionné
+  //      (ou pendant un glisser-déposer depuis la palette) ----
+  const anchorsShown = (node) => (opts.selectedIds ? opts.selectedIds.has(node.id) : node.id === opts.selectedId) || !!opts.showAnchors;
+  const drawAnchors = (node) => {
+    if (!anchorsShown(node)) return;
+    const hasChild = node.children && Object.values(node.children).some((v) => v != null);
+    // node et compteur restent ramifiables : leurs points d'ancrage libres restent visibles
+    const ramifiable = node.symbolType === 'node' || node.symbolType === 'tableau';
+    if (hasChild && !ramifiable) return;
+    const c = pos.get(node.id);
+    if (!c) return;
+    const half = halfOf(project, node.id);
+    // le compteur n'a qu'un seul point d'ancrage : a droite
+    const dirs = node.symbolType === 'compteur' ? ['right'] : anchorsOf(node.symbolType);
+    for (const dir of dirs) {
+      if ((node.children || {})[dir] != null) continue;
+      const [dx, dy] = DIR[dir];
+      // juste au-delà du bord du symbole (le compteur est plus large qu'une cellule)
+      const ox = Math.max(CW * 0.3, half.w + 6);
+      const oy = Math.max(CH * 0.3, half.h + 6);
+      plusMark(svg, px(c.x) + dx * ox, py(c.y) + dy * oy, 'ui-only anchor', { 'data-anchor': `${node.id}:${dir}` });
+    }
+  };
 
-    // symboles en branches horizontales
-    (circ.components || []).forEach((comp, j) => {
-      const def = symbolOf(comp.symbolType);
-      const y = Y_RAIL_TOP + j * STEP;
-      const cx = railX + BRANCH_GAP + def.h / 2;
-
-      el('line', { x1: railX, y1: y, x2: cx - def.h / 2, y2: y, class: 'wire' }, svg);
-      if (comp.phases > 1) phaseTicks(svg, railX + 11, y - 9, comp.phases);
-
-      const g = drawSymbol(svg, comp, cx, y, opts.selectedComponentId === comp.id);
-      txt(g, def.h / 2 + 8, 4, comp.label, 'lbl-sm', 'start');
-      if (comp.detail) txt(g, def.h / 2 + 8, def.w / 2 + 4, comp.detail, 'lbl-sm', 'start');
-    });
-
-    // type de circuit sous la lettre de groupe
-    const typeName = (CIRCUIT_TYPES[circ.typeKey] || {}).name;
-    if (typeName) txt(svg, x + COL_W / 2, Y_BUS + 34, typeName, 'lbl-sm');
-  });
-
-  // ---- bus horizontal, trace en dernier pour rester au-dessus des fonds ----
-  el('line', { x1: supplyX, y1: Y_BUS, x2: Math.max(busEnd, supplyX + 40), y2: Y_BUS, class: 'bus' }, svg);
-
-  // ---- cartouche a colonnes ----
-  drawTitleBlock(svg, info, SHEET_H);
-}
-
-/** Boite englobante du symbole de protection dans son bloc (toujours 40x40 ici). */
-function prot0() { return 20; }
-
-function drawTitleBlock(svg, info, sheetH) {
-  const top = sheetH - CART_H + 30;
-  const h = CART_H - 42;
-  const left = 30;
-  const right = SHEET_W - 30;
-  const cols = [
-    {
-      head: "L'installateur",
-      rows: [
-        ["Nom", info.installateur.societe || ''],
-        ["TVA", info.installateur.numeroTVA || ''],
-        ["Adresse", info.installateur.adresse || ''],
-        ["Signature", ''],
-      ],
-    },
-    {
-      head: 'Le propriétaire / occupant',
-      rows: [
-        ["Nom", `${info.occupant.nom || ''} ${info.occupant.prenom || ''}`.trim()],
-        ["Adresse", info.chantier.adresse || ''],
-        ["Téléphone", info.occupant.telephone || ''],
-        ["Signature", ''],
-      ],
-    },
-    {
-      head: "L'organisme de contrôle",
-      rows: [
-        ["Organisme", info.controle.organisme || ''],
-        ["Contact", info.controle.contact || ''],
-        ["Date", info.controle.datePrevue || ''],
-        ["Signature", ''],
-      ],
-    },
-    {
-      head: 'Conducteurs nus',
-      rows: [
-        ["Section arrivée", '—'],
-        ["Section terre", '—'],
-        ["Longueur", '—'],
-        ["Signature", ''],
-      ],
-    },
-  ];
-
-  const w = right - left;
-  const cw = w / cols.length;
-
-  el('rect', { x: left, y: top, width: w, height: h, fill: '#fff', stroke: '#111827', 'stroke-width': 1.5 }, svg);
-  el('line', { x1: left, y1: top + 26, x2: right, y2: top + 26, stroke: '#111827' }, svg);
-  for (let i = 1; i < cols.length; i++) {
-    el('line', { x1: left + i * cw, y1: top, x2: left + i * cw, y2: top + h, stroke: '#111827' }, svg);
+  for (const dir of DIR_ORDER) if ((project.supply.children || {})[dir] != null) drawMid(project.supply.id, dir);
+  for (const node of elements) {
+    for (const dir of DIR_ORDER) if ((node.children || {})[dir] != null) drawMid(node.id, dir);
   }
-  // lignes de lignes
-  for (let r = 1; r < cols[0].rows.length; r++) {
-    const y = top + 26 + r * ((h - 26) / cols[0].rows.length);
-    el('line', { x1: left, y1: y, x2: right, y2: y, stroke: '#9ca3af', 'stroke-width': 0.6 }, svg);
-  }
-
-  cols.forEach((col, i) => {
-    const cx = left + i * cw;
-    el('rect', { x: cx, y: top, width: cw, height: 26, fill: '#1e3a5f' }, svg);
-    txt(svg, cx + cw / 2, top + 18, col.head, 'lbl-head', 'middle');
-    col.rows.forEach((row, r) => {
-      const ry = top + 26 + r * ((h - 26) / col.rows.length);
-      txt(svg, cx + 8, ry + 14, row[0], 'lbl-sm', 'start');
-      txt(svg, cx + 8, ry + 30, row[1] || '', 'lbl-sm', 'start');
-    });
-  });
+  if (anchorsShown(project.supply)) drawAnchors(project.supply);
+  for (const node of elements) if (anchorsShown(node)) drawAnchors(node);
+  // (pied de page / cartouche : hors canvas, voir le PDF)
 }
-
-export { SHEET_W, SHEET_H };

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+  <title>switch_tripolar.svg</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <g>
+      <path d="M20.038 20.169 L8.276 8.406" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M16.661 19.918 C16.661 17.928 18.274 16.314 20.265 16.314 C22.256 16.314 23.869 17.928 23.869 19.918 C23.869 21.909 22.256 23.523 20.265 23.523 C18.274 23.523 16.661 21.909 16.661 19.918 Z" fill="#ffffff" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M9.542 8.554 L12.714 5.382" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M12.494 11.268 L15.666 8.097" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M15.256 14.054 L18.428 10.882" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+    </g>
+  </g>
+</svg>

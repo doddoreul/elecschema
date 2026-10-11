@@ -9,6 +9,12 @@ const os = require('node:os');
 let mainWindow = null;
 const MAX_RECENTS = 8;
 
+/** Structure minimale d'un projet ElecSchema (arbre d'éléments v3, ou legacy circuits). */
+function isProject(obj) {
+  return !!obj && typeof obj === 'object'
+    && (Array.isArray(obj.elements) || Array.isArray(obj.circuits));
+}
+
 /** Fichier des projets récents, dans les données utilisateur de l'app. */
 function recentsPath() {
   return path.join(app.getPath('userData'), 'recents.json');
@@ -115,8 +121,8 @@ ipcMain.handle('project:open', async (event) => {
   try {
     const text = await fs.readFile(filePath, 'utf8');
     const parsed = JSON.parse(text);
-    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.circuits)) {
-      throw new Error('Structure de projet invalide : tableau « circuits » absent.');
+    if (!isProject(parsed)) {
+      throw new Error('Structure de projet invalide : arbre d’éléments absent.');
     }
     return { filePath, data: parsed };
   } catch (err) {
@@ -134,8 +140,8 @@ ipcMain.handle('recents:add', (event, filePath) => pushRecent(filePath));
 ipcMain.handle('project:openPath', async (event, filePath) => {
   const text = await fs.readFile(filePath, 'utf8');
   const parsed = JSON.parse(text);
-  if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.circuits)) {
-    throw new Error('Structure de projet invalide : tableau « circuits » absent.');
+  if (!isProject(parsed)) {
+    throw new Error('Structure de projet invalide : arbre d’éléments absent.');
   }
   await pushRecent(filePath);
   return { filePath, data: parsed };
