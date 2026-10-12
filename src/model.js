@@ -6,7 +6,7 @@
 import { DEFAULT_ICB, isProtection, DEFAULT_CABLE, TABLEAU_OUTPUTS, ANCHOR_DIRECTIONS, outputIndex } from './standards.js';
 import { DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
 
-const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 3;
 const DOMAINE = 'DOMESTIQUE';
 const PAYS = 'BE';
 

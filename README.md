@@ -44,7 +44,7 @@
 
 6. **Enregistrer / Exporter**
    - `Ctrl+S` ou **Enregistrer** : sauvegarde locale (retrouvée à la prochaine ouverture).
-   - **Exporter…** : télécharge le schéma en `.json` (format `.unifilaire.json`).
+   - **Exporter…** : télécharge le schéma au format **`.elx`** (JSON enveloppé + base64 ; voir ci-dessous).
    - **PDF…** : dossier d'impression (cartouche général, schéma sur une page A4 par page
      de mise en page, liste des circuits, liste des matériaux).
 
@@ -120,6 +120,7 @@ src/
   index.html      onglets + panneaux
   styles.css
   model.js        modèle de données (arbre d'éléments) + migrations
+  format.js       format de fichier `.elx` (JSON enveloppé + base64, versionné)
   default-schema.js  schéma pré-rempli à la création
   symbols.js      31 symboles RGIE + types de prise/interrupteur + SVG des montages
   symbols/        fichiers SVG autonomes
@@ -132,9 +133,13 @@ tools/serve-browser.js  serveur local de test (navigateur)
 test/             tests automatiques (node:test)
 ```
 
-Le fichier de projet est un **`.json`** (`.unifilaire.json`) : format d'export/import
-propre à Elexio (l'autosave reste **local** : stockage du navigateur ; en bureau, un
-miroir disque `autosave.json` est écrit en plus dans le dossier de données).
+Le fichier de projet est un **`.elx`** : un JSON enveloppé puis **encodé en base64**.
+L'enveloppe note le numéro de version (`format`, `formatVersion`, `schemaVersion`, `app`,
+`exportedAt`) avant le projet. À l'import, le fichier est décodé puis sa version est
+vérifiée : même version → chargement direct ; plus ancienne → **migration automatique** ;
+plus récente → avertissement. L'import reste tolérant aux anciens `.json` en clair.
+L'autosave reste **local** (stockage du navigateur ; en bureau, un miroir disque
+`autosave.json` est écrit en plus dans le dossier de données).
 
 ---
 

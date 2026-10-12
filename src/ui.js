@@ -2,6 +2,7 @@
 // Toute mutation du projet passe par markDirty() + refreshAll() pour rester synchronisé.
 
 import { emptyProject, createElement, syncIdCounter, nodeById, treeOrder, nextId, PREFIXES, migrateProject, normalizeTypes, isCircuitStart, renumberCircuits } from './model.js';
+import { encodeElx, decodeElx, checkCompatibility, FILE_EXT, APP_VERSION } from './format.js';
 import { renderSchema, sheetSize, deviceDetail, PAGE, layoutForced } from './render.js';
 import { SYMBOLS, SYMBOL_CATEGORIES, symbolName, symbolUrl, SOCKET_TYPES, SWITCH_TYPES, DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
 import { validate, RULES_BE, RULE_SEVERITY } from './rules-be.js';
@@ -750,13 +751,14 @@ $('#btn-save').addEventListener('click', saveLocal);
 
 $('#btn-export').addEventListener('click', () => {
   project.info.projet.dateModification = new Date().toISOString().slice(0, 10);
-  const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
+  const text = encodeElx(project);
+  const blob = new Blob([text], { type: 'application/octet-stream' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = suggestedName() + '.json';
+  a.download = suggestedName() + '.' + FILE_EXT;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  status('JSON exporté.');
+  status(`Fichier .${FILE_EXT} exporté.`);
 });
 
 async function loadRecents() {
@@ -778,9 +780,9 @@ $('#recent-select').addEventListener('change', async (e) => {
   if (typeof window.elexio !== 'object') return;
   if (dirty && !confirm('Des modifications ne sont pas enregistrées. Ouvrir un autre projet ?')) { e.target.value = ''; return; }
   try {
-    const { filePath, data } = await window.elexio.openPath(p);
-    loadProject(data, filePath);
-    status(`Projet ouvert : ${filePath}`);
+    const res = await window.elexio.openPath(p);
+    if (importProjectText(res.text, res.filePath)) status(`Projet ouvert : ${res.filePath}`);
+    else e.target.value = '';
   } catch (err) {
     alert(`Ouverture impossible.\n\n${p}\n\n${err.message}`);
     e.target.value = '';
@@ -815,6 +817,29 @@ function loadProject(data, filePath) {
   fitView();
 }
 
+/** Décode un fichier (.elx base64 ou JSON legacy) et charge le projet.
+ *  Vérifie la version du modèle : migration automatique, alerte si fichier trop
+ *  récent. Retourne true si le projet a été chargé. */
+function importProjectText(text, filePath) {
+  let decoded;
+  try {
+    decoded = decodeElx(text);
+  } catch (err) {
+    alert('Ouverture impossible.\n\n' + err.message);
+    return false;
+  }
+  const data = decoded.project;
+  if (!data || typeof data !== 'object' || (!data.supply && !Array.isArray(data.elements) && !Array.isArray(data.circuits))) {
+    alert('Ouverture impossible.\n\nStructure de projet invalide.');
+    return false;
+  }
+  const compat = checkCompatibility(decoded.meta);
+  if (compat.level === 'future' && !confirm(`${compat.message}\n\nOuvrir quand même ? (comportement non garanti)`)) return false;
+  loadProject(data, filePath);
+  if (compat.level === 'migrate' || compat.level === 'unknown') status(compat.message);
+  return true;
+}
+
 $('#btn-undo').addEventListener('click', undo);
 $('#btn-redo').addEventListener('click', redo);
 
@@ -822,12 +847,11 @@ $('#btn-open').addEventListener('click', async () => {
   if (typeof window.elexio !== 'object') {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.json,application/json';
+    input.accept = '.elx,.json,application/octet-stream,application/json';
     input.onchange = async () => {
       const file = input.files && input.files[0];
       if (!file) return;
-      try { loadProject(JSON.parse(await file.text()), file.name); status(`Projet ouvert : ${file.name}`); }
-      catch (err) { alert('Fichier illisible : ' + err.message); }
+      if (importProjectText(await file.text(), file.name)) status(`Projet ouvert : ${file.name}`);
     };
     input.click();
     return;
@@ -835,9 +859,10 @@ $('#btn-open').addEventListener('click', async () => {
   if (dirty && !confirm('Des modifications ne sont pas enregistrées. Ouvrir un autre projet ?')) return;
   const res = await window.elexio.open();
   if (!res) return;
-  loadProject(res.data, res.filePath);
-  loadRecents();
-  status('Projet ouvert.');
+  if (importProjectText(res.text, res.filePath)) {
+    loadRecents();
+    status('Projet ouvert.');
+  }
 });
 
 /** Vrai si le schéma (position et taille de la mise en page) déborde des pages. */
@@ -1691,20 +1716,13 @@ $('#e-del').addEventListener('click', () => { if (selectedId != null && !isSuppl
 
 $('#btn-apply-json').addEventListener('click', () => {
   const ta = $('#schema-json');
-  try {
-    const data = JSON.parse(ta.value);
-    if (!data || !data.supply || !Array.isArray(data.elements)) throw new Error('Format invalide');
-    loadProject(data, null);
-    status('Schéma JSON appliqué.');
-  } catch (err) {
-    alert('JSON invalide : ' + err.message);
-  }
+  // Le champ accepte un projet JSON (lisible) ou un fichier .elx collé (base64).
+  if (importProjectText(ta.value, null)) status('Schéma appliqué.');
 });
 
 /* -------------------------------------------------------------------- init */
 
 document.addEventListener('DOMContentLoaded', () => {
-  const APP_VERSION = '0.3.0';
   $('#app-version').textContent = 'v' + APP_VERSION;
 
   let savedTab = null;

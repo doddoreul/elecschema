@@ -20,12 +20,13 @@
       return new Promise((res) => {
         const i = document.createElement('input');
         i.type = 'file';
-        i.accept = '.json,application/json';
+        i.accept = '.elx,.json,application/octet-stream,application/json';
         i.onchange = async () => {
           const f = i.files && i.files[0];
           if (!f) return res(null);
+          // Lecture brute : le décodage (.elx / JSON) est fait par src/format.js côté ui.js.
           try {
-            res({ filePath: f.name, data: JSON.parse(await f.text()) });
+            res({ filePath: f.name, text: await f.text() });
           } catch (err) {
             alert('Fichier illisible : ' + err.message);
             res(null);

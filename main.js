@@ -11,36 +11,6 @@ const { inlineSymbolSvg } = require('./print-assets.js');
 let mainWindow = null;
 const MAX_RECENTS = 8;
 
-/** Directions d'ancrage valides (standards.js#ANCHOR_DIRECTIONS). */
-const DIRS = ['top', 'bottom', 'left', 'right'];
-
-/** Contrôle d'intégrité de l'arbre v3 : ids uniques, parents/enfants résolus, directions valides. */
-function hasValidTree(p) {
-  if (!p.supply || typeof p.supply.id !== 'number' || !Number.isInteger(p.supply.id)) return false;
-  const ids = new Set([p.supply.id]);
-  for (const e of p.elements || []) {
-    if (!e || typeof e !== 'object' || typeof e.id !== 'number' || !Number.isInteger(e.id)) return false;
-    if (ids.has(e.id)) return false;
-    ids.add(e.id);
-  }
-  for (const e of p.elements || []) {
-    if (typeof e.symbolType !== 'string' || !e.symbolType) return false;
-    if (e.parent != null && !ids.has(e.parent)) return false;
-    if (e.dir != null && !DIRS.includes(e.dir)) return false;
-    if (e.children && typeof e.children === 'object') {
-      for (const v of Object.values(e.children)) if (v != null && !ids.has(v)) return false;
-    }
-  }
-  return true;
-}
-
-/** Structure d'un projet Elexio : arbre d'éléments v3 vérifié, ou ancien format circuits. */
-function isProject(obj) {
-  if (!obj || typeof obj !== 'object') return false;
-  if (Array.isArray(obj.elements)) return hasValidTree(obj);
-  return Array.isArray(obj.circuits);
-}
-
 /** Fichier des projets récents, dans les données utilisateur de l'app. */
 function recentsPath() {
   return path.join(app.getPath('userData'), 'recents.json');
@@ -128,7 +98,7 @@ ipcMain.handle('project:open', async (event) => {
     defaultPath: dir,
     properties: ['openFile'],
     filters: [
-      { name: 'Projet Elexio', extensions: ['unifilaire.json', 'json'] },
+      { name: 'Projet Elexio', extensions: ['elx', 'json'] },
       { name: 'Tous les fichiers', extensions: ['*'] },
     ],
   });
@@ -136,14 +106,13 @@ ipcMain.handle('project:open', async (event) => {
 
   const filePath = filePaths[0];
   try {
+    // Lecture brute : le décodage du format (.elx base64 / JSON legacy) et le
+    // contrôle de version sont faits dans le rendu (src/format.js), seul endroit
+    // où le décodeur est disponible (ESM partagé navigateur/bureau).
     const text = await fs.readFile(filePath, 'utf8');
-    const parsed = JSON.parse(text);
-    if (!isProject(parsed)) {
-      throw new Error('Structure de projet invalide : arbre d’éléments absent.');
-    }
-    return { filePath, data: parsed };
+    return { filePath, text };
   } catch (err) {
-    dialog.showErrorBox('Ouverture impossible', `Le fichier n’est pas un projet Elexio valide.\n\n${filePath}\n\n${err.message}`);
+    dialog.showErrorBox('Ouverture impossible', `Le fichier n’a pas pu être lu.\n\n${filePath}\n\n${err.message}`);
     return null;
   }
 });
@@ -158,12 +127,8 @@ ipcMain.handle('project:openPath', async (event, filePath) => {
     throw new Error('Chemin refuse : le fichier n’est pas dans les projets récents.');
   }
   const text = await fs.readFile(filePath, 'utf8');
-  const parsed = JSON.parse(text);
-  if (!isProject(parsed)) {
-    throw new Error('Structure de projet invalide : arbre d’éléments absent.');
-  }
   await pushRecent(filePath);
-  return { filePath, data: parsed };
+  return { filePath, text };
 });
 
 /* ------------------------------------------------------------------ IPC : PDF */

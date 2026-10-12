@@ -55,6 +55,7 @@ src/
   index.html      4 onglets + panneaux proprietes (1 onglet desactive : implantation)
   styles.css
   model.js        modele de donnees (arbre d'elements, migrations, reperage circuits)
+  format.js       format de fichier .elx (JSON enveloppe + base64, versionne)
   default-schema.js  schema pre-rempli a la creation
   symbols.js      31 symboles + SOCKET_TYPES (10) + SWITCH_TYPES (7)
   symbols/        52 fichiers SVG autonomes (dessins, pas de JS)
@@ -65,7 +66,7 @@ src/
   platform.js     shim web de window.elexio (hors Electron : CSV/PDF/ouverture)
 tools/serve-browser.js    serveur de test navigateur
 tools/check-syntax.mjs    verificateur de syntaxe (npm run check)
-test/                     tests automatises node:test (model, rules-be, layout)
+test/                     tests automatises node:test (model, rules-be, layout, format)
 .github/workflows/pages.yml  deploiement Pages
 .github/workflows/ci.yml     syntaxe + tests (node --test)
 TESTS.md          cas de test manuels
@@ -153,7 +154,14 @@ Decisions actees :
   restaure au demarrage (`restoreAutosave()`). En bureau, un **miroir disque** est ecrit
   en plus (`autosave:write`, debounce 400 ms, `userData/autosave.json`, ecriture atomique)
   et sert de repli si le `localStorage` est vide (profil efface). Enregistrer (Ctrl+S)
-  ecrit dans le stockage local ; « Exporter » telecharge le `.json` (`.unifilaire.json`).
+  ecrit dans le stockage local.
+- **Format de fichier `.elx`** (`src/format.js`) : JSON enveloppe (`format`,
+  `formatVersion`, `schemaVersion`, `app`, `exportedAt`, `project`) puis **encode en
+  base64**. « Exporter » telecharge un `.elx` ; « Ouvrir » le decode et verifie la
+  version : plus ancienne -> **migration automatique**, plus recente -> avertissement.
+  `main.js` ne fait que lire/ecrire le texte brut ; le decodage et le controle de
+  version sont dans le rendu (ESM partage navigateur/bureau). Tolerance de lecture pour
+  les anciens `.json` en clair.
 - **Prises** : un seul symbole palette `socket` ; la propriete **type de prise**
   (`socketType`, defaut `earth_childproof`) choisit le fichier SVG parmi `SOCKET_TYPES`
   (`symbols.js`). 10 types : generic, waterproof, earth, childproof, earth_childproof,

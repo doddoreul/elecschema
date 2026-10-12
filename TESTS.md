@@ -69,11 +69,12 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | # | Action | Attendu |
 |---|---|---|
 | T6.1 | `Ctrl+S` ou « Enregistrer » | Sauvegarde dans le stockage local, statut « Enregistré » |
-| T6.2 | « Exporter… » | Télécharge `<nom>.json` (format `.unifilaire.json`) |
-| T6.3 | « Ouvrir… » un `.json` exporté | Projet rechargé à l'identique |
+| T6.2 | « Exporter… » | Télécharge `<nom>.elx` (JSON enveloppé, encodé en base64) |
+| T6.3 | « Ouvrir… » un `.elx` exporté | Projet rechargé à l'identique |
 | T6.4 | « PDF… » (bureau) | Dossier : cartouche général, schéma (1 page A4 / page de mise en page), circuits, matériaux |
 | T6.5 | « PDF… » (navigateur) | Impressions via `window.print()` |
 | T6.6 | Schéma qui débordait des pages | Un avertissement signale le débordement |
+| T6.7 | Ouvrir un `.elx` de version ancienne / récente | Migration auto (ancienne) ; avertissement puis ouverture au choix (récente) |
 
 ## T7 — Validation
 

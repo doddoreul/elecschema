@@ -24,6 +24,7 @@
 | 11 | Mise en page multi-pages (A4 + cartouche) | LIVREE |
 | 12 | Renommage Elexio + version navigateur GitHub Pages | LIVREE |
 | 13 | Qualite : tests auto (node:test) + CI + durcissement | LIVREE |
+| 14 | Format de fichier `.elx` (versionne, base64) | LIVREE |
 
 ---
 
@@ -135,9 +136,18 @@ PDF : SVG des symboles inlines en `data:` (`print-assets.js`), plus de dependanc
 `file:` ; reperage des circuits (`renumberCircuits`) deplace dans `model.js`.
 
 **Suivi :** Electron 33 est en fin de support. Passer a une version supportee
-(`electron@^44`) puis **re-tester l'export PDF et `npm run build`** : le passage a
-une majeure recente peut changer le chargement des SVG `file://` depuis la page
-`data:` utilisee par le PDF.
+(`electron@^44`) puis **re-tester l'export PDF et `npm run build`**. Risque reduit :
+le PDF n'utilise plus `file://` depuis la page `data:` (les SVG sont inlines en `data:`).
+
+### Etape 14 - Format de fichier `.elx`
+
+Format d'export/import propre a Elexio : JSON **enveloppe** (`format`, `formatVersion`,
+`schemaVersion`, `app`, `exportedAt`, `project`) puis **encode en base64**, extension
+`.elx`. Logique pure dans `src/format.js` (testee). Import : decodage puis controle de
+version — migration automatique si le modele est plus ancien, avertissement si plus
+recent — et tolerance des anciens `.json` en clair. `main.js` est reduit a la
+lecture/ecriture du texte brut ; le decodage et la validation sont dans le rendu (ESM
+partage navigateur/bureau).
 
 ---
 
