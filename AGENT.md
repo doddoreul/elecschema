@@ -4,7 +4,7 @@ Fichier de reprise. A lire en premier apres un changement de contexte.
 
 ## Le projet
 
-Elecschema - editeur de schemas unifilaires pour installations electriques **domestiques** belges.
+Elexio - editeur de schemas unifilaires pour installations electriques **domestiques** belges.
 Norme visee : RGIE / AREI (symboles tableau 2.23). Mono **et** triphase.
 **100% local** : pas de cloud, pas de licence, pas de telemetrie.
 Usage personnel, pas de distribution.
@@ -259,7 +259,7 @@ Workflow qui marche :
 npm version 0.2.0 --no-git-tag-version
 node node_modules/electron-builder/out/cli/cli.js --win --x64 --dir
 & "$env:LOCALAPPDATA\electron-builder\Cache\winCodeSign\<hash>\rcedit-x64.exe" `
-  dist\win-unpacked\ElecSchema.exe --set-file-version "0.2.0.0" --set-product-version "0.2.0.0" ...
+  dist\win-unpacked\Elexio.exe --set-file-version "0.2.0.0" --set-product-version "0.2.0.0" ...
 node node_modules/electron-builder/out/cli/cli.js --win --x64 --prepackaged "dist\win-unpacked"
 ```
 

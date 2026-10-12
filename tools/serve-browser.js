@@ -2,7 +2,7 @@
 // Usage : node tools/serve-browser.js [port]   (defaut 8080)
 //   /w/<fichier>            copie de travail (src/)
 //   /r/<ref>/<fichier>      src/ tel qu'il etait a un commit ou un tag git
-// Hors Electron, window.elecschema est remplace par un shim (telechargements, input file).
+// Hors Electron, window.elexio est remplace par un shim (telechargements, input file).
 // Limite : les .exe ne tournent pas dans un navigateur.
 
 const http = require('node:http');
@@ -16,7 +16,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 
 const SHIM = `(() => {
   const save = (name, text, type) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); };
-  window.elecschema = {
+  window.elexio = {
     async save(data) { save((data.info?.chantier?.denomination || 'projet') + '.unifilaire.json', JSON.stringify(data, null, 2), 'application/json'); return 'telecharge'; },
     open() { return new Promise((res) => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json'; i.onchange = async () => { const f = i.files[0]; if (!f) return res(null); res({ filePath: f.name, data: JSON.parse(await f.text()) }); }; i.click(); }); },
     lastOpened: async () => null,
@@ -38,7 +38,7 @@ function indexPage() {
   const commits = git(['log', '--format=%h%x09%s', '-n', '20']).trim().split('\n');
   const tags = git(['tag']).trim().split('\n').filter(Boolean);
   const li = (href, label) => `<li><a href="${href}">${label}</a></li>`;
-  return `<!DOCTYPE html><meta charset="utf-8"><title>ElecSchema - tests</title>
+  return `<!DOCTYPE html><meta charset="utf-8"><title>Elexio - tests</title>
 <h2>Copie de travail</h2><ul>${li('/w/index.html', 'src/ (working tree)')}</ul>
 <h2>Tags</h2><ul>${tags.map((t) => li(`/r/${t}/index.html`, t)).join('') || '<li>(aucun)</li>'}</ul>
 <h2>Commits</h2><ul>${commits.map((l) => { const [sha, msg] = l.split('\t'); return li(`/r/${sha}/index.html`, `${sha} ${msg}`); }).join('')}</ul>`;
@@ -83,5 +83,5 @@ http.createServer((req, res) => {
     fail(404, 'introuvable : ' + rel + ' @ ' + ref);
   }
 }).listen(PORT, '127.0.0.1', () => {
-  console.log(`ElecSchema tests -> http://127.0.0.1:${PORT}/`);
+  console.log(`Elexio tests -> http://127.0.0.1:${PORT}/`);
 });

@@ -9,7 +9,7 @@ const os = require('node:os');
 let mainWindow = null;
 const MAX_RECENTS = 8;
 
-/** Structure minimale d'un projet ElecSchema (arbre d'éléments v3, ou legacy circuits). */
+/** Structure minimale d'un projet Elexio (arbre d'éléments v3, ou legacy circuits). */
 function isProject(obj) {
   return !!obj && typeof obj === 'object'
     && (Array.isArray(obj.elements) || Array.isArray(obj.circuits));
@@ -44,14 +44,14 @@ async function pushRecent(filePath) {
 
 /** Dossier de stockage des projets.
  *  - version portable (PORTABLE_EXECUTABLE_DIR défini) : à côté de l'exécutable
- *  - version installée                                                 : Documents\ElecSchema
+ *  - version installée                                                 : Documents\Elexio
  */
 function projectsDir() {
   if (process.env.PORTABLE_EXECUTABLE_DIR) {
     return path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'Projets');
   }
   const docs = app.getPath('documents') || os.homedir();
-  return path.join(docs, 'ElecSchema');
+  return path.join(docs, 'Elexio');
 }
 
 async function ensureDir(dir) {
@@ -64,7 +64,7 @@ function createWindow() {
     height: 950,
     minWidth: 1100,
     minHeight: 700,
-    title: 'ElecSchema',
+    title: 'Elexio',
     backgroundColor: '#f3f4f6',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -93,7 +93,7 @@ ipcMain.handle('project:save', async (event, data) => {
     title: 'Enregistrer le projet',
     defaultPath: path.join(dir, `${base}-${stamp}.unifilaire.json`),
     filters: [
-      { name: 'Projet ElecSchema', extensions: ['unifilaire.json', 'json'] },
+      { name: 'Projet Elexio', extensions: ['unifilaire.json', 'json'] },
       { name: 'Tous les fichiers', extensions: ['*'] },
     ],
   });
@@ -111,7 +111,7 @@ ipcMain.handle('project:open', async (event) => {
     defaultPath: dir,
     properties: ['openFile'],
     filters: [
-      { name: 'Projet ElecSchema', extensions: ['unifilaire.json', 'json'] },
+      { name: 'Projet Elexio', extensions: ['unifilaire.json', 'json'] },
       { name: 'Tous les fichiers', extensions: ['*'] },
     ],
   });
@@ -126,7 +126,7 @@ ipcMain.handle('project:open', async (event) => {
     }
     return { filePath, data: parsed };
   } catch (err) {
-    dialog.showErrorBox('Ouverture impossible', `Le fichier n’est pas un projet ElecSchema valide.\n\n${filePath}\n\n${err.message}`);
+    dialog.showErrorBox('Ouverture impossible', `Le fichier n’est pas un projet Elexio valide.\n\n${filePath}\n\n${err.message}`);
     return null;
   }
 });

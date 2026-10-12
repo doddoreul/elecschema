@@ -1,4 +1,4 @@
-# TESTS — ElecSchema
+# TESTS — Elexio
 
 Cas de test **manuels**. À dérouler avant chaque version.
 État au 9 octobre 2026 : aucun cas déroulé automatiquement (pas de framework de test installé).

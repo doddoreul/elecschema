@@ -1,6 +1,6 @@
 {
-  "name": "elecschema",
-  "productName": "ElecSchema",
+  "name": "elexio",
+  "productName": "Elexio",
   "version": "0.3.0",
   "private": true,
   "description": "Éditeur de schémas unifilaires pour installations domestiques (RGIE/AREI, Belgique). 100 % local.",
@@ -14,8 +14,8 @@
     "build:dir": "electron-builder --win --x64 --dir"
   },
   "build": {
-    "appId": "be.elecschema.app",
-    "productName": "ElecSchema",
+    "appId": "be.elexio.app",
+    "productName": "Elexio",
     "copyright": "Usage personnel",
     "directories": {
       "output": "dist"
@@ -29,7 +29,7 @@
     "win": {
       "signAndEditExecutable": false,
       "verifyUpdateCodeSignature": false,
-      "publisherName": "ElecSchema",
+      "publisherName": "Elexio",
       "target": [
         {
           "target": "nsis",
@@ -52,7 +52,7 @@
       "createDesktopShortcut": true
     },
     "portable": {
-      "artifactName": "ElecSchema-portable-${version}.exe"
+      "artifactName": "Elexio-portable-${version}.exe"
     }
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-# ElecSchema
+# Elexio
 
 Éditeur de **schémas unifilaires** pour installations **domestiques** belges.
 

@@ -3,7 +3,7 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('elecschema', {
+contextBridge.exposeInMainWorld('elexio', {
   save: (data) => ipcRenderer.invoke('project:save', data),
   open: () => ipcRenderer.invoke('project:open'),
   lastOpened: () => ipcRenderer.invoke('project:lastOpened'),

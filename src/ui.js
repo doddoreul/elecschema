@@ -689,8 +689,8 @@ function renderBom() {
 }
 
 $('#btn-bom-csv').addEventListener('click', async () => {
-  if (typeof window.elecschema !== 'object') { alert('Export CSV disponible dans la version bureau.'); return; }
-  const csv = await window.elecschema.exportCsv(buildBomCsv(), suggestedName() + '-composants');
+  if (typeof window.elexio !== 'object') { alert('Export CSV disponible dans la version bureau.'); return; }
+  const csv = await window.elexio.exportCsv(buildBomCsv(), suggestedName() + '-composants');
   if (csv) status(`CSV exporté : ${csv}`);
 });
 
@@ -809,11 +809,11 @@ $('#btn-export').addEventListener('click', () => {
 
 async function loadRecents() {
   const sel = $('#recent-select');
-  if (typeof window.elecschema !== 'object') {
+  if (typeof window.elexio !== 'object') {
     sel.innerHTML = '<option value="">(version navigateur — pas de fichiers récents)</option>';
     return;
   }
-  const list = await window.elecschema.recents();
+  const list = await window.elexio.recents();
   sel.innerHTML = list.length
     ? '<option value="">— Projets récents —</option>' +
       list.map((r) => `<option value="${escHtml(r.path)}">${escHtml(r.name)}</option>`).join('')
@@ -823,10 +823,10 @@ async function loadRecents() {
 $('#recent-select').addEventListener('change', async (e) => {
   const p = e.target.value;
   if (!p) return;
-  if (typeof window.elecschema !== 'object') return;
+  if (typeof window.elexio !== 'object') return;
   if (dirty && !confirm('Des modifications ne sont pas enregistrées. Ouvrir un autre projet ?')) { e.target.value = ''; return; }
   try {
-    const { filePath, data } = await window.elecschema.openPath(p);
+    const { filePath, data } = await window.elexio.openPath(p);
     loadProject(data, filePath);
     status(`Projet ouvert : ${filePath}`);
   } catch (err) {
@@ -974,7 +974,7 @@ $('#btn-undo').addEventListener('click', undo);
 $('#btn-redo').addEventListener('click', redo);
 
 $('#btn-open').addEventListener('click', async () => {
-  if (typeof window.elecschema !== 'object') {
+  if (typeof window.elexio !== 'object') {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json,application/json';
@@ -988,7 +988,7 @@ $('#btn-open').addEventListener('click', async () => {
     return;
   }
   if (dirty && !confirm('Des modifications ne sont pas enregistrées. Ouvrir un autre projet ?')) return;
-  const res = await window.elecschema.open();
+  const res = await window.elexio.open();
   if (!res) return;
   loadProject(res.data, res.filePath);
   loadRecents();
@@ -1015,7 +1015,7 @@ $('#btn-pdf').addEventListener('click', async () => {
   }
   if (drawingOverflowsPages() && !confirm('Le schéma déborde des pages de la mise en page : la partie hors pages ne sera pas imprimée. Continuer ?')) return;
   const html = buildPrintHtml();
-  if (typeof window.elecschema !== 'object') {
+  if (typeof window.elexio !== 'object') {
     const w = window.open('', '_blank');
     if (!w) { alert('Fenêtre bloquée : autorisez les pop-ups pour imprimer.'); return; }
     w.document.write(html);
@@ -1023,7 +1023,7 @@ $('#btn-pdf').addEventListener('click', async () => {
     setTimeout(() => w.print(), 300);
     return;
   }
-  const file = await window.elecschema.exportPdf(html, suggestedName());
+  const file = await window.elexio.exportPdf(html, suggestedName());
   if (file) status(`PDF exporté : ${file}`);
 });
 
@@ -1176,7 +1176,7 @@ function bindSymBtn(btn) {
   btn.addEventListener('dragstart', (e) => {
     dragActive = true;
     refreshAll();
-    e.dataTransfer.setData('text/x-elecschema-symbol', btn.dataset.symbol);
+    e.dataTransfer.setData('text/x-elexio-symbol', btn.dataset.symbol);
     e.dataTransfer.effectAllowed = 'copy';
   });
   btn.addEventListener('click', () => addViaPalette(btn.dataset.symbol));
@@ -1368,7 +1368,7 @@ function toWorld(e) {
 }
 
 canvasHost.addEventListener('dragover', (e) => {
-  if (!e.dataTransfer.types.includes('text/x-elecschema-symbol')) return;
+  if (!e.dataTransfer.types.includes('text/x-elexio-symbol')) return;
   e.preventDefault();
   e.dataTransfer.dropEffect = 'copy';
   canvasHost.classList.add('drag-over');
@@ -1391,7 +1391,7 @@ canvasHost.addEventListener('drop', async (e) => {
   canvasHost.classList.remove('drag-over');
   highlightAnchor(null);
   if (dragActive) { dragActive = false; refreshAll(); }
-  const type = e.dataTransfer.getData('text/x-elecschema-symbol');
+  const type = e.dataTransfer.getData('text/x-elexio-symbol');
   if (!type) return;
   const anchorEl = e.target.closest ? e.target.closest('[data-anchor]') : null;
   if (!anchorEl) { status('Déposez le symbole sur un point d’ancrage (« + »).'); return; }

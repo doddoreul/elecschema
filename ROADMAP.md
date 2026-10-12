@@ -1,4 +1,4 @@
-# ROADMAP - ElecSchema
+# ROADMAP - Elexio
 
 **Cible :** schema unifilaire domestique belge, editeur drag & drop, validation RGIE, CSV.
 **Hors perimetre :** schema d'implantation, profil France, import DWG/PDF.
@@ -96,7 +96,7 @@ projets recents (8), raccourcis clavier, `TESTS.md`.
 
 ### Etape 9 - Build
 `electron-builder` 25.1.8, 2 artefacts dans `dist/` :
-installeur NSIS + executable portable. Dossier projet : `Documents\Elecschema`
+installeur NSIS + executable portable. Dossier projet : `Documents\Elexio`
 (installe) ou `Projets\` a cote du `.exe` (portable).
 
 **Contrainte connue :** binaires non signes -> SmartScreen "Editeur inconnu".
