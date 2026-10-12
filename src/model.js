@@ -231,4 +231,56 @@ export function normalizeTypes(p) {
   }
 }
 
+/* ------------------------------------------------------------ repérage circuits */
+
+/** Lettre de circuit : 1 → A … 26 → Z, 27 → AA, 28 → AB… */
+export function letterOf(i) {
+  let s = '';
+  for (let n = i; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
+  return s;
+}
+
+/** Types pouvant porter le début d'un circuit. */
+const CIRCUIT_PARENTS = ['tableau', 'rcd', 'compteur', 'node'];
+
+/** Début de circuit : disjoncteur/fusible posé directement sous un tableau, un
+ *  différentiel, le compteur ou un node. */
+export function isCircuitStart(project, e) {
+  if (!e || !['breaker', 'fuse'].includes(e.symbolType)) return false;
+  const p = e.parent != null ? nodeById(project, e.parent) : null;
+  return !!p && CIRCUIT_PARENTS.includes(p.symbolType);
+}
+
+/** Circuit auquel appartient un élément (son début, en remontant l'arbre). */
+export function circuitStartOf(project, e) {
+  for (let n = e; n && n !== project.supply; n = n.parent != null ? nodeById(project, n.parent) : null) {
+    if (isCircuitStart(project, n)) return n;
+  }
+  return null;
+}
+
+/** Numérotation « Trikker » : une lettre par circuit (ordre du schéma), puis 1, 2…
+ *  pour les symboles du circuit. Un repère saisi à la main (verrouillé) est conservé. */
+export function renumberCircuits(project) {
+  const all = treeOrder(project);
+  const starts = all.filter((e) => isCircuitStart(project, e));
+  const reserved = new Set(starts.filter((s) => s.labelLocked && /^[A-Z]{1,2}$/.test(s.label || '')).map((s) => s.label));
+  let i = 0;
+  for (const s of starts) {
+    if (s.labelLocked) continue;
+    let l;
+    do { l = letterOf(++i); } while (reserved.has(l));
+    s.label = l;
+  }
+  const counts = new Map();
+  for (const e of all) {
+    if (e === project.supply || isCircuitStart(project, e) || ['node', 'tableau', 'fil', 'sectionneur'].includes(e.symbolType)) continue;
+    const s = circuitStartOf(project, e);
+    if (!s) continue;
+    const n = (counts.get(s.id) || 0) + 1;
+    counts.set(s.id, n);
+    if (!e.labelLocked) e.label = s.label + n;
+  }
+}
+
 export { emptyProject, nextId, PREFIXES };

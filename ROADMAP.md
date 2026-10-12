@@ -131,6 +131,8 @@ du processus principal : validation d'arbre, `openPath` limite aux recents,
 fenetre PDF verrouillee (`javascript:false`), ecritures atomiques, autosave miroir
 disque. Shim web `src/platform.js` : memes fonctions CSV/PDF en navigateur qu'en
 bureau. Avertissement « trace contraint » quand le layout atteint son plafond.
+PDF : SVG des symboles inlines en `data:` (`print-assets.js`), plus de dependance
+`file:` ; reperage des circuits (`renumberCircuits`) deplace dans `model.js`.
 
 **Suivi :** Electron 33 est en fin de support. Passer a une version supportee
 (`electron@^44`) puis **re-tester l'export PDF et `npm run build`** : le passage a

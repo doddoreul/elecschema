@@ -114,6 +114,7 @@ Vérification de la syntaxe : `npm run check` — Tests automatiques : `npm test
 ```
 main.js           processus principal (fenêtres, fichiers, export PDF/CSV)
 preload.js        pont isolé rendu <-> principal (window.elexio)
+print-assets.js   inlining des SVG du PDF (file: -> data:)
 index.html        redirection vers src/ (GitHub Pages)
 src/
   index.html      onglets + panneaux

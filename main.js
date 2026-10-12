@@ -5,6 +5,8 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
+const { fileURLToPath } = require('node:url');
+const { inlineSymbolSvg } = require('./print-assets.js');
 
 let mainWindow = null;
 const MAX_RECENTS = 8;
@@ -179,7 +181,10 @@ ipcMain.handle('pdf:export', async (event, html, defaultName) => {
     show: false,
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, javascript: false },
   });
-  await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+  // Les SVG sont inlinés en data: : le PDF ne dépend plus de l'accès file: depuis
+  // une page data: (robuste quelle que soit la version d'Electron).
+  const inlined = await inlineSymbolSvg(html, (u) => fs.readFile(fileURLToPath(u)));
+  await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(inlined));
   const pdf = await win.webContents.printToPDF({
     landscape: true,
     pageSize: 'A4',

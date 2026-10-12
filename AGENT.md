@@ -50,10 +50,11 @@ node_modules\electron\dist\electron.exe . --enable-logging=stderr > rc.out 2>&1
 index.html        redirection (Pages) vers src/
 main.js           processus principal : fenetres, ouverture, PDF, CSV, recents
 preload.js        pont isole (contextBridge -> window.elexio, sandbox:true)
+print-assets.js   inlining des SVG du PDF (file: -> data:), pur/CJS
 src/
   index.html      4 onglets + panneaux proprietes (1 onglet desactive : implantation)
   styles.css
-  model.js        modele de donnees (arbre d'elements) + migrations legacy -> v3
+  model.js        modele de donnees (arbre d'elements, migrations, reperage circuits)
   default-schema.js  schema pre-rempli a la creation
   symbols.js      31 symboles + SOCKET_TYPES (10) + SWITCH_TYPES (7)
   symbols/        52 fichiers SVG autonomes (dessins, pas de JS)
@@ -287,6 +288,8 @@ Artefacts non signes -> SmartScreen "Editeur inconnu" au 1er lancement. Normal.
 - Etapes 1-6 et 8-9 livrees. **Etape 7 (PDF) livree** : `buildPrintHtml()` +
   handler `pdf:export`. Dossier : cartouche general, schema (une page A4 par page de
   mise en page), liste des circuits, liste du materiel. En navigateur, `window.print()`.
+  Les SVG de symboles sont **inlines en `data:`** (`print-assets.js`) avant chargement :
+  le PDF ne depend plus de l'acces `file:` depuis la page `data:`.
 - **Mise en page multi-pages** : cadres A4 paysage cote a cote, cartouche sur chaque
   page, zoom + liste des pages dans le panneau de droite, deplacement du dessin entier,
   panoramique a la barre d'espace (curseur main).

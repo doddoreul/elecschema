@@ -1,7 +1,7 @@
 // Contrôleur d'interface : onglets, informations, palette, arbre d'éléments, BOM.
 // Toute mutation du projet passe par markDirty() + refreshAll() pour rester synchronisé.
 
-import { emptyProject, createElement, syncIdCounter, nodeById, treeOrder, nextId, PREFIXES, migrateProject, normalizeTypes } from './model.js';
+import { emptyProject, createElement, syncIdCounter, nodeById, treeOrder, nextId, PREFIXES, migrateProject, normalizeTypes, isCircuitStart, renumberCircuits } from './model.js';
 import { renderSchema, sheetSize, deviceDetail, PAGE, layoutForced } from './render.js';
 import { SYMBOLS, SYMBOL_CATEGORIES, symbolName, symbolUrl, SOCKET_TYPES, SWITCH_TYPES, DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
 import { validate, RULES_BE, RULE_SEVERITY } from './rules-be.js';
@@ -241,52 +241,6 @@ function freeAnchorDirs(node) {
   return anchorKeysOf(node).filter((d) => (node.children || {})[d] == null);
 }
 
-/** Lettre de circuit : 1 → A … 26 → Z, 27 → AA, 28 → AB… */
-function letterOf(i) {
-  let s = '';
-  for (let n = i; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
-  return s;
-}
-
-/** Début de circuit : automate ou fusible posé directement sous un tableau, un différentiel,
- *  le compteur ou un node. */
-const CIRCUIT_PARENTS = ['tableau', 'rcd', 'compteur', 'node'];
-function isCircuitStart(e) {
-  if (!e || !['breaker', 'fuse'].includes(e.symbolType)) return false;
-  const p = nodeOf(e.parent);
-  return !!p && CIRCUIT_PARENTS.includes(p.symbolType);
-}
-
-/** Circuit auquel appartient un élément (son début, en remontant l'arbre). */
-function circuitStartOf(e) {
-  for (let n = e; n && n !== project.supply; n = nodeOf(n.parent)) if (isCircuitStart(n)) return n;
-  return null;
-}
-
-/** Numérotation Trikker : lettre par circuit (ordre du schéma), puis 1, 2… pour les
- *  symboles du circuit. Un repère saisi à la main (verrouillé) est conservé. */
-function renumberCircuits() {
-  const all = treeOrder(project);
-  const starts = all.filter(isCircuitStart);
-  const reserved = new Set(starts.filter((s) => s.labelLocked && /^[A-Z]{1,2}$/.test(s.label || '')).map((s) => s.label));
-  let i = 0;
-  for (const s of starts) {
-    if (s.labelLocked) continue;
-    let l;
-    do { l = letterOf(++i); } while (reserved.has(l));
-    s.label = l;
-  }
-  const counts = new Map();
-  for (const e of all) {
-    if (e === project.supply || isCircuitStart(e) || ['node', 'tableau', 'fil', 'sectionneur'].includes(e.symbolType)) continue;
-    const s = circuitStartOf(e);
-    if (!s) continue;
-    const n = (counts.get(s.id) || 0) + 1;
-    counts.set(s.id, n);
-    if (!e.labelLocked) e.label = s.label + n;
-  }
-}
-
 /** Repère automatique global, unique par préfixe. */
 function nextGlobalLabel(symbolType) {
   const prefix = PREFIXES[symbolType] || 'C';
@@ -468,7 +422,7 @@ function addElement(symbolType, parentId, dir, props = null) {
   }
   const e = createElement(symbolType, parentId, dir);
   e.label = NO_AUTO_LABEL.includes(symbolType) ? '' : nextGlobalLabel(symbolType);
-  if (isCircuitStart(e)) e.showLabel = true;
+  if (isCircuitStart(project, e)) e.showLabel = true;
   applyProps(e, props);
   // une barre de tableau reste horizontale par defaut (hors sens de pose)
   e.orient = symbolType === 'tableau' ? 0 : orientForDir(dir);
@@ -507,7 +461,7 @@ function insertNode(parentId, dir, type = 'node', props = null) {
   const c = createElement(type, parentId, dir);
   c.orient = type === 'tableau' ? 0 : orientForDir(dir);
   c.label = NO_AUTO_LABEL.includes(type) ? '' : nextGlobalLabel(type);
-  if (isCircuitStart(c)) c.showLabel = true;
+  if (isCircuitStart(project, c)) c.showLabel = true;
   applyProps(c, props);
   parent.children = parent.children || {};
   parent.children[dir] = c.id;
@@ -742,7 +696,7 @@ function renderIssues() {
 
 function refreshAll() {
   syncOutputs();
-  renumberCircuits();
+  renumberCircuits(project);
   renderElementList();
   renderBom();
   renderIssues();

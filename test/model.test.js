@@ -2,7 +2,7 @@
 // Exécution : node --test test/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { emptyProject, createElement, nodeById, treeOrder, migrateProject, normalizeTypes } from '../src/model.js';
+import { emptyProject, createElement, nodeById, treeOrder, migrateProject, normalizeTypes, letterOf, renumberCircuits } from '../src/model.js';
 
 test('migrateProject : ancien format (circuits/difs) -> arbre v3', () => {
   const legacy = {
@@ -76,4 +76,33 @@ test('treeOrder : parcours sans cycle ; nodeById', () => {
   assert.deepEqual(treeOrder(p).map((n) => n.id), [p.supply.id, d.id, s1.id, s2.id]);
   assert.equal(nodeById(p, s1.id), s1);
   assert.equal(nodeById(p, 999999), null);
+});
+
+test('letterOf : 1 -> A, 26 -> Z, 27 -> AA', () => {
+  assert.equal(letterOf(1), 'A');
+  assert.equal(letterOf(26), 'Z');
+  assert.equal(letterOf(27), 'AA');
+  assert.equal(letterOf(28), 'AB');
+});
+
+test('renumberCircuits : une lettre par circuit, puis 1, 2… par symbole', () => {
+  const p = emptyProject();
+  const add = (type, parent, dir) => { const e = createElement(type, parent.id, dir); parent.children[dir] = e.id; p.elements.push(e); return e; };
+  const diff = add('rcd', p.supply, 'right');
+  const b1 = add('breaker', diff, 'top');
+  const s1 = add('socket', b1, 'top');
+  const b2 = add('breaker', diff, 'bottom');
+  const s2 = add('socket', b2, 'top');
+  renumberCircuits(p);
+  assert.equal(b1.label, 'A');
+  assert.equal(b2.label, 'B');
+  assert.equal(s1.label, 'A1');
+  assert.equal(s2.label, 'B1');
+
+  // un repère de circuit verrouillé est conservé et réservé
+  b1.labelLocked = true;
+  b1.label = 'B';
+  renumberCircuits(p);
+  assert.equal(b1.label, 'B');
+  assert.notEqual(b2.label, 'B');
 });
