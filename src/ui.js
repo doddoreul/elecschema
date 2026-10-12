@@ -2,7 +2,7 @@
 // Toute mutation du projet passe par markDirty() + refreshAll() pour rester synchronisé.
 
 import { emptyProject, createElement, syncIdCounter, nodeById, treeOrder, nextId, PREFIXES } from './model.js';
-import { renderSchema, sheetSize, deviceDetail } from './render.js';
+import { renderSchema, sheetSize, deviceDetail, PAGE } from './render.js';
 import { SYMBOLS, SYMBOL_CATEGORIES, symbolName, symbolUrl, SOCKET_TYPES, SWITCH_TYPES, DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
 import { validate, RULES_BE, RULE_SEVERITY } from './rules-be.js';
 import { DEFAULT_SCHEMA } from './default-schema.js';
@@ -22,6 +22,9 @@ let lastAddDir = null;       // direction du dernier ajout (les suivants suivent
 let lastAddId = null;        // id du dernier élément ajouté (tête de la chaîne)
 let armedSymbol = null;      // symbole choisi dans la bibliothèque, posé sur chaque « + » cliqué
 let dragActive = false;      // glisser-déposer depuis la palette en cours
+let printPreview = false;    // mode mise en page (cadres A4 + panneau de mise en page)
+let currentPage = 0;         // index de la page courante (sélectionnée dans la liste)
+try { printPreview = localStorage.getItem('elecschema.printPreview') === '1'; } catch (err) { /* ignore */ }
 let view = { x: 0, y: 0, w: 2100, h: 1100 };
 
 const escHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -110,19 +113,30 @@ function persistSnapshot() {
   }
 }
 
-/** Recharge le dernier état enregistré dans le localStorage (si présent). */
+/** Recharge le dernier état enregistré dans le localStorage.
+ *  Première ouverture (ou sauvegarde illisible) : le schéma par défaut est chargé. */
 function restoreAutosave() {
   let raw;
-  try { raw = localStorage.getItem(AUTOSAVE_KEY); } catch (err) { return; }
-  if (!raw) return;
-  try {
-    const rec = JSON.parse(raw);
-    if (!rec || !rec.project || !rec.project.supply || !Array.isArray(rec.project.elements)) return;
-    loadProject(rec.project, rec.file || null);
-    status('Restauration du dernier état (sauvegarde locale).');
-  } catch (err) {
-    console.warn('Autosave illisible, ignoré :', err);
+  try { raw = localStorage.getItem(AUTOSAVE_KEY); } catch (err) { raw = null; }
+  if (raw) {
+    try {
+      const rec = JSON.parse(raw);
+      if (rec && rec.project && rec.project.supply && Array.isArray(rec.project.elements)) {
+        loadProject(rec.project, rec.file || null);
+        status('Restauration du dernier état (sauvegarde locale).');
+        return;
+      }
+    } catch (err) {
+      console.warn('Autosave illisible, ignoré :', err);
+    }
   }
+  // première ouverture : schéma par défaut
+  const seed = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
+  const today = new Date().toISOString().slice(0, 10);
+  seed.info.projet.dateCreation = today;
+  seed.info.projet.dateModification = today;
+  loadProject(seed, null);
+  status('Première ouverture : schéma par défaut chargé.');
 }
 
 /* ------------------------------------------------------------------ onglets */
@@ -743,7 +757,15 @@ function refreshAll() {
     selectedId,
     showAnchors: dragActive || !!armedSymbol,
     accepts: armedSymbol ? (n) => canAccept(n.symbolType, armedSymbol) : null,
+    printPreview,
+    currentPage,
   });
+  $('#layout-panel').hidden = !printPreview;
+  $('#props').classList.toggle('layout-mode', printPreview);
+  renderPageList();
+  const lay = project.layout || { x: 0, y: 0, scale: 0.6 };
+  $('#layout-scale').value = String(Math.round(lay.scale * 100));
+  $('#layout-scale-val').textContent = Math.round(lay.scale * 100) + ' %';
   refreshTitleBlock();
 }
 
@@ -929,6 +951,8 @@ function loadProject(data, filePath) {
   syncIdCounter(project);
   migrateProject(project);
   normalizeTypes(project);
+  if (!Array.isArray(project.pages) || project.pages.length === 0) project.pages = [{ id: 1 }];
+  currentPage = 0;
   syncIdCounter(project);
   loadInfoForm();
   selectedIds = new Set();
@@ -971,13 +995,34 @@ $('#btn-open').addEventListener('click', async () => {
   status('Projet ouvert.');
 });
 
+/** Vrai si le schéma (position et taille de la mise en page) déborde des pages. */
+function drawingOverflowsPages() {
+  const d = svgEl.querySelector('#drawing');
+  if (!d) return false;
+  const bb = d.getBBox();
+  const lay = project.layout || { x: 0, y: 0, scale: 0.6 };
+  const m = 10;   // marge de la zone de déplacement (poignée)
+  const x0 = lay.x + lay.scale * (bb.x + m), x1 = lay.x + lay.scale * (bb.x + bb.width - m);
+  const y0 = lay.y + lay.scale * (bb.y + m), y1 = lay.y + lay.scale * (bb.y + bb.height - m);
+  const n = Math.max(1, (project.pages || []).length);
+  return x0 < 0 || y0 < 0 || x1 > n * PAGE.w || y1 > PAGE.h;
+}
+
 $('#btn-pdf').addEventListener('click', async () => {
   if ((project.elements || []).length === 0) {
     alert('Ajoutez au moins un élément avant d’exporter un PDF.');
     return;
   }
-  if (typeof window.elecschema !== 'object') { window.print(); return; }
+  if (drawingOverflowsPages() && !confirm('Le schéma déborde des pages de la mise en page : la partie hors pages ne sera pas imprimée. Continuer ?')) return;
   const html = buildPrintHtml();
+  if (typeof window.elecschema !== 'object') {
+    const w = window.open('', '_blank');
+    if (!w) { alert('Fenêtre bloquée : autorisez les pop-ups pour imprimer.'); return; }
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => w.print(), 300);
+    return;
+  }
   const file = await window.elecschema.exportPdf(html, suggestedName());
   if (file) status(`PDF exporté : ${file}`);
 });
@@ -988,33 +1033,100 @@ function suggestedName() {
     .filter(Boolean).join('-').replace(/[^\w\-\.À-ÿ]+/g, '_');
 }
 
-/** Page autonome pour l'impression : clone du SVG + en-tête. */
+/** Dossier PDF : cartouche général, schéma (une page, mis à l'échelle), liste des circuits,
+ *  liste des matériaux. (Schéma d'implantation : à venir.) */
 function buildPrintHtml() {
-  const clone = $('#canvas').cloneNode(true);
-  clone.querySelectorAll('.ui-only').forEach((n) => n.remove());
-  clone.removeAttribute('width');
-  clone.removeAttribute('height');
-  clone.setAttribute('style', 'width:100%;height:auto');
-
   const i = project.info;
-  const d = new Date(i.chantier.dateTravaux || Date.now());
-  const date = d instanceof Date && !Number.isNaN(d.getTime()) ? d.toLocaleDateString('fr-BE') : '';
+  const ch = i.chantier, oc = i.occupant, ins = i.installateur, dd = i.dessinateur, ct = i.controle, pr = i.projet;
+  const v = (x) => escHtml(x && String(x).trim() ? x : '—');
+  const row = (label, val) => `<tr><th>${escHtml(label)}</th><td>${v(val)}</td></tr>`;
+  const box = (title, rows) => `<div class="box"><h3>${escHtml(title)}</h3><table>${rows.join('')}</table></div>`;
 
-  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${escHtml(i.chantier.denomination || 'Schéma unifilaire')}</title>
+  // 1. cartouche général
+  const cover = `<section class="page">
+<h1>Dossier d’installation électrique</h1>
+<div class="sub">${v(ch.denomination)} · ${v(ch.adresse)}, ${v(ch.codePostal)} ${v(ch.localite)}</div>
+<div class="grid">
+${box('Chantier', [row('Dénomination', ch.denomination), row('Adresse', ch.adresse), row('Code postal', ch.codePostal), row('Localité', ch.localite), row('Date des travaux', ch.dateTravaux)])}
+${box('Occupant', [row('Nom', [oc.prenom, oc.nom].filter(Boolean).join(' ')), row('Téléphone', oc.telephone), row('Email', oc.email)])}
+${box('Installateur', [row('Société', ins.societe), row('N° TVA', ins.numeroTVA), row('Adresse', ins.adresse), row('Contact', ins.contact), row('Téléphone', ins.telephone), row('Email', ins.email)])}
+${box('Dessinateur', [row('Nom', dd.nom), row('Société', dd.societe), row('Téléphone', dd.telephone), row('Email', dd.email)])}
+${box('Organisme de contrôle', [row('Organisme', ct.organisme), row('Contact', ct.contact), row('Date prévue', ct.datePrevue)])}
+${box('Projet', [row('Version', pr.version), row('Date de création', pr.dateCreation), row('Dernière modification', pr.dateModification), row('Domaine', pr.domaine), row('Pays', pr.pays), row('Alimentation', pr.typeAlim === 'TRI' ? 'Triphasé' : 'Monophasé')])}
+${box('Remarques', [row('Remarques', i.remarques)])}
+</div></section>`;
+
+  // 2. schéma unifilaire : une page PDF par page de la mise en page ; chacune montre
+  //    la portion du dessin qui la recouvre (le schéma passe d'une page à l'autre)
+  const nPages = Math.max(1, (project.pages || []).length);
+  const schema = Array.from({ length: nPages }, (_, p) => {
+    const clone = $('#canvas').cloneNode(true);
+    clone.querySelectorAll('.ui-only').forEach((n) => n.remove());
+    clone.removeAttribute('width');
+    clone.removeAttribute('height');
+    clone.setAttribute('viewBox', `${p * PAGE.w} 0 ${PAGE.w} ${PAGE.h}`);
+    clone.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    clone.setAttribute('style', 'width:100%;height:100%');
+    return `<section class="page schema">${clone.outerHTML}</section>`;
+  }).join('');
+
+  // 3. liste des circuits : une ligne par protection (disjoncteur, fusible) avec son repère
+  const protections = treeOrder(project).filter((n) => ['breaker', 'fuse'].includes(n.symbolType));
+  const circuits = `<section class="page"><h2>Liste des circuits</h2>
+<table><thead><tr><th>Repère</th><th>Protection</th><th>Caractéristique</th><th>Alimenté depuis</th></tr></thead><tbody>
+${protections.map((n) => {
+    const p = nodeById(project, n.parent);
+    const from = p ? (p.label || (p.symbolType === 'compteur' ? 'W1' : '')) : '';
+    return `<tr><td>${v(n.label)}</td><td>${escHtml(symbolName(n.symbolType))}</td><td>${v(deviceDetail(n))}</td><td>${v(from)}</td></tr>`;
+  }).join('') || '<tr><td colspan="4">Aucun circuit.</td></tr>'}
+</tbody></table></section>`;
+
+  // 4. liste des matériaux, regroupés par désignation et caractéristique
+  const groups = new Map();
+  for (const n of treeOrder(project)) {
+    if (n.symbolType === 'node') continue;
+    const name = symbolLabel(n);
+    const det = n.symbolType === 'compteur' ? (n.detail || 'Compteur') : (deviceDetail(n) || '—');
+    const key = name + '||' + det;
+    const g = groups.get(key) || { name, det, qty: 0 };
+    g.qty += 1;
+    groups.set(key, g);
+  }
+  const mats = [...groups.values()].sort((a, b) => b.qty - a.qty || a.name.localeCompare(b.name, 'fr'));
+  const materials = `<section class="page"><h2>Liste des matériaux</h2>
+<table><thead><tr><th>Désignation</th><th>Caractéristique</th><th>Quantité</th></tr></thead><tbody>
+${mats.map((g) => `<tr><td>${escHtml(g.name)}</td><td>${escHtml(g.det)}</td><td>${g.qty}</td></tr>`).join('')}
+</tbody></table></section>`;
+
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${escHtml(ch.denomination || 'Dossier électrique')}</title>
 <style>
-  @page { size: A4 landscape; margin: 12mm; }
-  body { font-family: sans-serif; color:#111827; margin:0; }
-  h1 { font-size:16px; margin:0 0 2px; }
-  .sub { font-size:11px; color:#6b7280; margin-bottom:8px; }
+  @page { size: A4 landscape; margin: 10mm; }
+  body { font-family: sans-serif; color:#111827; margin:0; font-size:11px; }
+.page { width: 277mm; height: 186mm; page-break-after: always; break-after: page; overflow: hidden; }
+.page:last-child { page-break-after: auto; break-after: auto; }
+.schema { height: 186mm; }
+.schema svg { display: block; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  h2 { font-size:16px; margin:0 0 8px; }
+  h3 { font-size:12px; margin:0 0 4px; }
+  .sub { color:#6b7280; margin-bottom:10px; }
+  .grid { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; }
+  .box { border:1px solid #d1d5db; border-radius:4px; padding:6px; }
+  table { border-collapse: collapse; width:100%; font-size:10px; }
+  th, td { border:1px solid #d1d5db; padding:3px 6px; text-align:left; vertical-align:top; }
+  thead th { background:#f3f4f6; }
+  .box th { width:38%; color:#4b5563; font-weight:normal; border:none; border-bottom:1px solid #e5e7eb; }
+  .box td { border:none; border-bottom:1px solid #e5e7eb; }
   .wire { stroke:#111827; stroke-width:1.6; fill:none; }
   .bus { stroke:#111827; stroke-width:2; fill:none; }
   text { font-family: sans-serif; }
   .lbl { font-size:9px; fill:#374151; }
   .lbl-sm { font-size:8px; fill:#4b5563; white-space: pre-line; }
 </style></head><body>
-<h1>Schéma unifilaire — installation domestique</h1>
-<div class="sub">${escHtml(i.chantier.denomination || '')} · ${escHtml(i.chantier.adresse || '')}, ${escHtml(i.chantier.codePostal || '')} ${escHtml(i.chantier.localite || '')} · ${date} · version ${escHtml(i.projet.version)} · RGIE/AREI</div>
-${clone.outerHTML}
+${cover}
+${schema}
+${circuits}
+${materials}
 </body></html>`;
 }
 
@@ -1300,14 +1412,36 @@ window.addEventListener('dragend', () => {
 /* ------------------------------------------- sélection, pan, zoom (canvas) */
 
 let gesture = null;
+let spaceDown = false;   // barre d'espace maintenue : glisser = panoramique (curseur main)
+
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && !isTyping(e.target)) { e.preventDefault(); spaceDown = true; canvasHost.classList.add('hand'); }
+});
+document.addEventListener('keyup', (e) => {
+  if (e.code === 'Space') { spaceDown = false; canvasHost.classList.remove('hand'); }
+});
+window.addEventListener('blur', () => { spaceDown = false; canvasHost.classList.remove('hand'); });
 
 svgEl.addEventListener('pointerdown', (e) => {
+  // mise en page : glisser le dessin entier (tout point du dessin), sauf espace/alt (panoramique)
+  const dr = svgEl.querySelector('#drawing');
+  const dbox = dr ? dr.getBoundingClientRect() : null;
+  const onDrawing = !!dbox && e.clientX >= dbox.left && e.clientX <= dbox.right && e.clientY >= dbox.top && e.clientY <= dbox.bottom;
+  if (printPreview && e.button === 0 && !spaceDown && !e.altKey && onDrawing) {
+    const lay = project.layout || { x: 0, y: 0, scale: 0.6 };
+    gesture = { move: true, x: e.clientX, y: e.clientY, lx: lay.x, ly: lay.y, moved: false };
+    svgEl.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    return;
+  }
   const anchorEl = e.target.closest('[data-anchor]');
   const linkEl = e.target.closest('[data-link]');
   const hit = e.target.closest('[data-el]');
 
-  if (e.button === 1 || (e.button === 0 && (e.altKey || (!hit && !anchorEl && !linkEl)))) {
+  // panoramique : bouton du milieu, ou clic gauche avec espace (main) / alt
+  if (e.button === 1 || (e.button === 0 && (e.altKey || spaceDown))) {
     gesture = { pan: true, x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false };
+    canvasHost.classList.add('panning');
   } else if (e.button === 0 && anchorEl) {
     const [pid, dir] = anchorEl.dataset.anchor.split(':');
     e.preventDefault();
@@ -1328,13 +1462,23 @@ svgEl.addEventListener('pointerdown', (e) => {
     const elId = Number(hit.dataset.el);
     if (e.shiftKey) toggleElement(elId);      // Maj + clic : sélection multiple
     else selectElement(elId);
-  } else return;
+  } else { if (e.button === 0 && !hit) deselect(); return; }
 
   svgEl.setPointerCapture(e.pointerId);
   e.preventDefault();
 });
 
 svgEl.addEventListener('pointermove', (e) => {
+  if (gesture && gesture.move) {
+    const k = Math.max(view.w / svgEl.clientWidth, view.h / svgEl.clientHeight);
+    const dx = (e.clientX - gesture.x) * k, dy = (e.clientY - gesture.y) * k;
+    if (Math.abs(dx) + Math.abs(dy) > 1) gesture.moved = true;
+    const cur = project.layout || { x: 0, y: 0, scale: 0.6 };
+    project.layout = { ...cur, x: Math.round((gesture.lx + dx) * 10) / 10, y: Math.round((gesture.ly + dy) * 10) / 10 };
+    const drawing = svgEl.querySelector('#drawing');
+    if (drawing) drawing.setAttribute('transform', `translate(${project.layout.x},${project.layout.y}) scale(${cur.scale})`);
+    return;
+  }
   if (!gesture || !gesture.pan) return;
   const k = Math.max(view.w / svgEl.clientWidth, view.h / svgEl.clientHeight);
   const dx = e.clientX - gesture.x;
@@ -1344,6 +1488,13 @@ svgEl.addEventListener('pointermove', (e) => {
 });
 
 svgEl.addEventListener('pointerup', (e) => {
+  canvasHost.classList.remove('panning');
+  if (gesture && gesture.move) {
+    if (gesture.moved) markDirty();
+    gesture = null;
+    if (svgEl.hasPointerCapture(e.pointerId)) svgEl.releasePointerCapture(e.pointerId);
+    return;
+  }
   if (gesture && gesture.pan && !gesture.moved && e.button === 0) deselect();
   gesture = null;
   if (svgEl.hasPointerCapture(e.pointerId)) svgEl.releasePointerCapture(e.pointerId);
@@ -1358,6 +1509,81 @@ $('#btn-zoom-in').addEventListener('click', () => zoomAt(0.8));
 $('#btn-zoom-out').addEventListener('click', () => zoomAt(1.25));
 $('#btn-zoom-reset').addEventListener('click', fitView);
 
+/* --------------------------------------------- aperçu avant impression */
+
+$('#preview-print').checked = printPreview;
+$('#preview-print').addEventListener('change', (e) => {
+  printPreview = e.target.checked;
+  try { localStorage.setItem('elecschema.printPreview', printPreview ? '1' : '0'); } catch (err) { /* ignore */ }
+  refreshAll();
+});
+$('#layout-scale').addEventListener('input', (e) => {
+  project.layout = { ...(project.layout || { x: 0, y: 0 }), scale: Number(e.target.value) / 100 };
+  refreshAll();
+});
+$('#layout-scale').addEventListener('change', () => markDirty());
+$('#btn-layout-reset').addEventListener('click', () => {
+  // recentrer : le dessin est centré dans la page courante, la taille est conservée
+  const cur = project.layout || { x: 0, y: 0, scale: 0.6 };
+  const drawing = svgEl.querySelector('#drawing');
+  if (!drawing) return;
+  const bb = drawing.getBBox();
+  const pageX = currentPage * (PAGE.w + PAGE.gap);
+  project.layout = {
+    ...cur,
+    x: Math.round((pageX + PAGE.w / 2 - cur.scale * (bb.x + bb.width / 2)) * 10) / 10,
+    y: Math.round((PAGE.h / 2 - cur.scale * (bb.y + bb.height / 2)) * 10) / 10,
+  };
+  markDirty();
+  refreshAll();
+});
+
+/* --------------------------------------------------------- pages (mise en page) */
+
+function renderPageList() {
+  const host = $('#page-list');
+  if (!host) return;
+  const pages = project.pages || [];
+  host.innerHTML = '';
+  pages.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'page-row' + (i === currentPage ? ' active' : '');
+    const name = document.createElement('button');
+    name.className = 'page-name';
+    name.textContent = 'Page ' + (i + 1);
+    name.addEventListener('click', () => { currentPage = i; refreshAll(); });
+    const del = document.createElement('button');
+    del.textContent = '✕';
+    del.title = 'Supprimer cette page';
+    del.disabled = pages.length <= 1;
+    del.addEventListener('click', () => deletePage(i));
+    row.append(name, del);
+    host.appendChild(row);
+  });
+}
+
+function addPage() {
+  const pages = project.pages || (project.pages = [{ id: 1 }]);
+  const id = Math.max(0, ...pages.map((p) => p.id || 0)) + 1;
+  pages.splice(currentPage + 1, 0, { id });
+  currentPage += 1;
+  markDirty();
+  refreshAll();
+  status(`Page ${currentPage + 1} ajoutée.`);
+}
+
+function deletePage(i) {
+  const pages = project.pages || [];
+  if (pages.length <= 1) return;
+  pages.splice(i, 1);
+  if (i < currentPage || currentPage >= pages.length) currentPage = Math.max(0, currentPage - 1);
+  markDirty();
+  refreshAll();
+  status(`Page ${i + 1} supprimée.`);
+}
+
+$('#btn-page-add').addEventListener('click', addPage);
+
 /* --------------------------------------------------- clavier : suppr / échap */
 
 function isTyping(t) { return /INPUT|TEXTAREA|SELECT/.test(t.tagName); }
@@ -1370,7 +1596,7 @@ document.addEventListener('keydown', (e) => {
   if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); saveLocal(); return; }
   if (mod && e.key.toLowerCase() === 'n') { e.preventDefault(); $('#btn-new').click(); return; }
 
-  if (activeTab !== 'schema' || isTyping(e.target) || $('#prop-dialog').open) return;
+  if (activeTab !== 'schema' || printPreview || isTyping(e.target) || $('#prop-dialog').open) return;
   if (e.key === 'Escape' && !anchorMenu.hidden) { closeAnchorMenu(); return; }
   if (e.key === 'Delete' || e.key === 'Backspace') {
     const ids = [...selectedIds].filter((id) => !isSupplyId(id));

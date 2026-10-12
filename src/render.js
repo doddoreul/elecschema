@@ -18,6 +18,9 @@ const BOTTOM_PAD = 18;  // petite marge (pied hors canvas, dans le PDF)
 
 const DIR = { right: [1, 0], left: [-1, 0], top: [0, -1], bottom: [0, 1] };
 
+/** Format de page de mise en page : A4 paysage (297 x 210 mm à 2 px/mm), pages côte à côte. */
+export const PAGE = { w: 594, h: 420, gap: 0 };
+
 function el(name, attrs = {}, parent) {
   const n = document.createElementNS(NS, name);
   for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
@@ -340,13 +343,59 @@ function halfOf(project, id) {
   return { w: (def.w || 40) / 2, h: (def.h || 40) / 2 };
 }
 
-export function renderSchema(svg, project, opts = {}) {
+/** Mise en page : cadres A4 paysage (2 px/mm), alignés à droite, + cartouche sur la première page.
+ *  Élément décoratif, retiré de l'impression. */
+function drawPrintPreview(svg, project, opts = {}) {
+  const { w: A4W, h: A4H, gap } = PAGE;
+  const nPages = Math.max(1, (project.pages || []).length);
+  for (let i = 0; i < nPages; i++) {
+    const x = i * (A4W + gap);
+    el('rect', { class: 'page-guide ui-only' + (i === (opts.currentPage || 0) ? ' current' : ''), x, y: 0, width: A4W, height: A4H }, svg);
+    txt(svg, x + 6, 12, 'Page ' + (i + 1), 'lbl-sm').setAttribute('class', 'lbl-sm ui-only page-label');
+  }
+
+  const info = project.info;
+  const ch = info.chantier || {}, occ = info.occupant || {};
+  const inst = info.installateur || {}, pr = info.projet || {};
+  const date = ch.dateTravaux || pr.dateCreation || '';
+  const place = [ch.codePostal && ch.localite].filter(Boolean).join(' ') || '';
+  const occupant = [occ.nom, occ.prenom].filter(Boolean).join(' ');
+
+  for (let i = 0; i < nPages; i++) {
+    const ox = i * (A4W + gap);
+    const CW2 = 250, CH2 = 62, CX = ox + A4W - CW2, CY = A4H - CH2;
+    const g = el('g', { class: 'cartouche ui-only' }, svg);
+    el('rect', { x: CX, y: CY, width: CW2, height: CH2, fill: '#fff', stroke: '#9ca3af', 'stroke-width': 1 }, g);
+    el('line', { x1: CX, y1: CY + 13, x2: CX + CW2, y2: CY + 13, stroke: '#d1d5db', 'stroke-width': 1 }, g);
+    const lines = [
+      { t: ch.denomination || 'Installation domestique', cls: 'cart-title' },
+      { t: [ch.adresse, place].filter(Boolean).join(', '), cls: 'cart-line' },
+      { t: [occupant && 'Occupant : ' + occupant, occ.telephone].filter(Boolean).join(' · '), cls: 'cart-line' },
+      { t: [inst.societe && 'Installateur : ' + inst.societe, date, 'v' + (pr.version || '1')].filter(Boolean).join(' · '), cls: 'cart-line' },
+      { t: (pr.typeAlim === 'TRI' ? 'Triphasé' : 'Monophasé') + ' · RGIE/AREI · ' + (info.dessinateur?.nom || ''), cls: 'cart-line' },
+    ];
+    let y = CY + 9;
+    for (const l of lines) {
+      if (l.t) txt(g, CX + 5, y, l.t, l.cls);
+      y += 11;
+    }
+  }
+}
+
+export function renderSchema(root, project, opts = {}) {
   const L = computeLayout(project);
   const { pos, routes, px, py, W, H } = L;
   const info = project.info;
 
-  svg.innerHTML = '';
-  svg.setAttribute('viewBox', opts.viewBox || `0 0 ${W} ${H}`);
+  root.innerHTML = '';
+  root.setAttribute('viewBox', opts.viewBox || `0 0 ${W} ${H}`);
+
+  // ---- mise en page : cadre A4 + cartouche (aperçu) ----
+  if (opts.printPreview) drawPrintPreview(root, project, opts);
+
+  // ---- le dessin entier, déplaçable et redimensionnable comme un seul objet ----
+  const lay = project.layout || { x: 0, y: 0, scale: 0.6 };
+  const svg = el('g', { id: 'drawing', transform: `translate(${lay.x},${lay.y}) scale(${lay.scale})` }, root);
 
   const elements = project.elements || [];
   const emptyEl = document.getElementById('empty-state');
@@ -412,6 +461,7 @@ export function renderSchema(svg, project, opts = {}) {
   // ---- insertion de node au milieu de chaque conducteur ----
   //      Dernière couche : toujours cliquable, même au-dessus du symbole du compteur.
   const drawMid = (pid, dir) => {
+    if (opts.printPreview) return;
     const pnode = nodeById(project, pid);
     const cid = (pnode?.children || {})[dir];
     const pts = cid != null ? routes.get(cid) : null;
@@ -438,7 +488,7 @@ export function renderSchema(svg, project, opts = {}) {
 
   // ---- points d'ancrage libres : visibles seulement si l'élément est sélectionné
   //      (ou pendant un glisser-déposer depuis la palette) ----
-  const anchorsShown = (node) => (opts.selectedIds ? opts.selectedIds.has(node.id) : node.id === opts.selectedId) || !!opts.showAnchors;
+  const anchorsShown = (node) => !opts.printPreview && ((opts.selectedIds ? opts.selectedIds.has(node.id) : node.id === opts.selectedId) || !!opts.showAnchors);
   const drawAnchors = (node) => {
     if (!anchorsShown(node)) return;
     const hasChild = node.children && Object.values(node.children).some((v) => v != null);
@@ -477,5 +527,9 @@ export function renderSchema(svg, project, opts = {}) {
   }
   if (anchorsShown(project.supply)) drawAnchors(project.supply);
   for (const node of elements) if (anchorsShown(node)) drawAnchors(node);
+  // zone de déplacement du dessin entier (en mise en page seulement, hors impression)
+  const bb = svg.getBBox();
+  svg.insertBefore(el('rect', { class: 'move-hit ui-only', x: bb.x - 10, y: bb.y - 10, width: bb.width + 20, height: bb.height + 20, 'data-move': '1' }), svg.firstChild);
+  // (la zone de déplacement reste sous les éléments ; les éléments ne captent rien en mise en page)
   // (pied de page / cartouche : hors canvas, voir le PDF)
 }

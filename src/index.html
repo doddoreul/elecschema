@@ -142,6 +142,7 @@
           <div class="sheet-head">
             <h2>Schéma unifilaire</h2>
             <div id="sheet-meta" class="sheet-meta"></div>
+            <label class="check preview-check"><input id="preview-print" type="checkbox"> Activer la mise en page</label>
           </div>
           <div id="canvas-host" class="canvas-host">
             <svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="1400" height="900"></svg>
@@ -149,6 +150,17 @@
           </div>
         </main>
         <aside class="props" id="props">
+          <div id="layout-panel" class="layout-panel" hidden>
+            <h3>Mise en page</h3>
+            <div class="layout-tools">
+              <label>Zoom <input id="layout-scale" type="range" min="20" max="150" step="5" value="60"></label>
+              <output id="layout-scale-val">60 %</output>
+            </div>
+            <button id="btn-layout-reset">Recentrer</button>
+            <button id="btn-page-add" class="primary">+ Ajouter une page à droite</button>
+            <h4>Pages</h4>
+            <div id="page-list" class="page-list"></div>
+          </div>
           <h3>Propriétés</h3>
           <div id="props-empty" class="hint">Sélectionnez un élément.</div>
 
