@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # Les tests n'ont aucune dépendance : pas besoin de npm ci (évite de
+      # télécharger le binaire Electron ~120 Mo à chaque exécution).
+      - name: Syntaxe (node --check sur tout le JS)
+        run: node tools/check-syntax.mjs
+      - name: Tests (node --test)
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test "test/*.test.js"

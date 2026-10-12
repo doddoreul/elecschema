@@ -1,0 +1,58 @@
+// Shim navigateur : hors Electron, window.elexio est fourni par ce script
+// (chargé par src/index.html). Le bureau utilise preload.js (pont IPC).
+// Même interface que preload.js, implémentation web : téléchargements Blob,
+// ouverture par <input type=file>, impression par window.print().
+// Aucune dépendance. Limite : les .exe ne tournent pas dans un navigateur.
+(() => {
+  'use strict';
+  if (typeof window.elexio === 'object') return; // déjà fourni (Electron : preload.js)
+
+  const save = (name, text, type) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type }));
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+
+  window.elexio = {
+    open() {
+      return new Promise((res) => {
+        const i = document.createElement('input');
+        i.type = 'file';
+        i.accept = '.json,application/json';
+        i.onchange = async () => {
+          const f = i.files && i.files[0];
+          if (!f) return res(null);
+          try {
+            res({ filePath: f.name, data: JSON.parse(await f.text()) });
+          } catch (err) {
+            alert('Fichier illisible : ' + err.message);
+            res(null);
+          }
+        };
+        i.click();
+      });
+    },
+    recents: async () => [],
+    openPath: async () => { throw new Error('hors Electron'); },
+    exportPdf: async (html) => {
+      const w = window.open('', '_blank');
+      if (!w) {
+        alert('Le navigateur a bloqué la fenêtre d\'impression. Autorisez les fenêtres pop-up pour exporter le PDF.');
+        return null;
+      }
+      w.document.write(html);
+      w.document.close();
+      w.print();
+      return 'impression';
+    },
+    exportCsv: async (content, name) => {
+      save((name || 'composants') + '.csv', '\uFEFF' + content, 'text/csv;charset=utf-8');
+      return (name || 'composants') + '.csv';
+    },
+    // pas de miroir disque en navigateur : le localStorage suffit
+    autosaveWrite: async () => true,
+    autosaveRead: async () => null,
+  };
+})();

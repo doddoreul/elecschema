@@ -9,4 +9,6 @@ contextBridge.exposeInMainWorld('elexio', {
   exportCsv: (content, name) => ipcRenderer.invoke('csv:export', content, name),
   recents: () => ipcRenderer.invoke('recents:list'),
   openPath: (p) => ipcRenderer.invoke('project:openPath', p),
+  autosaveRead: () => ipcRenderer.invoke('autosave:read'),
+  autosaveWrite: (text) => ipcRenderer.invoke('autosave:write', text),
 });

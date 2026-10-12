@@ -3,7 +3,7 @@
 // d'ancrage libre de son parent (voir standards.js#anchorKeysOf), à une direction
 // cardinale donnée. Le compteur (supply) est la racine, en bas à gauche.
 
-import { DEFAULT_ICB, isProtection, DEFAULT_CABLE, TABLEAU_OUTPUTS } from './standards.js';
+import { DEFAULT_ICB, isProtection, DEFAULT_CABLE, TABLEAU_OUTPUTS, ANCHOR_DIRECTIONS, outputIndex } from './standards.js';
 import { DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
 
 const SCHEMA_VERSION = 3;
@@ -121,6 +121,114 @@ export function treeOrder(project) {
   };
   walk(project.supply);
   return out;
+}
+
+/* ----------------------------------------------------- migrations legacy -> v3 */
+
+const LEGACY_SOCKETS = { socket: 'generic', socket_earth: 'earth', socket_switch: 'switch', socket_waterproof: 'waterproof' };
+const LEGACY_SWITCHES = { switch_2way: 'two_way' };
+const LEGACY_SYMBOLS = { carrefour: 'node' };
+
+/** Migration d'un ancien projet (circuits/difs) vers l'arbre d'éléments v3.
+ *  Sans effet sur un projet déjà en v3 (retour anticipé). */
+export function migrateProject(p) {
+  if (Array.isArray(p.elements) && (p.schemaVersion || 0) >= 3) { delete p.circuits; delete p.difs; return; }
+  const els = [];
+  p.supply = p.supply || {};
+  p.supply.symbolType = p.supply.symbolType || 'compteur';
+  p.supply.children = { right: null };
+
+  const mk = (type, parentId, dir) => {
+    const e = { id: nextId(), symbolType: type, parent: parentId, dir, label: '', labelLocked: false, detail: '', children: {} };
+    if (isProtection(type)) e.params = type === 'rcd' ? { rating: 40, diff: 30, type: 'AC' } : { rating: null, curve: 'C', icb: DEFAULT_ICB };
+    if (type === 'socket') e.count = 1;
+    return e;
+  };
+  const addEl = (type, parent, dir) => { const e = mk(type, parent.id, dir); parent.children[dir] = e.id; els.push(e); return e; };
+
+  // Différentiels : chaînés depuis le compteur.
+  let parent = p.supply;
+  for (const d of p.difs || []) {
+    const dir = parent === p.supply ? 'right' : (ANCHOR_DIRECTIONS.find((x) => parent.children[x] == null) || 'right');
+    const e = addEl('rcd', parent, dir);
+    e.label = d.label || '';
+    e.params = d.params || { rating: 40, diff: 30, type: 'AC' };
+    parent = e;
+  }
+
+  // Circuits : composants accrochés en série de nodes (3 emplacements + chaînage).
+  let hub = addEl('node', p.supply, 'right');
+  let slots = ['top', 'bottom', 'left'];
+  let si = 0;
+  const attach = (type, label, params, count) => {
+    if (si >= slots.length) { hub = addEl('node', hub, 'right'); slots = ['top', 'bottom', 'left']; si = 0; }
+    const dir = slots[si++];
+    const e = addEl(type, hub, dir);
+    e.label = label || '';
+    if (params) e.params = params;
+    if (count) e.count = count;
+  };
+  for (const c of p.circuits || []) {
+    for (const comp of c.components || []) attach(comp.symbolType, comp.label, comp.params, comp.count);
+  }
+
+  p.elements = els;
+  p.schemaVersion = 3;
+  delete p.circuits;
+  delete p.difs;
+}
+
+/** Ramène les anciens types éclatés (prises, interrupteurs) vers le type unique + sa propriété de type. */
+export function normalizeTypes(p) {
+  for (const e of p.elements || []) {
+    if (!e || !e.symbolType) continue;
+    if (Object.prototype.hasOwnProperty.call(LEGACY_SYMBOLS, e.symbolType)) {
+      e.symbolType = LEGACY_SYMBOLS[e.symbolType];
+    }
+    if (Object.prototype.hasOwnProperty.call(LEGACY_SOCKETS, e.symbolType)) {
+      e.socketType = e.socketType || LEGACY_SOCKETS[e.symbolType];
+      e.symbolType = 'socket';
+    }
+    if (Object.prototype.hasOwnProperty.call(LEGACY_SWITCHES, e.symbolType)) {
+      e.switchType = e.switchType || LEGACY_SWITCHES[e.symbolType];
+      e.symbolType = 'switch';
+    }
+    if (e.symbolType === 'socket') {
+      if (!e.socketType) e.socketType = DEFAULT_SOCKET_TYPE;
+      if (!e.count) e.count = 1;
+      // plus de repère auto sur les prises : on ne garde que les repères saisis
+      if (/^X\d+$/.test(e.label || '')) e.label = '';
+    }
+    if (e.symbolType === 'switch' && !e.switchType) e.switchType = DEFAULT_SWITCH_TYPE;
+    // Un node n'a aucune propriété : on nettoie les anciens champs hérités.
+    if (e.symbolType === 'node') {
+      e.label = ''; e.labelLocked = false; e.detail = '';
+      delete e.labelPos; delete e.showLabel; delete e.poles;
+    }
+    // Tableau : sorties nommées top-1, top-2… ; anciens ancrages (top, right…) convertis.
+    if (e.symbolType === 'tableau') {
+      e.orient = 0;
+      const kids = Object.entries(e.children || {}).filter(([, v]) => v != null);
+      e.children = {};
+      const taken = new Set();
+      const pending = [];
+      for (const [key, cid] of kids) {
+        if (key === 'bottom') { e.children.bottom = cid; continue; }
+        if (/^top(-\d+)?$/.test(key) && !taken.has(outputIndex(key))) { taken.add(outputIndex(key)); e.children['top-' + (outputIndex(key) + 1)] = cid; }
+        else pending.push(cid);
+      }
+      let i = 0;
+      for (const cid of pending) {
+        while (taken.has(i)) i++;
+        taken.add(i); e.children['top-' + (i + 1)] = cid;
+      }
+      e.outputs = Math.max(e.outputs || TABLEAU_OUTPUTS, Math.max(-1, ...taken) + 2);
+      for (const [key, cid] of Object.entries(e.children)) {
+        const k = (p.elements || []).find((x) => x && x.id === cid);
+        if (k) { k.parent = e.id; k.dir = key; }
+      }
+    }
+  }
 }
 
 export { emptyProject, nextId, PREFIXES };

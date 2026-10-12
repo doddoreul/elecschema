@@ -23,6 +23,7 @@
 | 10 | Refonte ancrages (arbre d'elements + nodes) | LIVREE |
 | 11 | Mise en page multi-pages (A4 + cartouche) | LIVREE |
 | 12 | Renommage Elexio + version navigateur GitHub Pages | LIVREE |
+| 13 | Qualite : tests auto (node:test) + CI + durcissement | LIVREE |
 
 ---
 
@@ -123,11 +124,24 @@ installeur NSIS + executable portable. Dossier projet : `Documents\Elexio`
 
 **Contrainte connue :** binaires non signes -> SmartScreen "Editeur inconnu".
 
+### Etape 13 - Qualite
+Tests automatises sans dependance (`node --test` : modele/migrations, 6 regles,
+proprietes de layout) + workflow CI (syntaxe `node --check` + tests). Durcissement
+du processus principal : validation d'arbre, `openPath` limite aux recents,
+fenetre PDF verrouillee (`javascript:false`), ecritures atomiques, autosave miroir
+disque. Shim web `src/platform.js` : memes fonctions CSV/PDF en navigateur qu'en
+bureau. Avertissement « trace contraint » quand le layout atteint son plafond.
+
+**Suivi :** Electron 33 est en fin de support. Passer a une version supportee
+(`electron@^44`) puis **re-tester l'export PDF et `npm run build`** : le passage a
+une majeure recente peut changer le chargement des SVG `file://` depuis la page
+`data:` utilisee par le PDF.
+
 ---
 
 ## Suite possible
 
 - Page **schema d'implantation** (onglet desactive pour l'instant).
 - Icone et metadonnees de version signees.
-- Tests automatises (Vitest sur modele/regles, Playwright sur l'UI).
+- Tests automatises : `node --test` sur modele/regles/layout (fait) ; tests d'UI (Playwright) a faire.
 - Recherche dans la palette, renommage en masse.

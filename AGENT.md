@@ -32,7 +32,8 @@ Electron 33 + JS natif (aucune lib lourde). Node 24. Windows 10/11.
 
 ```
 npm start                                      lancer
-node --check main.js src/*.js                  syntaxe
+npm test                                       tests auto (node --test : modele, regles, layout)
+npm run check                                  syntaxe (node --check sur tout le JS)
 npm run build                                  NSIS + portable -> dist/
 npm version X.Y.Z --no-git-tag-version         bumper version
 node tools/serve-browser.js [port]             test navigateur : working tree + commits/tags (/w/, /r/<ref>/)
@@ -52,7 +53,7 @@ preload.js        pont isole (contextBridge -> window.elexio, sandbox:true)
 src/
   index.html      4 onglets + panneaux proprietes (1 onglet desactive : implantation)
   styles.css
-  model.js        modele de donnees (arbre d'elements)
+  model.js        modele de donnees (arbre d'elements) + migrations legacy -> v3
   default-schema.js  schema pre-rempli a la creation
   symbols.js      31 symboles + SOCKET_TYPES (10) + SWITCH_TYPES (7)
   symbols/        52 fichiers SVG autonomes (dessins, pas de JS)
@@ -60,8 +61,12 @@ src/
   render.js       rendu SVG + mise en page A4 + cartouche
   rules-be.js     6 regles de validation
   ui.js           onglets, formulaires, interactions
+  platform.js     shim web de window.elexio (hors Electron : CSV/PDF/ouverture)
 tools/serve-browser.js    serveur de test navigateur
+tools/check-syntax.mjs    verificateur de syntaxe (npm run check)
+test/                     tests automatises node:test (model, rules-be, layout)
 .github/workflows/pages.yml  deploiement Pages
+.github/workflows/ci.yml     syntaxe + tests (node --test)
 TESTS.md          cas de test manuels
 ROADMAP.md        etat + decisions
 README.md         notice + tutoriel debutant
@@ -144,8 +149,10 @@ Decisions actees :
 - Unifilaire uniquement : jamais de schema developpe.
 - **Autosave permanent** : le projet courant est serialise dans `localStorage`
   (`elecschema.autosave`) a *chaque* modification (`markDirty`/`restore`/`clearDirty`) et
-  restaure au demarrage (`restoreAutosave()`). Enregistrer (Ctrl+S) ecrit dans le stockage
-  local ; « Exporter » telecharge le `.json` (`.unifilaire.json`).
+  restaure au demarrage (`restoreAutosave()`). En bureau, un **miroir disque** est ecrit
+  en plus (`autosave:write`, debounce 400 ms, `userData/autosave.json`, ecriture atomique)
+  et sert de repli si le `localStorage` est vide (profil efface). Enregistrer (Ctrl+S)
+  ecrit dans le stockage local ; « Exporter » telecharge le `.json` (`.unifilaire.json`).
 - **Prises** : un seul symbole palette `socket` ; la propriete **type de prise**
   (`socketType`, defaut `earth_childproof`) choisit le fichier SVG parmi `SOCKET_TYPES`
   (`symbols.js`). 10 types : generic, waterproof, earth, childproof, earth_childproof,
@@ -193,7 +200,7 @@ Decisions actees :
   - Supprimer un élément posé sur une sortie retire **ce point d'ancrage** (`removeOutput`) : les sorties suivantes remontent d'un cran. Ses enfants acceptés se reposent en fin de barre ; les autres sont supprimés.
   - Accepte `rcd`, `breaker`, `sectionneur` et `fil` (`TABLEAU_OUTPUT_TYPES`, en tête de `canAccept`).
   - Disposition (`computeLayout` dans `render.js`) : routage orthogonal. Chaque enfant part de son port (de préférence dans sa direction, sinon de biais avec pénalité), puis tourne au besoin. Un tracé est refusé s'il touche un élément ou un autre fil (`routeFree`, `segHit`). Les branches rectilignes sont posées avant les détours. Quand un détour est nécessaire, la branche bloquante est décalée (`bias`, `blockerOf`) et tout est recalculé (plafonné à 6 décalages par branche, 30 itérations). Résultat mis en cache (`layoutMemo`).
-  - **Limite connue** : dans les configurations très denses (élément entouré de ses propres enfants sur ses 4 ancrages), le plafond peut laisser un passage forcé. Cas rares, pas de garantie formelle.
+  - **Limite connue** : dans les configurations très denses (élément entouré de ses propres enfants sur ses 4 ancrages), le plafond peut laisser un passage forcé. Cas rares, pas de garantie formelle. Le layout renvoie `bump != null` quand le plafond est atteint ; `layoutForced()` l'expose et `ui.js` (panneau Controles) affiche alors un **avertissement « trace contraint »**.
   - Migration à l'ouverture (`normalizeTypes`) : clé `top` → `top-1`, autres clés renumérotées.
 
 ## Mise en page (render.js)
@@ -292,9 +299,11 @@ Artefacts non signes -> SmartScreen "Editeur inconnu" au 1er lancement. Normal.
 
 ## Secrets
 
-Un token GitHub a ete colle en clair dans la conversation. **A revoquer** sur
-github.com/settings/tokens. Ne jamais remettre de token dans un fichier ni dans
-.git/config en clair.
+Un token GitHub avait ete expose dans une ancienne conversation : il a ete
+**revoque et remplace**. Le nouveau jeton est stocke par Git Credential Manager
+(chiffre, hors du depot et hors de .git/config). Regle : aucun token en clair
+dans un fichier, un commit ou .git/config ; le depot etant public, tout jeton
+expose doit etre considere comme compromis et revoque.
 
 ## Non versionne (.gitignore)
 
@@ -314,7 +323,7 @@ Outils : `node tools/serve-browser.js [port]` (serveur local) ; `capture.js`
 - Ne modifier dans les fichiers que le necessaire. Pas de regroupement de
   fonctions, pas de reecriture "propre" non demandee.
 - **Ne pas recompiler les .exe** sans demande explicite.
-- Faire le **minimum de tests** : `node --check` uniquement. **Ne pas lancer Electron** à chaque prompt (seulement sur demande explicite). Pas de capture d'ecran systematique.
+- Faire le **minimum de tests** : `npm test` (rapide, sans dependance) + `npm run check` si le doute. **Ne pas lancer Electron** à chaque prompt (seulement sur demande explicite). Pas de capture d'ecran systematique.
 - Reponses tres courtes : une phrase si possible.
 - Petites modifications : modifier directement le code sans presenter de plan.
 - Ne pas reformuler la demande ni decrire chaque etape.

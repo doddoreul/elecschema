@@ -109,7 +109,7 @@ npm run build:portable # portable seul
 npm run build:dir       # version décompressée
 ```
 
-Vérification de la syntaxe : `node --check main.js src/*.js`
+Vérification de la syntaxe : `npm run check` — Tests automatiques : `npm test`
 
 ```
 main.js           processus principal (fenêtres, fichiers, export PDF/CSV)
@@ -118,7 +118,7 @@ index.html        redirection vers src/ (GitHub Pages)
 src/
   index.html      onglets + panneaux
   styles.css
-  model.js        modèle de données (arbre d'éléments)
+  model.js        modèle de données (arbre d'éléments) + migrations
   default-schema.js  schéma pré-rempli à la création
   symbols.js      31 symboles RGIE + types de prise/interrupteur + SVG des montages
   symbols/        fichiers SVG autonomes
@@ -126,11 +126,14 @@ src/
   render.js       rendu SVG (grille, mise en page, cartouche)
   rules-be.js     6 règles de validation
   ui.js           onglets, formulaires, interactions
+  platform.js     shim web de window.elexio (version navigateur : CSV/PDF/ouverture)
 tools/serve-browser.js  serveur local de test (navigateur)
+test/             tests automatiques (node:test)
 ```
 
 Le fichier de projet est un **`.json`** (`.unifilaire.json`) : format d'export/import
-propre à Elexio (l'autosave reste dans le stockage local du navigateur/Electron).
+propre à Elexio (l'autosave reste **local** : stockage du navigateur ; en bureau, un
+miroir disque `autosave.json` est écrit en plus dans le dossier de données).
 
 ---
 

@@ -1,7 +1,11 @@
 # TESTS — Elexio
 
 Cas de test **manuels**. À dérouler avant chaque version.
-État : aucun cas automatisé (pas de framework de test installé).
+
+Tests **automatisés** (aucune dépendance) : `npm test` (`node --test`) couvre le
+modèle (migrations legacy → v3), les 6 règles BE et les propriétés de layout ;
+`npm run check` vérifie la syntaxe de tout le JS. CI : `.github/workflows/ci.yml`.
+Les cas ci-dessous restent la référence pour l'UI et le bureau.
 
 App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 

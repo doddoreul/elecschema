@@ -9,10 +9,34 @@ const os = require('node:os');
 let mainWindow = null;
 const MAX_RECENTS = 8;
 
-/** Structure minimale d'un projet Elexio (arbre d'éléments v3, ou legacy circuits). */
+/** Directions d'ancrage valides (standards.js#ANCHOR_DIRECTIONS). */
+const DIRS = ['top', 'bottom', 'left', 'right'];
+
+/** Contrôle d'intégrité de l'arbre v3 : ids uniques, parents/enfants résolus, directions valides. */
+function hasValidTree(p) {
+  if (!p.supply || typeof p.supply.id !== 'number' || !Number.isInteger(p.supply.id)) return false;
+  const ids = new Set([p.supply.id]);
+  for (const e of p.elements || []) {
+    if (!e || typeof e !== 'object' || typeof e.id !== 'number' || !Number.isInteger(e.id)) return false;
+    if (ids.has(e.id)) return false;
+    ids.add(e.id);
+  }
+  for (const e of p.elements || []) {
+    if (typeof e.symbolType !== 'string' || !e.symbolType) return false;
+    if (e.parent != null && !ids.has(e.parent)) return false;
+    if (e.dir != null && !DIRS.includes(e.dir)) return false;
+    if (e.children && typeof e.children === 'object') {
+      for (const v of Object.values(e.children)) if (v != null && !ids.has(v)) return false;
+    }
+  }
+  return true;
+}
+
+/** Structure d'un projet Elexio : arbre d'éléments v3 vérifié, ou ancien format circuits. */
 function isProject(obj) {
-  return !!obj && typeof obj === 'object'
-    && (Array.isArray(obj.elements) || Array.isArray(obj.circuits));
+  if (!obj || typeof obj !== 'object') return false;
+  if (Array.isArray(obj.elements)) return hasValidTree(obj);
+  return Array.isArray(obj.circuits);
 }
 
 /** Fichier des projets récents, dans les données utilisateur de l'app. */
@@ -29,9 +53,21 @@ async function readRecents() {
   }
 }
 
+/** Écriture atomique (fichier temporaire puis renommage) : jamais de fichier corrompu. */
+async function writeFileAtomic(filePath, content) {
+  const tmp = path.join(path.dirname(filePath), `.${path.basename(filePath)}.tmp-${process.pid}-${Date.now()}`);
+  await fs.writeFile(tmp, content);
+  try {
+    await fs.rename(tmp, filePath);
+  } catch (err) {
+    await fs.rm(tmp, { force: true });
+    throw err;
+  }
+}
+
 async function writeRecents(list) {
   await ensureDir(path.dirname(recentsPath()));
-  await fs.writeFile(recentsPath(), JSON.stringify(list.slice(0, MAX_RECENTS), null, 2), 'utf8');
+  await writeFileAtomic(recentsPath(), JSON.stringify(list.slice(0, MAX_RECENTS), null, 2));
 }
 
 async function pushRecent(filePath) {
@@ -113,6 +149,12 @@ ipcMain.handle('project:open', async (event) => {
 ipcMain.handle('recents:list', () => readRecents());
 
 ipcMain.handle('project:openPath', async (event, filePath) => {
+  // Le renderer ne peut rouvrir qu'un fichier deja present dans les recents
+  // (limite l'exposition : pas de lecture de chemin arbitraire).
+  const known = new Set((await readRecents()).map((r) => r.path));
+  if (typeof filePath !== 'string' || !known.has(filePath)) {
+    throw new Error('Chemin refuse : le fichier n’est pas dans les projets récents.');
+  }
   const text = await fs.readFile(filePath, 'utf8');
   const parsed = JSON.parse(text);
   if (!isProject(parsed)) {
@@ -133,7 +175,10 @@ ipcMain.handle('pdf:export', async (event, html, defaultName) => {
   });
   if (canceled || !filePath) return null;
 
-  const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true, contextIsolation: true } });
+  const win = new BrowserWindow({
+    show: false,
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, javascript: false },
+  });
   await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
   const pdf = await win.webContents.printToPDF({
     landscape: true,
@@ -142,7 +187,7 @@ ipcMain.handle('pdf:export', async (event, html, defaultName) => {
     margins: { marginType: 'custom', top: 0, bottom: 0, left: 0, right: 0 },
   });
   win.close();
-  await fs.writeFile(filePath, pdf);
+  await writeFileAtomic(filePath, pdf);
   return filePath;
 });
 
@@ -156,8 +201,30 @@ ipcMain.handle('csv:export', async (event, content, defaultName) => {
     filters: [{ name: 'CSV (séparateur ;)', extensions: ['csv'] }],
   });
   if (canceled || !filePath) return null;
-  await fs.writeFile(filePath, '\uFEFF' + content, 'utf8');
+  await writeFileAtomic(filePath, '\uFEFF' + content);
   return filePath;
+});
+
+/* -------------------------------------------------------------- IPC : autosave */
+// Miroir disque de la sauvegarde locale (localStorage) : protège les données si
+// le profil est effacé. Écriture atomique, lecture tolérante.
+function autosavePath() {
+  return path.join(app.getPath('userData'), 'autosave.json');
+}
+
+ipcMain.handle('autosave:read', async () => {
+  try {
+    return await fs.readFile(autosavePath(), 'utf8');
+  } catch {
+    return null;
+  }
+});
+
+ipcMain.handle('autosave:write', async (event, text) => {
+  if (typeof text !== 'string' || text.length > 10_000_000) throw new Error('Autosave refusé.');
+  await ensureDir(path.dirname(autosavePath()));
+  await writeFileAtomic(autosavePath(), text);
+  return true;
 });
 
 async function ensureProjectsDir() {

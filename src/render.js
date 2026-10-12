@@ -60,7 +60,7 @@ function sizeOf(node, span = tabSpan(node)) {
  *  fil trouve son passage. Les fils ne se croisent jamais. */
 let layoutMemo = { key: null, value: null };
 
-function computeLayout(project) {
+export function computeLayout(project) {
   // le tracé ne dépend que de la structure (pas des repères ni des textes) : cache du dernier calcul
   const key = JSON.stringify([project.supply.id, project.elements.map((e) => [e.id, e.parent, e.dir, e.symbolType, e.orient, e.outputs, e.children, e.cable?.montage])]);
   if (layoutMemo.key === key) return layoutMemo.value;
@@ -236,12 +236,17 @@ function layoutOnce(project, bias) {
   const py = (y) => TOP_PAD + (y - minY) * CH + CH / 2;
   const W = (maxX - minX + 1) * CW + 2 * MARGIN;
   const H = (maxY - minY + 1) * CH + TOP_PAD + BOTTOM_PAD;
-  return { pos, routes, span: spanOf, col: colOf, bump, px, py, W, H };
+  return { pos, routes, span: spanOf, col: colOf, bump, px, py, W, H, rects };
 }
 
 export function sheetSize(project) {
   const L = computeLayout(project);
   return { w: Math.max(560, L.W), h: Math.max(380, L.H) };
+}
+
+/** Vrai si la mise en page a dû forcer un tracé (décalages épuisés) : chevauchements possibles. */
+export function layoutForced(project) {
+  return computeLayout(project).bump != null;
 }
 
 /* ---------------------------------------------------------------------- dessin */

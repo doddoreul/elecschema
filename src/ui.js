@@ -1,12 +1,12 @@
 // Contrôleur d'interface : onglets, informations, palette, arbre d'éléments, BOM.
 // Toute mutation du projet passe par markDirty() + refreshAll() pour rester synchronisé.
 
-import { emptyProject, createElement, syncIdCounter, nodeById, treeOrder, nextId, PREFIXES } from './model.js';
-import { renderSchema, sheetSize, deviceDetail, PAGE } from './render.js';
+import { emptyProject, createElement, syncIdCounter, nodeById, treeOrder, nextId, PREFIXES, migrateProject, normalizeTypes } from './model.js';
+import { renderSchema, sheetSize, deviceDetail, PAGE, layoutForced } from './render.js';
 import { SYMBOLS, SYMBOL_CATEGORIES, symbolName, symbolUrl, SOCKET_TYPES, SWITCH_TYPES, DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
 import { validate, RULES_BE, RULE_SEVERITY } from './rules-be.js';
 import { DEFAULT_SCHEMA } from './default-schema.js';
-import { RATINGS, CURVES, RCD_TYPES, RCD_VALUES, RCD_RATINGS, DEFAULT_ICB, isProtection, anchorKeysOf, baseDir, outputIndex, ANCHOR_DIRECTIONS, SECTIONS, CABLE_TYPES, MOUNT_TYPES, mountName, DEFAULT_CABLE, TABLEAU_OUTPUTS, TABLEAU_OUTPUT_TYPES } from './standards.js';
+import { RATINGS, CURVES, RCD_TYPES, RCD_VALUES, RCD_RATINGS, DEFAULT_ICB, isProtection, anchorKeysOf, baseDir, outputIndex, SECTIONS, CABLE_TYPES, MOUNT_TYPES, mountName, DEFAULT_CABLE, TABLEAU_OUTPUTS, TABLEAU_OUTPUT_TYPES } from './standards.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -103,11 +103,21 @@ const AUTOSAVE_KEY = 'elecschema.autosave';
 const TAB_KEY = 'elecschema.tab';   // onglet actif, conservé au refresh
 
 /** Persiste projet + fichier courant dans le localStorage (ne rien perdre au reload). */
+let autosaveFileTimer = null;
+
 function persistSnapshot() {
+  const rec = JSON.stringify({ project, file: currentFile });
   try {
-    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ project, file: currentFile }));
+    localStorage.setItem(AUTOSAVE_KEY, rec);
   } catch (err) {
-    console.warn('Autosave impossible :', err);
+    console.warn('Autosave local impossible :', err);
+  }
+  // Miroir disque (bureau) : debounce 400 ms, jamais bloquant ; ignoré en navigateur.
+  if (typeof window.elexio?.autosaveWrite === 'function') {
+    clearTimeout(autosaveFileTimer);
+    autosaveFileTimer = setTimeout(() => {
+      window.elexio.autosaveWrite(rec).catch((err) => console.warn('Autosave disque impossible :', err));
+    }, 400);
   }
 }
 
@@ -135,6 +145,22 @@ function restoreAutosave() {
   seed.info.projet.dateModification = today;
   loadProject(seed, null);
   status('Première ouverture : schéma par défaut chargé.');
+  // Repli : si le localStorage est vide mais qu'un autosave disque existe (profil
+  // effacé), on restaure l'état fichier — plus récent que le schéma par défaut.
+  if (typeof window.elexio?.autosaveRead === 'function') {
+    window.elexio.autosaveRead().then((rawFile) => {
+      if (!rawFile) return;
+      try {
+        const rec = JSON.parse(rawFile);
+        if (rec && rec.project && rec.project.supply && Array.isArray(rec.project.elements)) {
+          loadProject(rec.project, rec.file || null);
+          status('Restauration du dernier état (sauvegarde disque).');
+        }
+      } catch (err) {
+        console.warn('Autosave disque illisible, ignoré :', err);
+      }
+    }).catch((err) => console.warn('Lecture autosave disque impossible :', err));
+  }
 }
 
 /* ------------------------------------------------------------------ onglets */
@@ -655,7 +681,13 @@ $('#btn-bom-csv').addEventListener('click', async () => {
 function buildBomCsv() {
   const head = ['Repère', 'Emplacement', 'Symbole', 'Caractéristique', 'Type'];
   const lines = [head.join(';')];
-  const q = (s) => '"' + String(s ?? '').replace(/"/g, '""') + '"';
+  // Anti-injection de formule : une cellule débutant par = + - @ est neutralisée
+  // par une apostrophe (Excel / Calc la traitent alors comme du texte).
+  const q = (s) => {
+    let v = String(s ?? '');
+    if (/^[=+\-@]/.test(v)) v = "'" + v;
+    return '"' + v.replace(/"/g, '""') + '"';
+  };
   for (const node of treeOrder(project)) {
     const parent = nodeOf(node.parent);
     const parentLabel = node.symbolType === 'compteur' ? '—'
@@ -678,14 +710,21 @@ function renderIssues() {
   const issues = validate(project);
   if ((project.elements || []).length === 0) { host.hidden = true; host.innerHTML = ''; return; }
   const errs = issues.filter((i) => i.rule.severity === RULE_SEVERITY.ERROR);
-  if (issues.length === 0) {
+  const forced = layoutForced(project);   // plafond de mise en page atteint (tracé contraint)
+  if (issues.length === 0 && !forced) {
     host.hidden = false;
     host.innerHTML = `<span class="ok">✔ Aucune anomalie détectée (${RULES_BE.length} règles).</span>`;
     return;
   }
   host.hidden = false;
+  const warnings = issues.length - errs.length + (forced ? 1 : 0);
+  const forcedLi = forced
+    ? '<li class="warn"><span class="sev">avertissement</span>'
+      + '<span>Tracé contraint : la mise en page a atteint son plafond, certains symboles peuvent se chevaucher.'
+      + '<span class="src">Mise en page</span></span></li>'
+    : '';
   host.innerHTML =
-    `<div class="head">${errs.length} erreur(s) · ${issues.length - errs.length} avertissement(s)</div><ul>` +
+    `<div class="head">${errs.length} erreur(s) · ${warnings} avertissement(s)</div><ul>${forcedLi}` +
     issues.map((i, n) =>
       `<li class="${i.rule.severity === 'erreur' ? 'err' : 'warn'}" data-issue="${n}">` +
       `<span class="sev">${i.rule.severity}</span>` +
@@ -793,111 +832,6 @@ $('#recent-select').addEventListener('change', async (e) => {
     e.target.value = '';
   }
 });
-
-/** Convertit un ancien projet (circuits + différentiels) vers l'arbre d'éléments. */
-function migrateProject(p) {
-  if (Array.isArray(p.elements) && (p.schemaVersion || 0) >= 3) { delete p.circuits; delete p.difs; return; }
-  const els = [];
-  p.supply = p.supply || {};
-  p.supply.symbolType = p.supply.symbolType || 'compteur';
-  p.supply.children = { right: null };
-
-  const mk = (type, parentId, dir) => {
-    const e = { id: nextId(), symbolType: type, parent: parentId, dir, label: '', labelLocked: false, detail: '', children: {} };
-    if (isProtection(type)) e.params = type === 'rcd' ? { rating: 40, diff: 30, type: 'AC' } : { rating: null, curve: 'C', icb: DEFAULT_ICB };
-    if (type === 'socket') e.count = 1;
-    return e;
-  };
-  const addEl = (type, parent, dir) => { const e = mk(type, parent.id, dir); parent.children[dir] = e.id; els.push(e); return e; };
-
-  // Différentiels : chaînés depuis le compteur.
-  let parent = p.supply;
-  for (const d of p.difs || []) {
-    const dir = parent === p.supply ? 'right' : (ANCHOR_DIRECTIONS.find((x) => parent.children[x] == null) || 'right');
-    const e = addEl('rcd', parent, dir);
-    e.label = d.label || '';
-    e.params = d.params || { rating: 40, diff: 30, type: 'AC' };
-    parent = e;
-  }
-
-  // Circuits : composants accrochés en série de nodes (3 emplacements + chaînage).
-  let hub = addEl('node', p.supply, 'right');
-  let slots = ['top', 'bottom', 'left'];
-  let si = 0;
-  const attach = (type, label, params, count) => {
-    if (si >= slots.length) { hub = addEl('node', hub, 'right'); slots = ['top', 'bottom', 'left']; si = 0; }
-    const dir = slots[si++];
-    const e = addEl(type, hub, dir);
-    e.label = label || '';
-    if (params) e.params = params;
-    if (count) e.count = count;
-  };
-  for (const c of p.circuits || []) {
-    for (const comp of c.components || []) attach(comp.symbolType, comp.label, comp.params, comp.count);
-  }
-
-  p.elements = els;
-  p.schemaVersion = 3;
-  delete p.circuits;
-  delete p.difs;
-}
-
-const LEGACY_SOCKETS = { socket: 'generic', socket_earth: 'earth', socket_switch: 'switch', socket_waterproof: 'waterproof' };
-const LEGACY_SWITCHES = { switch_2way: 'two_way' };
-const LEGACY_SYMBOLS = { carrefour: 'node' };
-
-/** Ramène les anciens types éclatés (prises, interrupteurs) vers le type unique + sa propriété de type. */
-function normalizeTypes(p) {
-  for (const e of p.elements || []) {
-    if (!e || !e.symbolType) continue;
-    if (Object.prototype.hasOwnProperty.call(LEGACY_SYMBOLS, e.symbolType)) {
-      e.symbolType = LEGACY_SYMBOLS[e.symbolType];
-    }
-    if (Object.prototype.hasOwnProperty.call(LEGACY_SOCKETS, e.symbolType)) {
-      e.socketType = e.socketType || LEGACY_SOCKETS[e.symbolType];
-      e.symbolType = 'socket';
-    }
-    if (Object.prototype.hasOwnProperty.call(LEGACY_SWITCHES, e.symbolType)) {
-      e.switchType = e.switchType || LEGACY_SWITCHES[e.symbolType];
-      e.symbolType = 'switch';
-    }
-    if (e.symbolType === 'socket') {
-      if (!e.socketType) e.socketType = DEFAULT_SOCKET_TYPE;
-      if (!e.count) e.count = 1;
-      // plus de repère auto sur les prises : on ne garde que les repères saisis
-      if (/^X\d+$/.test(e.label || '')) e.label = '';
-    }
-    if (e.symbolType === 'switch' && !e.switchType) e.switchType = DEFAULT_SWITCH_TYPE;
-    // Un node n'a aucune propriété : on nettoie les anciens champs hérités.
-    if (e.symbolType === 'node') {
-      e.label = ''; e.labelLocked = false; e.detail = '';
-      delete e.labelPos; delete e.showLabel; delete e.poles;
-    }
-    // Tableau : sorties nommées top-1, top-2… ; anciens ancrages (top, right…) convertis.
-    if (e.symbolType === 'tableau') {
-      e.orient = 0;
-      const kids = Object.entries(e.children || {}).filter(([, v]) => v != null);
-      e.children = {};
-      const taken = new Set();
-      const pending = [];
-      for (const [key, cid] of kids) {
-        if (key === 'bottom') { e.children.bottom = cid; continue; }
-        if (/^top(-\d+)?$/.test(key) && !taken.has(outputIndex(key))) { taken.add(outputIndex(key)); e.children['top-' + (outputIndex(key) + 1)] = cid; }
-        else pending.push(cid);
-      }
-      let i = 0;
-      for (const cid of pending) {
-        while (taken.has(i)) i++;
-        taken.add(i); e.children['top-' + (i + 1)] = cid;
-      }
-      e.outputs = Math.max(e.outputs || TABLEAU_OUTPUTS, Math.max(-1, ...taken) + 2);
-      for (const [key, cid] of Object.entries(e.children)) {
-        const k = (p.elements || []).find((x) => x && x.id === cid);
-        if (k) { k.parent = e.id; k.dir = key; }
-      }
-    }
-  }
-}
 
 function loadProject(data, filePath) {
   const base = emptyProject();

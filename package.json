@@ -9,6 +9,8 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"test/*.test.js\"",
+    "check": "node tools/check-syntax.mjs",
     "build": "electron-builder --win --x64",
     "build:portable": "electron-builder --win portable --x64",
     "build:dir": "electron-builder --win --x64 --dir"

@@ -2,7 +2,9 @@
 // Usage : node tools/serve-browser.js [port]   (defaut 8080)
 //   /w/<fichier>            copie de travail (src/)
 //   /r/<ref>/<fichier>      src/ tel qu'il etait a un commit ou un tag git
-// Hors Electron, window.elexio est remplace par un shim (telechargements, input file).
+// Le shim web de window.elexio vit desormais dans src/platform.js (embarque dans
+// la page). __shim.js (serveur) n'est plus injecte que pour les anciennes versions
+// de l'historique, qui n'avaient pas encore platform.js.
 // Limite : les .exe ne tournent pas dans un navigateur.
 
 const http = require('node:http');
@@ -73,7 +75,12 @@ http.createServer((req, res) => {
     let body = readFile(ref, rel);
     const type = MIME[path.extname(rel)] || 'application/octet-stream';
     if (rel === 'index.html') {
-      body = body.toString('utf8').replace('<script src="ui.js"', '<script src="__shim.js"></script>\n  <script src="ui.js"');
+      const html = body.toString('utf8');
+      // La version courante embarque platform.js : rien a injecter.
+      // Anciennes versions (sans platform.js) : on injecte le shim serveur.
+      if (!html.includes('platform.js')) {
+        body = html.replace('<script src="ui.js"', '<script src="__shim.js"></script>\n  <script src="ui.js"');
+      }
     }
     res.writeHead(200, { 'Content-Type': type });
     res.end(body);
