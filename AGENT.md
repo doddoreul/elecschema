@@ -9,8 +9,8 @@ Elexio (ex-ElecSchema) - editeur de schemas unifilaires pour installations elect
 Norme visee : RGIE / AREI (symboles tableau 2.23). Mono **et** triphase.
 **100% local** : pas de cloud, pas de licence, pas de telemetrie.
 Usage personnel.
-Depot : `doddoreul/elecschema` (public). Version navigateur : GitHub Pages
-(`.github/workflows/pages.yml`, source `src/`).
+Depot : `doddoreul/elexio` (public). Version navigateur : GitHub Pages
+(<https://doddoreul.github.io/elexio/>, `.github/workflows/pages.yml`, source `src/`).
 
 ### Nomenclature (domaine)
 
@@ -286,8 +286,8 @@ Artefacts non signes -> SmartScreen "Editeur inconnu" au 1er lancement. Normal.
 - **Refonte ancrages** : modele en arbre d'elements + points d'ancrage ; nodes ;
   compteur en bas a gauche. Remplace circuits/difs. Legacy migre a l'ouverture.
 - Nom : **Elexio** (ex-ElecSchema). Version 0.3.0.
-- Depot : https://github.com/doddoreul/elecschema (public). Pages :
-  https://doddoreul.github.io/elecschema/
+- Depot : https://github.com/doddoreul/elexio (public). Pages :
+  https://doddoreul.github.io/elexio/
 - Credential GitHub stocke via Git Credential Manager (chiffre, pas dans .git/config).
 
 ## Secrets

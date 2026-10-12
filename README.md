@@ -18,7 +18,7 @@
 
 **Version bureau (Windows)** : `npm install` puis `npm start`.
 
-**Version navigateur** : ouvrir <https://doddoreul.github.io/elecschema/> — rien à installer.
+**Version navigateur** : ouvrir <https://doddoreul.github.io/elexio/> — rien à installer.
 
 ### Créer un schéma en 5 minutes
 

@@ -131,4 +131,3 @@ installeur NSIS + executable portable. Dossier projet : `Documents\Elexio`
 - Icone et metadonnees de version signees.
 - Tests automatises (Vitest sur modele/regles, Playwright sur l'UI).
 - Recherche dans la palette, renommage en masse.
-- Renommage du depot GitHub `elecschema` -> `elexio` (Settings, cote web).
