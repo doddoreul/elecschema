@@ -1,13 +1,6 @@
 // Constantes normalisées — installations domestiques belges (RGIE / AREI).
 // Valeurs usuelles du marché. `verified: false` = non confronté au texte officiel.
 
-/** Types de circuits domestiques reconnus. */
-export const CIRCUIT_TYPES = {
-  eclairage: { name: 'Éclairage' },
-  prise: { name: 'Prises de courant' },
-  mixte: { name: 'Mixte' },
-};
-
 /** Sections normalisées (mm²). Non utilisées comme propriété en V1 :
  *  conservées pour référence et pour les futures annotations de câble. */
 export const SECTIONS = [0.75, 1, 1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70];
@@ -27,7 +20,7 @@ export const RCD_RATINGS = [25, 40, 63];
 export const RCD_TYPES = ['AC', 'A', 'F', 'Hpi'];
 
 /** Symboles considérés comme des protections (portent calibre / sensibilité). */
-export const PROTECTION_SYMBOLS = ['breaker', 'rcd', 'fuse'];
+const PROTECTION_SYMBOLS = ['breaker', 'rcd', 'fuse'];
 
 /** Un symbole de protection ? */
 export function isProtection(symbolType) {
@@ -36,11 +29,6 @@ export function isProtection(symbolType) {
 
 /** Directions cardinales des points d'ancrage. */
 export const ANCHOR_DIRECTIONS = ['right', 'top', 'left', 'bottom'];
-
-/** Points d'ancrage d'un type d'élément : tous les éléments ont leurs 4 directions. */
-export function anchorsOf() {
-  return ANCHOR_DIRECTIONS;
-}
 
 /** Tableau : une entrée (ancrage à gauche, occupée par le parent), des sorties en haut.
  *  Chaque sortie occupée ouvre une sortie vierge : le tableau s'élargit. */

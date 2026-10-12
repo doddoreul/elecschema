@@ -18,7 +18,7 @@
 
 **Version bureau (Windows)** : `npm install` puis `npm start`.
 
-**Version navigateur** : ouvrir la page GitHub Pages du dépôt — rien à installer.
+**Version navigateur** : ouvrir <https://doddoreul.github.io/elecschema/> — rien à installer.
 
 ### Créer un schéma en 5 minutes
 
@@ -71,7 +71,7 @@
 - Zoom / panoramique, sélection multiple, annuler-rétablir (150 pas)
 
 **Symboles**
-- **31 symboles** RGIE en 7 familles (tableaux, protections, interrupteurs, prises,
+- **31 symboles** RGIE en 8 familles (tableaux, protections, interrupteurs, prises,
   éclairage, appareils, sources, câbles)
 - Prises : 10 types (générique, étanche, terre, enfant, interrupteur, **double**, **triple**…)
 - Interrupteurs : 7 types (simple, bi/tripolaire, double, va-et-vient, inverseur)
@@ -113,7 +113,8 @@ Vérification de la syntaxe : `node --check main.js src/*.js`
 
 ```
 main.js           processus principal (fenêtres, fichiers, export PDF/CSV)
-preload.js        pont isolé rendu <-> principal
+preload.js        pont isolé rendu <-> principal (window.elexio)
+index.html        redirection vers src/ (GitHub Pages)
 src/
   index.html      onglets + panneaux
   styles.css
@@ -125,10 +126,11 @@ src/
   render.js       rendu SVG (grille, mise en page, cartouche)
   rules-be.js     6 règles de validation
   ui.js           onglets, formulaires, interactions
+tools/serve-browser.js  serveur local de test (navigateur)
 ```
 
-Le fichier de projet est un **`.json`** (`.unifilaire.json`), le format d'export
-(défaut des outils Trikker).
+Le fichier de projet est un **`.json`** (`.unifilaire.json`) : format d'export/import
+propre à Elexio (l'autosave reste dans le stockage local du navigateur/Electron).
 
 ---
 

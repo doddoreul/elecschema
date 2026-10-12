@@ -4,10 +4,13 @@ Fichier de reprise. A lire en premier apres un changement de contexte.
 
 ## Le projet
 
-Elexio - editeur de schemas unifilaires pour installations electriques **domestiques** belges.
+Elexio (ex-ElecSchema) - editeur de schemas unifilaires pour installations electriques
+**domestiques** belges.
 Norme visee : RGIE / AREI (symboles tableau 2.23). Mono **et** triphase.
 **100% local** : pas de cloud, pas de licence, pas de telemetrie.
-Usage personnel, pas de distribution.
+Usage personnel.
+Depot : `doddoreul/elecschema` (public). Version navigateur : GitHub Pages
+(`.github/workflows/pages.yml`, source `src/`).
 
 ### Nomenclature (domaine)
 
@@ -43,21 +46,25 @@ node_modules\electron\dist\electron.exe . --enable-logging=stderr > rc.out 2>&1
 ## Structure
 
 ```
-main.js           processus principal : fenetres, fichiers, PDF, CSV, recents
-preload.js        pont isole (contextBridge, sandbox:true)
+index.html        redirection (Pages) vers src/
+main.js           processus principal : fenetres, ouverture, PDF, CSV, recents
+preload.js        pont isole (contextBridge -> window.elexio, sandbox:true)
 src/
-  index.html      4 onglets + panneaux proprietes
+  index.html      4 onglets + panneaux proprietes (1 onglet desactive : implantation)
   styles.css
-  model.js        modele de donnees
-  symbols.js      metadonnees (27 RGIE + fil + node) + SOCKET_TYPES + SWITCH_TYPES
-  symbols/        44 fichiers SVG autonomes (un par symbole) <-- dessins, pas de JS
-  standards.js    valeurs normalisees (calibres, sections, delta, courbes)
-  render.js       rendu SVG  <-- coeur de la mise en page
+  model.js        modele de donnees (arbre d'elements)
+  default-schema.js  schema pre-rempli a la creation
+  symbols.js      31 symboles + SOCKET_TYPES (10) + SWITCH_TYPES (7)
+  symbols/        52 fichiers SVG autonomes (dessins, pas de JS)
+  standards.js    valeurs normalisees (calibres, sections, delta, courbes, pages A4)
+  render.js       rendu SVG + mise en page A4 + cartouche
   rules-be.js     6 regles de validation
   ui.js           onglets, formulaires, interactions
+tools/serve-browser.js    serveur de test navigateur
+.github/workflows/pages.yml  deploiement Pages
 TESTS.md          cas de test manuels
 ROADMAP.md        etat + decisions
-README.md         notice
+README.md         notice + tutoriel debutant
 ```
 
 ## Modele
@@ -84,8 +91,9 @@ Decisions actees :
 - **Canvas epure** : titre, sous-titre chantier et pied de page ne sont plus dessines
   dans le SVG (voir le bandeau `#sheet-meta` / `refreshTitleBlock` et le PDF).
   Marges reduites : `TOP_PAD = 18`, `BOTTOM_PAD = 18`.
-- Points d'ancrage (`standards.js#anchorsOf`) : **tous les éléments ont leurs 4 directions**
-  (right, top, left, bottom) — y compris le compteur. Plus aucune restriction par type.
+- Points d'ancrage : **tous les elements ont leurs 4 directions** (right, top, left,
+  bottom) — sauf le **compteur** (droite uniquement) et le **tableau** (entree a gauche,
+  sorties `top-n` + `bottom`). Voir `anchorKeysOf` / `freeAnchorDirs`.
 - Un point d'ancrage ne recoit **qu'un seul** element.
 - **Orientation initiale selon l'ancrage** (ANCHOR_ORIENT / orientForDir) : right = 90° (droite), top = 0° (haut), bottom = 180° (bas), left = -90° (gauche). Les symboles sont dessinés « conducteurs verticaux » : ils pivotent d'un quart de tour sur une liaison horizontale. Reste modifiable dans les propriétés.
 - **Un element (hors node) qui a deja un enfant n'accepte plus aucun ajout** :
@@ -114,13 +122,10 @@ Decisions actees :
   Clic sur un « + » d'ancrage -> **menu contextuel** `#anchor-menu` (position fixe au point
   clique) listant les favoris + champ de recherche sur tous les symboles (`renderAnchorMenuList`) ; les symboles impossibles ici restent affichés grisés (`.nope`) ; choix -> ajout direct sur cet ancrage.
   Fermeture : clic externe, `Echap`, ou apres ajout.
-- **Ajouts en chaîne** : un ajout depuis la palette s'accroche a l'element **selectionne**;
-  a defaut, au **dernier element ajoute** (`lastAddId`), et toujours dans la **meme direction**
-  que l'ajout precedent (`lastAddDir`, mis en tête par `dirsWithLast`). Ex. : node pose en haut
-  d'un node -> le node suivant part en haut du precedent, puis une prise en haut de celui-ci.
-  Un clic explicite sur un point d'ancrage (`pendingAnchor`) reste prioritaire et devient
-  la nouvelle direction de référence. Si l'element courant est sature, on repart du dernier
-  ajoute. `insertNode` met aussi a jour `lastAddDir` / `lastAddId`.
+- **Ajout depuis la palette** : cliquer un symbole l'**arme** (`armedSymbol`) ; chaque clic
+  sur un « + » d'ancrage pose une copie et le symbole reste arme (re-clic ou Echap = desarmer).
+  Un clic sur un « + » orange sans symbole arme ouvre le **menu contextuel** (`pendingAnchor`).
+  `insertNode` insere un element (node compris) entre deux elements de la ligne.
 - **Sectionneur (coupe à vide)** : symbole `sectionneur` (categorie « Protection », prefixe Q),
   nouveau fichier `symbols/sectionneur.svg`. **Hors règles de composition** : il peut être posé
   sur n'importe quel parent et recevoir n'importe quel type (`canAccept`).
@@ -139,11 +144,13 @@ Decisions actees :
 - Unifilaire uniquement : jamais de schema developpe.
 - **Autosave permanent** : le projet courant est serialise dans `localStorage`
   (`elecschema.autosave`) a *chaque* modification (`markDirty`/`restore`/`clearDirty`) et
-  restaure au demarrage (`restoreAutosave()`). Le fichier .jle reste le format d'export.
+  restaure au demarrage (`restoreAutosave()`). Enregistrer (Ctrl+S) ecrit dans le stockage
+  local ; « Exporter » telecharge le `.json` (`.unifilaire.json`).
 - **Prises** : un seul symbole palette `socket` ; la propriete **type de prise**
   (`socketType`, defaut `earth_childproof`) choisit le fichier SVG parmi `SOCKET_TYPES`
-  (`symbols.js`). 8 types : generic, waterproof, earth, childproof, earth_childproof,
-  switch, switch_lock, transformer. Rendu : `socketUrl(node.socketType)`.
+  (`symbols.js`). 10 types : generic, waterproof, earth, childproof, earth_childproof,
+  earth_childproof_double, earth_childproof_triple, switch, switch_lock, transformer.
+  Rendu : `socketUrl(node.socketType)`.
   `normalizeSockets()` convertit les anciens types eclates (socket_earth, ...) a l'ouverture.
 - **Interrupteurs** : un seul symbole palette `switch` ; la propriete **type d'interrupteur**
   (`switchType`, defaut `simple`) choisit le fichier SVG parmi `SWITCH_TYPES` (`symbols.js`).
@@ -160,7 +167,6 @@ Decisions actees :
 - **Dessin du fil selon le montage** : `FIL_MOUNT_FILES` (`symbols.js`) mappe
   `node.cable.montage` -> fichier SVG (`filUrl(node)`, repli `fil.svg`) :
   apparent, apparent_conduit, encastre, encastre_conduit, enterree, aerienne.
-  `fil_3conducteurs.svg` est pour l'instant **non assigné** (voir liste des SVG fil).
 
 - **Tableau / sous-tableau** : nouveau symbole `tableau` (« Tableau (barre) », catégorie
   « Tableaux », préfixe `TB`), fichier `symbols/tableau.svg` (64 x 24, barre de 5 pt).
@@ -171,7 +177,7 @@ Decisions actees :
   - repaire **toujours affiché** (`showLabel = true` dans `createElement`) ;
   - reçoit circuits (disjoncteurs), circuits sous différentiel, sectionneurs, fils, nodes…
   **Étape suivante** : départs numérotés sur la barre (`top-1..n`, `bottom-1..n`) via
-  `anchorsOf('tableau')` + extension de `children` (clés composites) et du layout.
+  `anchorKeysOf('tableau')` + extension de `children` (clés composites) et du layout.
 
 - **Propriétés à l'ajout** (`PROMPTS`, `askProps`, `promptFor`, dialogue `#prop-dialog`) : disjoncteur (calibre 16 A, courbe C, pôles 2P), différentiel (sensibilité 30 mA, intensité 63 A, type AC, pôles 2P), prise (type terre + enfant), interrupteur (simple). Chaque invite a aussi le champ **Repère** (texte, vide = automatique) ; un repère saisi est verrouillé (`applyProps`). Annuler = rien n'est posé. Appliqué par `addWithProps` (ancrage, dépôt, menu, symbole armé) et `insertNode` (entre éléments).
 - **Mode « Trikker-like »** (branche `like-trikker`) :
@@ -179,7 +185,7 @@ Decisions actees :
   - « + » gris entre deux éléments : ouvre le **menu contextuel en mode « intercaler »** (`openAnchorMenu(..., 'insert')`, `placeable`, `insertWithProps`). Aucun type par défaut : l'utilisateur choisit (node compris). Le menu n'affiche grisés que les types impossibles sur le parent ou devant l'enfant existant. L'enfant suit dans la ligne.
   - **Circuits** (`renumberCircuits`, appelé dans `refreshAll`) : disjoncteur/fusible sous tableau, différentiel, compteur ou node = début de circuit → lettre A, B… Z, AA, AB (`letterOf`). Symboles du circuit → `lettre + n` (1, 2…). Fil, node, tableau et sectionneur sans repère auto. Un repère saisi à la main verrouille l'élément (`labelLocked`) et lui conserve son nom.
   - Le repère d'un début de circuit s'affiche par défaut (`showLabel`).
-  - Le clic sur un « + » sans symbole armé garde le menu contextuel et le mode chaîné (`resolveTarget`, bouton « + Node »).
+  - Le clic sur un « + » sans symbole armé ouvre le menu contextuel (bouton « + Node » pour intercaler un node).
 - **Tableau** (`tableau`) :
   - Une entrée à **gauche** (occupée par le parent, le conducteur arrive au bout de la barre), des **sorties en haut** : clés `top-1`, `top-2`… (`anchorKeysOf`, `baseDir`, `outputIndex` dans `standards.js`).
   - `node.outputs` = nombre de sorties, **toujours une sortie vierge après la dernière occupée** (minimum 2) : recalculé à chaque rafraîchissement (`syncOutputs`, appelée dans `refreshAll`). La barre s'élargit à l'ajout et se réduit à la suppression (`tabSpan`).
@@ -269,15 +275,19 @@ chaque fois dans un nouveau dossier.
 
 Artefacts non signes -> SmartScreen "Editeur inconnu" au 1er lancement. Normal.
 
-## Etat actuel (9-10 oct. 2026)
+## Etat actuel (oct. 2026)
 
-- Etapes 1 a 6 et 8 a 9 livrees. **Etape 7 (PDF) en stand-by** : le handler
-  `pdf:export` et `buildPrintHtml()` existent encore, reactivable en recablant un bouton.
-- **Refonte ancrages** (9-10 oct.) : modele en arbre d'elements + points d'ancrage ;
-  nodes ; compteur en bas a gauche. Remplace circuits/difs. Legacy migre a l'ouverture.
-  Non committe.
-- Version 0.2.0. 2 commits sur `main`.
-- Depot : https://github.com/doddoreul/elecschema (**prive**)
+- Etapes 1-6 et 8-9 livrees. **Etape 7 (PDF) livree** : `buildPrintHtml()` +
+  handler `pdf:export`. Dossier : cartouche general, schema (une page A4 par page de
+  mise en page), liste des circuits, liste du materiel. En navigateur, `window.print()`.
+- **Mise en page multi-pages** : cadres A4 paysage cote a cote, cartouche sur chaque
+  page, zoom + liste des pages dans le panneau de droite, deplacement du dessin entier,
+  panoramique a la barre d'espace (curseur main).
+- **Refonte ancrages** : modele en arbre d'elements + points d'ancrage ; nodes ;
+  compteur en bas a gauche. Remplace circuits/difs. Legacy migre a l'ouverture.
+- Nom : **Elexio** (ex-ElecSchema). Version 0.3.0.
+- Depot : https://github.com/doddoreul/elecschema (public). Pages :
+  https://doddoreul.github.io/elecschema/
 - Credential GitHub stocke via Git Credential Manager (chiffre, pas dans .git/config).
 
 ## Secrets
@@ -288,14 +298,15 @@ github.com/settings/tokens. Ne jamais remettre de token dans un fichier ni dans
 
 ## Non versionne (.gitignore)
 
-`node_modules/`, `dist/`, `capture.js`, `capture.png`, `serve-test.js`,
-`test-render.html` (outils de verification visuelle, restent sur le disque).
+`node_modules/`, `dist/`, `*.log`, `capture.js`, `capture.png`, `test-render.html`
+(outils de verification visuelle, restent sur le disque).
 
 ## Verification visuelle
 
 Le screenshot navigateur exige une fenetre visible (absente de cet environnement).
-Workaround : `serve-test.js` (serveur 8791) + `capture.js` (Electron capturePage).
-Mais la verite vient de la mesure DOM via `getBBox()`, pas de l'image.
+Outils : `node tools/serve-browser.js [port]` (serveur local) ; `capture.js`
+(Electron capturePage, non versionne). Mais la verite vient de la mesure DOM via
+`getBBox()`, pas de l'image.
 
 ## Consignes de travail
 

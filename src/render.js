@@ -60,7 +60,7 @@ function sizeOf(node, span = tabSpan(node)) {
  *  fil trouve son passage. Les fils ne se croisent jamais. */
 let layoutMemo = { key: null, value: null };
 
-export function computeLayout(project) {
+function computeLayout(project) {
   // le tracé ne dépend que de la structure (pas des repères ni des textes) : cache du dernier calcul
   const key = JSON.stringify([project.supply.id, project.elements.map((e) => [e.id, e.parent, e.dir, e.symbolType, e.orient, e.outputs, e.children, e.cable?.montage])]);
   if (layoutMemo.key === key) return layoutMemo.value;

@@ -83,27 +83,6 @@ function createWindow() {
 
 /* --------------------------------------------------------------- IPC : fichier */
 
-ipcMain.handle('project:save', async (event, data) => {
-  const dir = await ensureProjectsDir();
-  const stamp = new Date().toISOString().slice(0, 10);
-  const base = [data.info?.chantier?.denomination, data.info?.chantier?.localite, 'v' + data.info?.projet?.version]
-    .filter(Boolean).join('-').replace(/[^\w\-. À-ÿ]+/g, '_') || 'schema';
-
-  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
-    title: 'Enregistrer le projet',
-    defaultPath: path.join(dir, `${base}-${stamp}.unifilaire.json`),
-    filters: [
-      { name: 'Projet Elexio', extensions: ['unifilaire.json', 'json'] },
-      { name: 'Tous les fichiers', extensions: ['*'] },
-    ],
-  });
-  if (canceled || !filePath) return null;
-
-  await ensureDir(path.dirname(filePath));
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
-  return filePath;
-});
-
 ipcMain.handle('project:open', async (event) => {
   const dir = await ensureProjectsDir();
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
@@ -131,11 +110,7 @@ ipcMain.handle('project:open', async (event) => {
   }
 });
 
-ipcMain.handle('project:lastOpened', () => true);
-
 ipcMain.handle('recents:list', () => readRecents());
-
-ipcMain.handle('recents:add', (event, filePath) => pushRecent(filePath));
 
 ipcMain.handle('project:openPath', async (event, filePath) => {
   const text = await fs.readFile(filePath, 'utf8');

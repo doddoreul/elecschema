@@ -17,9 +17,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 const SHIM = `(() => {
   const save = (name, text, type) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); };
   window.elexio = {
-    async save(data) { save((data.info?.chantier?.denomination || 'projet') + '.unifilaire.json', JSON.stringify(data, null, 2), 'application/json'); return 'telecharge'; },
     open() { return new Promise((res) => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json'; i.onchange = async () => { const f = i.files[0]; if (!f) return res(null); res({ filePath: f.name, data: JSON.parse(await f.text()) }); }; i.click(); }); },
-    lastOpened: async () => null,
     recents: async () => [],
     openPath: async () => { throw new Error('hors Electron'); },
     exportPdf: async (html) => { const w = window.open('', '_blank'); w.document.write(html); w.document.close(); w.print(); return 'impression'; },

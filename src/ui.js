@@ -6,7 +6,7 @@ import { renderSchema, sheetSize, deviceDetail, PAGE } from './render.js';
 import { SYMBOLS, SYMBOL_CATEGORIES, symbolName, symbolUrl, SOCKET_TYPES, SWITCH_TYPES, DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
 import { validate, RULES_BE, RULE_SEVERITY } from './rules-be.js';
 import { DEFAULT_SCHEMA } from './default-schema.js';
-import { RATINGS, CURVES, RCD_TYPES, RCD_VALUES, RCD_RATINGS, DEFAULT_ICB, isProtection, anchorsOf, anchorKeysOf, baseDir, outputIndex, ANCHOR_DIRECTIONS, SECTIONS, CABLE_TYPES, MOUNT_TYPES, mountName, DEFAULT_CABLE, TABLEAU_OUTPUTS, TABLEAU_OUTPUT_TYPES } from './standards.js';
+import { RATINGS, CURVES, RCD_TYPES, RCD_VALUES, RCD_RATINGS, DEFAULT_ICB, isProtection, anchorKeysOf, baseDir, outputIndex, ANCHOR_DIRECTIONS, SECTIONS, CABLE_TYPES, MOUNT_TYPES, mountName, DEFAULT_CABLE, TABLEAU_OUTPUTS, TABLEAU_OUTPUT_TYPES } from './standards.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -18,8 +18,6 @@ let dirty = false;
 let selectedIds = new Set();  // sélection multiple (Maj + clic)
 let selectedId = null;       // id d'élément (ou du compteur)
 let pendingAnchor = null;    // { parentId, dir } en attente de symbole
-let lastAddDir = null;       // direction du dernier ajout (les suivants suivent)
-let lastAddId = null;        // id du dernier élément ajouté (tête de la chaîne)
 let armedSymbol = null;      // symbole choisi dans la bibliothèque, posé sur chaque « + » cliqué
 let dragActive = false;      // glisser-déposer depuis la palette en cours
 let printPreview = false;    // mode mise en page (cadres A4 + panneau de mise en page)
@@ -275,35 +273,6 @@ function nextGlobalLabel(symbolType) {
   return prefix + (max + 1);
 }
 
-/** Met dans l'ordre préféré : la direction du dernier ajout d'abord.
- *  Ainsi des ajouts successifs depuis la palette s'enchaînent dans le même sens. */
-function dirsWithLast(dirs) {
-  if (!lastAddDir || !dirs.includes(lastAddDir)) return dirs;
-  return [lastAddDir, ...dirs.filter((d) => d !== lastAddDir)];
-}
-
-/** Cible d'ajout : ancrage choisi, sinon (dans cet ordre) l'élément sélectionné,
- *  le dernier élément ajouté, puis le compteur — en privilégiant `lastAddDir`. */
-function resolveTarget() {
-  if (pendingAnchor) return pendingAnchor;
-  const pick = (parentId) => {
-    const dirs = dirsWithLast(freeAnchorDirs(nodeOf(parentId) || project.supply));
-    return dirs.length ? { parentId, dir: dirs[0] } : null;
-  };
-  const sel = selectedNode();
-  if (sel) {
-    const t = pick(sel.id);
-    if (t) return t;
-  }
-  // l'élément sélectionné est saturé : on reprend à la tête de la chaîne
-  if (lastAddId != null && lastAddId !== (sel && sel.id)) {
-    const t = pick(lastAddId);
-    if (t) return t;
-  }
-  const t = pick(project.supply.id);
-  return t;
-}
-
 /** Orientation initiale d'un nouvel élément selon la direction de l'ancrage.
  *  Les symboles sont dessinés « conducteurs verticaux » : ils pivotent d'un quart
  *  de tour quand la liaison est horizontale. */
@@ -482,8 +451,6 @@ function addElement(symbolType, parentId, dir, props = null) {
   project.elements.push(e);
   selectedId = e.id;
   selectedIds = new Set([e.id]);
-  lastAddDir = dir;          // les prochains ajouts suivront cette direction
-  lastAddId = e.id;          // le prochain élément s'accrochera au dernier ajouté
   markDirty();
   refreshAll();
   return e;
@@ -529,8 +496,6 @@ function insertNode(parentId, dir, type = 'node', props = null) {
   refreshAll();
   if (type !== 'node') { status(`${symbolName(type)} inséré dans la ligne.`); return; }
   status('Node inséré. Ajoutez-y des éléments.');
-  lastAddDir = dir;          // la chaîne continue dans le même sens
-  lastAddId = c.id;
 }
 
 /** Supprime un élément ; ses enfants remontent au parent. */
@@ -624,13 +589,6 @@ function removeSubtree(rootId) {
     }
   }
   project.elements = project.elements.filter((x) => !remove.has(x.id));
-}
-
-function elementListLabel(node) {
-  if (node.symbolType === 'compteur') return '⚡ ' + (node.label || 'W1');
-  if (node.symbolType === 'node') return '• node';
-  const det = deviceDetail(node);
-  return [node.label || '(sans repère)', symbolName(node.symbolType), det].filter(Boolean).join(' · ');
 }
 
 function renderElementList() {
@@ -760,6 +718,7 @@ function refreshAll() {
     printPreview,
     currentPage,
   });
+  $('#canvas').classList.toggle('preview-mode', printPreview);
   $('#layout-panel').hidden = !printPreview;
   $('#props').classList.toggle('layout-mode', printPreview);
   renderPageList();
@@ -959,8 +918,6 @@ function loadProject(data, filePath) {
   selectedId = null;
   pendingAnchor = null;
   armedSymbol = null;
-  lastAddDir = null;
-  lastAddId = null;
   history.past.length = 0;
   history.future.length = 0;
   updateHistoryButtons();

@@ -1,103 +1,98 @@
 # TESTS — Elexio
 
 Cas de test **manuels**. À dérouler avant chaque version.
-État au 9 octobre 2026 : aucun cas déroulé automatiquement (pas de framework de test installé).
+État : aucun cas automatisé (pas de framework de test installé).
+
+App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 
 ## T1 — Démarrage
 
 | # | Action | Attendu |
 |---|---|---|
-| T1.1 | `npm start` | Fenêtre ouverte, onglet « Informations » actif, barre d'état « Prêt. » |
-| T1.2 | Fermer / relancer | Aucune erreur en console |
+| T1.1 | `npm start` | Fenêtre ouverte, sans erreur console |
+| T1.2 | Premier lancement (aucun autosave) | Le schéma par défaut (`DEFAULT_SCHEMA`) est chargé |
+| T1.3 | Relancer après une modif non enregistrée | L'autosave local est restauré |
 
-## T2 — Onglet Informations
+## T2 — Informations
 
 | # | Action | Attendu |
 |---|---|---|
 | T2.1 | Remplir chantier, occupant, installateur, dessinateur | Valeurs conservées en changeant d'onglet |
-| T2.2 | Passer « Type d'alimentation » à Triphasé | En-tête du schéma passe en « triphasé » |
-| T2.3 | Laisser des champs vides | Règle BE-08 signale les informations manquantes |
+| T2.2 | Passer « Type d'alimentation » à triphasé | En-tête du schéma passe en « triphasé » |
+| T2.3 | Laisser adresse / société / dessinateur vides | Règle BE-08 signale les informations manquantes |
 
-## T3 — Circuits
-
-| # | Action | Attendu |
-|---|---|---|
-| T3.1 | « + Ajouter un circuit », type « Prises de courant » | Circuit créé avec protection 16 A courbe C et DDR 30 mA |
-| T3.2 | Renommer le circuit | Nom propagé dans la liste, le schéma et la BOM |
-| T3.3 | Créer 2 circuits de même nom | Règle BE-05 signale le doublon |
-| T3.4 | ↑ / ↓ dans la liste | Ordre des colonnes inversé dans le schéma |
-| T3.5 | Supprimer un circuit | Circuit et composants retirés, BOM à jour |
-
-## T4 — Symboles et glisser-déposer
+## T3 — Schéma (arbre d'éléments)
 
 | # | Action | Attendu |
 |---|---|---|
-| T4.1 | Glisser « Disjoncteur » sur un circuit | Symbole ajouté, repère `Q1` |
-| T4.2 | Ajouter un 2e disjoncteur | Repère `Q2` (auto-incrémenté) |
-| T4.3 | Déposer un symbole hors d'une colonne | Refus avec message en barre d'état |
-| T4.4 | Clic sur un symbole de la palette | Ajouté au dernier circuit |
-| T4.5 | Glisser plusieurs symboles | Ordre vertical respecté, liaisons dessinées |
-| T4.6 | Verrouiller un repère, ajouter un autre symbole | Le repère verrouillé ne change pas |
-| T4.7 | Sélectionner un symbole, <kbd>Suppr</kbd> | Symbole retiré du circuit et de la BOM |
+| T3.1 | Cliquer le « + » à droite du compteur | Menu contextuel (différentiel, disjoncteur…) |
+| T3.2 | Poser un différentiel puis un disjoncteur | Chaîne compteur → diff → disjoncteur, lettres de circuit A, B… |
+| T3.3 | Cliquer un symbole de la palette puis un « + » | Le symbole est armé (orange), chaque « + » pose une copie |
+| T3.4 | `Échap` | Désarme le symbole puis désélectionne |
+| T3.5 | Glisser-déposer un symbole de la palette vers un « + » | Élément posé au point d'ancrage visé |
+| T3.6 | Poser un **node** (menu « + Node ») | Point de dérivation ramifiable (plusieurs enfants) |
+| T3.7 | Sélectionner un élément, `Suppr` | Élément supprimé (le compteur est protégé) |
+| T3.8 | `Ctrl+Z` / `Ctrl+Y` | Annuler / rétablir |
+| T3.9 | `Maj + clic` sur plusieurs éléments | Sélection multiple |
 
-## T5 — Zoom et déplacement
-
-| # | Action | Attendu |
-|---|---|---|
-| T5.1 | Molette vers le haut | Zoom avant, libellé de pourcentage à jour |
-| T5.2 | Molette vers le bas | Zoom arrière |
-| T5.3 | Alt + glisser | La vue se déplace |
-| T5.4 | Bouton « Ajuster » | Retour à la vue complète |
-
-## T6 — Triphasé
+## T4 — Propriétés
 
 | # | Action | Attendu |
 |---|---|---|
-| T6.1 | Passer le projet en triphasé | Trois bus L1/L2/L3 + marqueur `3~` |
-| T6.2 | Circuit en phases 3 | Marqueur ×N et `3~` sur chaque symbole |
-| T6.3 | Mettre tous les circuits sur L1 | Avertissement de déséquilibre |
-| T6.4 | Répartir L1/L2/L3 | Avertissement retiré |
+| T4.1 | Sélectionner une prise | Type de prise par défaut « terre + enfant », nombre de prises réglable |
+| T4.2 | Changer le type de prise (double, triple…) | Le SVG affiché change |
+| T4.3 | Sélectionner un fil | Câble, section, montage, conducteurs `1X…7X` / `2G…7G`, étiquette type `3G2,5mm²` |
+| T4.4 | Modifier un repère | Repère verrouillé (ne suit plus l'auto-numérotation) |
+| T4.5 | Cocher « Afficher le repère » | Le repère s'affiche sous le symbole |
 
-## T7 — Validation (rules-be.js)
-
-| # | Action | Attendu |
-|---|---|---|
-| T7.1 | Circuit sans calibre de protection | Erreur BE-01, listée en tête |
-| T7.2 | Circuit vide | Erreur BE-02 |
-| T7.3 | Cliquer une anomalie | Le circuit concerné est sélectionné |
-| T7.4 | Projet conforme | Message « Aucune anomalie détectée (8 règles) » |
-| T7.5 | Contrôler chaque règle | Chaque ligne du panneau affiche `id` + `source` |
-
-## T8 — Liste des composants
+## T5 — Mise en page (A4)
 
 | # | Action | Attendu |
 |---|---|---|
-| T8.1 | Remplir des symboles | Tableau trié par repère |
-| T8.2 | Vérifier le bloc « Matériel regroupé » | Quantités correctes, tri décroissant |
-| T8.3 | « Exporter CSV… » | Fichier `.csv` avec BOM UTF-8, séparateur `;` |
-| T8.4 | Ouvrir le CSV dans Excel | Caractères accentués et colonnes corrects |
+| T5.1 | Cocher « Activer la mise en page » | Cadre(s) A4 paysage + cartouche ; panneau droit = « Mise en page » |
+| T5.2 | Zoom (curseur du panneau) | Le dessin grandit/rétrécit (défaut 60 %) |
+| T5.3 | « Recentrer » | Le dessin se recentre sur la page courante, sans changer de taille |
+| T5.4 | Glisser le dessin | Tout le dessin se déplace (curseur main) |
+| T5.5 | Ajouter une page | Nouvelle page insérée à droite, **avec cartouche** |
+| T5.6 | Cliquer le nom d'une page | Cette page devient la page courante (surlignée) |
+| T5.7 | Supprimer une page (✕) | Page retirée ; la **dernière** page ne peut pas être supprimée |
+| T5.8 | Dessin à cheval sur 2 pages | Le trait continue d'une page à la suivante (pas d'espace entre pages) |
+| T5.9 | Cliquer un symbole en mode mise en page | Aucune sélection (le dessin reste déplaçable) |
+| T5.10 | `espace` + glisser | Panoramique (curseur main) |
 
-## T9 — Édition
-
-| # | Action | Attendu |
-|---|---|---|
-| T9.1 | Ctrl+Z après ajout | Ajout annulé |
-| T9.2 | Ctrl+Maj+Z | Ajout rétabli |
-| T9.3 | Ctrl+C / Ctrl+V sur un symbole | Copie collée avec nouveau repère |
-| T9.4 | Ctrl+C / Ctrl+V sur un circuit | Circuit copié, mention « (copie) » |
-| T9.5 | Ctrl+S | Fichier enregistré, projet ajouté aux récents |
-| T9.6 | Ctrl+N puis refuser | Rien n'est perdu |
-| T9.7 | Sélectionner un projet récent | Projet rechargé |
-
-## T10 — Fichiers
+## T6 — Enregistrer / Exporter / PDF
 
 | # | Action | Attendu |
 |---|---|---|
-| T10.1 | Enregistrer, fermer, rouvrir | Projet identique, y compris repères et caractéristiques |
-| T10.2 | Ouvrir un fichier corrompu | Message d'erreur clair, pas de plantage |
+| T6.1 | `Ctrl+S` ou « Enregistrer » | Sauvegarde dans le stockage local, statut « Enregistré » |
+| T6.2 | « Exporter… » | Télécharge `<nom>.json` (format `.unifilaire.json`) |
+| T6.3 | « Ouvrir… » un `.json` exporté | Projet rechargé à l'identique |
+| T6.4 | « PDF… » (bureau) | Dossier : cartouche général, schéma (1 page A4 / page de mise en page), circuits, matériaux |
+| T6.5 | « PDF… » (navigateur) | Impressions via `window.print()` |
+| T6.6 | Schéma qui débordait des pages | Un avertissement signale le débordement |
 
-## Non couvert
+## T7 — Validation
 
-- Export PDF (étape 7 en stand-by).
-- Build installable / portable (étape 9).
-- Tests automatisés.
+| # | Action | Attendu |
+|---|---|---|
+| T7.1 | Schéma sans élément | BE-01 (erreur) |
+| T7.2 | Prise sans DDR 30 mA en amont | BE-03 (avertissement) |
+| T7.3 | Protection sans calibre | BE-04 |
+| T7.4 | Deux éléments avec le même repère | BE-05 |
+| T7.5 | Symbole sans repère | BE-06 |
+| T7.6 | Cliquer une anomalie | L'élément concerné est sélectionné |
+
+## T8 — Liste des matériaux
+
+| # | Action | Attendu |
+|---|---|---|
+| T8.1 | Onglet « Composants » | Tableau regroupe par désignation, quantités correctes |
+| T8.2 | « Exporter CSV » | Fichier CSV UTF-8, séparateur `;` |
+
+## T9 — Build
+
+| # | Action | Attendu |
+|---|---|---|
+| T9.1 | `npm run build` | Installeur NSIS + portable dans `dist/` |
+| T9.2 | Lancer l'exe portable | Données dans `Projets\` à côté de l'exe ; pas d'installation |
+| T9.3 | Lancer l'installeur | Données dans `Documents\Elexio` |

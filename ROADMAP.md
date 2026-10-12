@@ -17,13 +17,35 @@
 | 4 | Triphase | LIVREE |
 | 5 | Validation | LIVREE |
 | 6 | Liste composants | LIVREE |
+| 7 | Export PDF (dossier complet) | LIVREE |
 | 8 | Finitions (undo/redo, copier/coller, recents) | LIVREE |
 | 9 | Build (NSIS + portable) | LIVREE |
-| 7 | Export PDF | STAND-BY (code present, bouton a recabler) |
+| 10 | Refonte ancrages (arbre d'elements + nodes) | LIVREE |
+| 11 | Mise en page multi-pages (A4 + cartouche) | LIVREE |
+| 12 | Renommage Elexio + version navigateur GitHub Pages | LIVREE |
 
 ---
 
-## Changement de modele - V1.1 (demande du 9 octobre 2026)
+## Modele actuel (oct. 2026) - arbre d'elements
+
+Le modele « circuits + composants » a ete remplace par un **arbre d'elements** :
+
+- Racine = **compteur** (ancrage a droite uniquement).
+- Chaque element s'ancre dans un **point d'ancrage** libre de son parent (4 directions ;
+  `node` et `tableau` restent ramifiables).
+- Notion de **groupe sous differentiel** : tout element place sous un differentiel.
+- **Tableau** : sorties en haut (`top-n`), sortie de terre en bas.
+- Reperes automatiques par prefixe, lettres de circuit (A, B...).
+- **Mise en page** A4 paysage (594x420 px a 2 px/mm), pages cote a cote, cartouche
+  sur chaque page ; dossier PDF par page.
+
+Voir `AGENT.md` (source de verite) et `src/model.js`, `src/standards.js`, `src/render.js`.
+
+La section suivante (« V1.1 ») est conservee comme **archive** du modele circuits.
+
+---
+
+## Changement de modele - V1.1 (archive, 9 octobre 2026)
 
 Le modele du circuit a ete simplifie. Resume des decisions :
 
@@ -73,7 +95,7 @@ Modele `Project > Circuits > Components` + `InstallationInfo`, 4 onglets,
 code en modules, `sandbox` + `contextIsolation`, rendu SVG, build configure.
 
 ### Etape 2 - Palette & drag & drop
-31 symboles RGIE en 7 familles, glisser-deposer vers une colonne de circuit,
+31 symboles RGIE en 8 familles, glisser-deposer vers une colonne de circuit,
 zoom molette + boutons, pan Alt+glisser, selection, suppression.
 
 ### Etape 3 - Circuits & nommage
@@ -85,7 +107,7 @@ Dialogue de creation (nom + type), panneau de proprietes a 3 colonnes
 arrivee `3N~ 400/230 V`, bus L1/L2/L3, controle d'equilibrage.
 
 ### Etape 5 - Validation
-`src/rules-be.js`, 8 regles sourcees, panneau d'anomalies cliquable.
+`src/rules-be.js`, 6 regles sourcees, panneau d'anomalies cliquable.
 
 ### Etape 6 - Liste composants
 Tableau detaille, materiel regroupe par designation, export CSV UTF-8 `;`.
@@ -105,7 +127,8 @@ installeur NSIS + executable portable. Dossier projet : `Documents\Elexio`
 
 ## Suite possible
 
-- Reactiver le PDF (bouton a recabler, handler deja en place).
-- Icone et metadonnees de version.
+- Page **schema d'implantation** (onglet desactive pour l'instant).
+- Icone et metadonnees de version signees.
 - Tests automatises (Vitest sur modele/regles, Playwright sur l'UI).
 - Recherche dans la palette, renommage en masse.
+- Renommage du depot GitHub `elecschema` -> `elexio` (Settings, cote web).

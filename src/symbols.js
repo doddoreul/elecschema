@@ -166,11 +166,6 @@ export function symbolName(type) {
   return symbolOf(type).name;
 }
 
-/** Famille d'appartenance d'un symbole. */
-export function symbolCategory(type) {
-  return symbolOf(type).category;
-}
-
 /** URL absolue du fichier SVG d'un symbole (résolue par rapport au document). */
 export function symbolUrl(type) {
   return new URL(symbolOf(type).file, document.baseURI).href;
@@ -194,7 +189,7 @@ export const SOCKET_TYPES = [
 export const DEFAULT_SOCKET_TYPE = 'earth_childproof';
 
 /** Définition d'un type de prise (repli sur le type par défaut si inconnu). */
-export function socketTypeOf(key) {
+function socketTypeOf(key) {
   return SOCKET_TYPES.find((t) => t.key === key) || SOCKET_TYPES.find((t) => t.key === DEFAULT_SOCKET_TYPE);
 }
 
@@ -218,7 +213,7 @@ export const SWITCH_TYPES = [
 export const DEFAULT_SWITCH_TYPE = 'simple';
 
 /** Définition d'un type d'interrupteur (repli sur le type par défaut si inconnu). */
-export function switchTypeOf(key) {
+function switchTypeOf(key) {
   return SWITCH_TYPES.find((t) => t.key === key) || SWITCH_TYPES.find((t) => t.key === DEFAULT_SWITCH_TYPE);
 }
 
@@ -229,7 +224,7 @@ export function switchUrl(key) {
 
 // Fichiers SVG par type de montage d'une ligne (élément « fil »). La forme du
 // symbole suit le mode de pose choisi dans `node.cable.montage`.
-export const FIL_MOUNT_FILES = {
+const FIL_MOUNT_FILES = {
   apparent: 'symbols/fil_apparent.svg',
   apparent_conduit: 'symbols/fil_conduit.svg',
   encastre: 'symbols/fil_encastre.svg',

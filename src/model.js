@@ -1,9 +1,9 @@
 // Modèle de données — schéma unifilaire domestique (BE).
 // Un projet est un arbre d'éléments : chaque élément s'ancre dans un point
-// d'ancrage libre de son parent (voir standards.js#anchorsOf), à une direction
+// d'ancrage libre de son parent (voir standards.js#anchorKeysOf), à une direction
 // cardinale donnée. Le compteur (supply) est la racine, en bas à gauche.
 
-import { CIRCUIT_TYPES, DEFAULT_ICB, isProtection, DEFAULT_CABLE, TABLEAU_OUTPUTS } from './standards.js';
+import { DEFAULT_ICB, isProtection, DEFAULT_CABLE, TABLEAU_OUTPUTS } from './standards.js';
 import { DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
 
 const SCHEMA_VERSION = 3;
@@ -93,10 +93,6 @@ export function createElement(symbolType, parentId, dir) {
   return e;
 }
 
-export function autoLabel(symbolType, index) {
-  return (PREFIXES[symbolType] || 'C') + index;
-}
-
 /* ------------------------------------------------------------- accès à l'arbre */
 
 /** Élément (ou compteur) par identifiant. */
@@ -106,7 +102,7 @@ export function nodeById(project, id) {
 }
 
 /** Enfant occupant le point d'ancrage `dir` (ou null). */
-export function childAt(node, dir) {
+function childAt(node, dir) {
   return (node.children || {})[dir] ?? null;
 }
 
@@ -127,4 +123,4 @@ export function treeOrder(project) {
   return out;
 }
 
-export { emptyProject, emptyInfo, emptySupply, nextId, CIRCUIT_TYPES, SCHEMA_VERSION, DOMAINE, PAYS, PREFIXES };
+export { emptyProject, nextId, PREFIXES };
