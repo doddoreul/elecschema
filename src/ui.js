@@ -675,6 +675,7 @@ function renderBom() {
 }
 
 $('#btn-bom-csv').addEventListener('click', async () => {
+  if (typeof window.elecschema !== 'object') { alert('Export CSV disponible dans la version bureau.'); return; }
   const csv = await window.elecschema.exportCsv(buildBomCsv(), suggestedName() + '-composants');
   if (csv) status(`CSV exporté : ${csv}`);
 });
@@ -785,8 +786,12 @@ $('#btn-export').addEventListener('click', () => {
 });
 
 async function loadRecents() {
-  const list = await window.elecschema.recents();
   const sel = $('#recent-select');
+  if (typeof window.elecschema !== 'object') {
+    sel.innerHTML = '<option value="">(version navigateur — pas de fichiers récents)</option>';
+    return;
+  }
+  const list = await window.elecschema.recents();
   sel.innerHTML = list.length
     ? '<option value="">— Projets récents —</option>' +
       list.map((r) => `<option value="${escHtml(r.path)}">${escHtml(r.name)}</option>`).join('')
@@ -796,6 +801,7 @@ async function loadRecents() {
 $('#recent-select').addEventListener('change', async (e) => {
   const p = e.target.value;
   if (!p) return;
+  if (typeof window.elecschema !== 'object') return;
   if (dirty && !confirm('Des modifications ne sont pas enregistrées. Ouvrir un autre projet ?')) { e.target.value = ''; return; }
   try {
     const { filePath, data } = await window.elecschema.openPath(p);
@@ -944,6 +950,19 @@ $('#btn-undo').addEventListener('click', undo);
 $('#btn-redo').addEventListener('click', redo);
 
 $('#btn-open').addEventListener('click', async () => {
+  if (typeof window.elecschema !== 'object') {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      try { loadProject(JSON.parse(await file.text()), file.name); status(`Projet ouvert : ${file.name}`); }
+      catch (err) { alert('Fichier illisible : ' + err.message); }
+    };
+    input.click();
+    return;
+  }
   if (dirty && !confirm('Des modifications ne sont pas enregistrées. Ouvrir un autre projet ?')) return;
   const res = await window.elecschema.open();
   if (!res) return;
@@ -957,6 +976,7 @@ $('#btn-pdf').addEventListener('click', async () => {
     alert('Ajoutez au moins un élément avant d’exporter un PDF.');
     return;
   }
+  if (typeof window.elecschema !== 'object') { window.print(); return; }
   const html = buildPrintHtml();
   const file = await window.elecschema.exportPdf(html, suggestedName());
   if (file) status(`PDF exporté : ${file}`);
