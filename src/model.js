@@ -3,7 +3,7 @@
 // d'ancrage libre de son parent (voir standards.js#anchorsOf), à une direction
 // cardinale donnée. Le compteur (supply) est la racine, en bas à gauche.
 
-import { CIRCUIT_TYPES, DEFAULT_ICB, isProtection, DEFAULT_CABLE } from './standards.js';
+import { CIRCUIT_TYPES, DEFAULT_ICB, isProtection, DEFAULT_CABLE, TABLEAU_OUTPUTS } from './standards.js';
 import { DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
 
 const SCHEMA_VERSION = 3;
@@ -86,7 +86,7 @@ export function createElement(symbolType, parentId, dir) {
     e.poles = symbolType === 'rcd' ? '2P' : '1P';
   }
   // un tableau doit toujours afficher son repère (libellé de la barre)
-  if (symbolType === 'tableau') e.showLabel = true;
+  if (symbolType === 'tableau') { e.showLabel = true; e.outputs = TABLEAU_OUTPUTS; }
   if (symbolType === 'socket') { e.count = 1; e.socketType = DEFAULT_SOCKET_TYPE; }
   if (symbolType === 'switch') e.switchType = DEFAULT_SWITCH_TYPE;
   if (symbolType === 'fil') e.cable = { ...DEFAULT_CABLE };
@@ -118,7 +118,7 @@ export function treeOrder(project) {
     if (!node || seen.has(node.id)) return;
     seen.add(node.id);
     out.push(node);
-    for (const dir of ['right', 'top', 'left', 'bottom']) {
+    for (const dir of Object.keys(node.children || {})) {
       const cid = childAt(node, dir);
       if (cid != null) walk(nodeById(project, cid));
     }

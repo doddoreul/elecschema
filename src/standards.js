@@ -42,6 +42,32 @@ export function anchorsOf() {
   return ANCHOR_DIRECTIONS;
 }
 
+/** Tableau : une entrée (ancrage à gauche, occupée par le parent), des sorties en haut.
+ *  Chaque sortie occupée ouvre une sortie vierge : le tableau s'élargit. */
+export const TABLEAU_OUTPUTS = 2;
+export const TABLEAU_OUTPUT_TYPES = ['rcd', 'breaker', 'sectionneur', 'fil'];
+
+/** Clés d'ancrage utilisables d'un élément (clés de `children`). */
+export function anchorKeysOf(node) {
+  if (node.symbolType === 'tableau') {
+    const tops = Array.from({ length: node.outputs || TABLEAU_OUTPUTS }, (_, i) => 'top-' + (i + 1));
+    return [...tops, 'bottom'];
+  }
+  return ANCHOR_DIRECTIONS;
+}
+
+/** Direction cardinale d'une clé d'ancrage (`top-2` -> `top`, `bottom` -> `bottom`). */
+export function baseDir(key) {
+  return String(key).split('-')[0];
+}
+
+/** Rang de sortie d'un tableau, à partir de 0 (`top-3` -> 2). `bottom` -> -1. */
+export function outputIndex(key) {
+  if (String(key) === 'bottom') return -1;
+  const m = /-(\d+)$/.exec(String(key));
+  return m ? Number(m[1]) - 1 : 0;
+}
+
 /* ------------------------------------------------------------- élément « fil » */
 
 /** Types de câble usuels (BE). */
@@ -62,5 +88,5 @@ export function mountName(key) {
   return (MOUNT_TYPES.find((m) => m.key === key) || MOUNT_TYPES[0]).name;
 }
 
-/** Valeurs par défaut d'un fil : 3 conducteurs avec terre, 2,5 mm², XVB encastré en conduit. */
-export const DEFAULT_CABLE = { n: 3, terre: true, section: 2.5, type: 'XVB', montage: 'encastre_conduit' };
+/** Valeurs par défaut d'un fil : 3G, 2,5 mm², XVB encastré en conduit. */
+export const DEFAULT_CABLE = { n: '3G', terre: true, section: 2.5, type: 'XVB', montage: 'encastre_conduit' };

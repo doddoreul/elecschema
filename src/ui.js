@@ -3,9 +3,10 @@
 
 import { emptyProject, createElement, syncIdCounter, nodeById, treeOrder, nextId, PREFIXES } from './model.js';
 import { renderSchema, sheetSize, deviceDetail } from './render.js';
-import { SYMBOLS, SYMBOL_CATEGORIES, symbolName, symbolUrl, SOCKET_TYPES, DEFAULT_SOCKET_TYPE, SWITCH_TYPES, DEFAULT_SWITCH_TYPE } from './symbols.js';
+import { SYMBOLS, SYMBOL_CATEGORIES, symbolName, symbolUrl, SOCKET_TYPES, SWITCH_TYPES, DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
 import { validate, RULES_BE, RULE_SEVERITY } from './rules-be.js';
-import { RATINGS, RCD_VALUES, RCD_RATINGS, DEFAULT_ICB, isProtection, anchorsOf, ANCHOR_DIRECTIONS, SECTIONS, CABLE_TYPES, MOUNT_TYPES, mountName, DEFAULT_CABLE } from './standards.js';
+import { DEFAULT_SCHEMA } from './default-schema.js';
+import { RATINGS, CURVES, RCD_TYPES, RCD_VALUES, RCD_RATINGS, DEFAULT_ICB, isProtection, anchorsOf, anchorKeysOf, baseDir, outputIndex, ANCHOR_DIRECTIONS, SECTIONS, CABLE_TYPES, MOUNT_TYPES, mountName, DEFAULT_CABLE, TABLEAU_OUTPUTS, TABLEAU_OUTPUT_TYPES } from './standards.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -19,6 +20,7 @@ let selectedId = null;       // id d'élément (ou du compteur)
 let pendingAnchor = null;    // { parentId, dir } en attente de symbole
 let lastAddDir = null;       // direction du dernier ajout (les suivants suivent)
 let lastAddId = null;        // id du dernier élément ajouté (tête de la chaîne)
+let armedSymbol = null;      // symbole choisi dans la bibliothèque, posé sur chaque « + » cliqué
 let dragActive = false;      // glisser-déposer depuis la palette en cours
 let view = { x: 0, y: 0, w: 2100, h: 1100 };
 
@@ -198,7 +200,53 @@ function freeAnchorDirs(node) {
   if (node.symbolType === 'compteur') return (node.children || {}).right == null ? ['right'] : [];
   const ramifiable = node.symbolType === 'node' || node.symbolType === 'tableau';
   if (hasChild && !ramifiable) return [];
-  return anchorsOf(node.symbolType).filter((d) => (node.children || {})[d] == null);
+  return anchorKeysOf(node).filter((d) => (node.children || {})[d] == null);
+}
+
+/** Lettre de circuit : 1 → A … 26 → Z, 27 → AA, 28 → AB… */
+function letterOf(i) {
+  let s = '';
+  for (let n = i; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
+  return s;
+}
+
+/** Début de circuit : automate ou fusible posé directement sous un tableau, un différentiel,
+ *  le compteur ou un node. */
+const CIRCUIT_PARENTS = ['tableau', 'rcd', 'compteur', 'node'];
+function isCircuitStart(e) {
+  if (!e || !['breaker', 'fuse'].includes(e.symbolType)) return false;
+  const p = nodeOf(e.parent);
+  return !!p && CIRCUIT_PARENTS.includes(p.symbolType);
+}
+
+/** Circuit auquel appartient un élément (son début, en remontant l'arbre). */
+function circuitStartOf(e) {
+  for (let n = e; n && n !== project.supply; n = nodeOf(n.parent)) if (isCircuitStart(n)) return n;
+  return null;
+}
+
+/** Numérotation Trikker : lettre par circuit (ordre du schéma), puis 1, 2… pour les
+ *  symboles du circuit. Un repère saisi à la main (verrouillé) est conservé. */
+function renumberCircuits() {
+  const all = treeOrder(project);
+  const starts = all.filter(isCircuitStart);
+  const reserved = new Set(starts.filter((s) => s.labelLocked && /^[A-Z]{1,2}$/.test(s.label || '')).map((s) => s.label));
+  let i = 0;
+  for (const s of starts) {
+    if (s.labelLocked) continue;
+    let l;
+    do { l = letterOf(++i); } while (reserved.has(l));
+    s.label = l;
+  }
+  const counts = new Map();
+  for (const e of all) {
+    if (e === project.supply || isCircuitStart(e) || ['node', 'tableau', 'fil', 'sectionneur'].includes(e.symbolType)) continue;
+    const s = circuitStartOf(e);
+    if (!s) continue;
+    const n = (counts.get(s.id) || 0) + 1;
+    counts.set(s.id, n);
+    if (!e.labelLocked) e.label = s.label + n;
+  }
 }
 
 /** Repère automatique global, unique par préfixe. */
@@ -247,7 +295,7 @@ function resolveTarget() {
  *  de tour quand la liaison est horizontale. */
 const ANCHOR_ORIENT = { right: 90, top: 0, left: -90, bottom: 180 };
 function orientForDir(dir) {
-  return ANCHOR_ORIENT[dir] ?? 0;
+  return ANCHOR_ORIENT[baseDir(dir)] ?? 0;
 }
 
 /** Types sans repère automatique : leur repère reste vide tant que l'utilisateur
@@ -264,65 +312,208 @@ const ACCEPT_RULES = {
   breaker: null,
 };
 
-function canAccept(parentType, childType) {
+/** Retire le point d'ancrage `key` d'un tableau : les points suivants sont décalés d'un cran. */
+function removeOutput(node, key) {
+  const idx = outputIndex(key);
+  const kept = {};
+  for (const k of Object.keys(node.children || {})) {
+    const cid = node.children[k];
+    const i = outputIndex(k);
+    if (cid == null || i === idx) continue;
+    const nk = i > idx ? 'top-' + i : k;
+    kept[nk] = cid;
+    const c = nodeOf(cid);
+    if (c) c.dir = nk;
+  }
+  node.children = kept;
+}
+
+/** Toujours une sortie vierge après la dernière occupée : le tableau s'élargit ou se réduit. */
+function syncOutputs() {
+  for (const e of project.elements) {
+    if (e.symbolType !== 'tableau') continue;
+    const used = Object.keys(e.children || {}).filter((k) => e.children[k] != null).map(outputIndex);
+    e.outputs = Math.max(TABLEAU_OUTPUTS, ...used.map((i) => i + 2));
+  }
+}
+
+function canAccept(parentType, childType, dir) {
+  // tableau : seulement différentiels, disjoncteurs et sectionneurs en sortie
+  if (parentType === 'tableau') {
+    if (dir === 'bottom') return childType === 'earth';
+    return TABLEAU_OUTPUT_TYPES.includes(childType);
+  }
   // point de derivation, cable, sectionneur et barre de tableau : hors regles
   if (childType === 'node' || childType === 'fil' || childType === 'sectionneur' || childType === 'tableau') return true;
   const allowed = ACCEPT_RULES[parentType];
   return allowed == null ? true : allowed.includes(childType);
 }
 
-function addElement(symbolType, parentId, dir) {
+/* ------------------------------------------- propriétés demandées à l'ajout */
+
+/** Champ « repère » commun aux invites : vide = repère automatique. */
+const REPERE_FIELD = { key: 'label', label: 'Repère', text: true, value: '', placeholder: 'automatique' };
+
+/** Questions posées à l'ajout (défauts Trikker). `build` traduit les réponses en propriétés. */
+const PROMPTS = {
+  breaker: {
+    title: 'Disjoncteur',
+    fields: [
+      REPERE_FIELD,
+      { key: 'rating', label: 'Calibre', num: true, value: 16, options: RATINGS.map((v) => ({ value: v, label: v + ' A' })) },
+      { key: 'curve', label: 'Courbe', value: 'C', options: CURVES.map((v) => ({ value: v, label: v })) },
+      { key: 'poles', label: 'Pôles', value: '2P', options: ['1P', '2P', '3P', '4P'].map((v) => ({ value: v, label: v })) },
+    ],
+    build: (d) => ({ label: d.label, poles: d.poles, params: { rating: d.rating, curve: d.curve } }),
+  },
+  rcd: {
+    title: 'Différentiel',
+    fields: [
+      REPERE_FIELD,
+      { key: 'diff', label: 'Sensibilité', num: true, value: 30, options: RCD_VALUES.map((v) => ({ value: v, label: v + ' mA' })) },
+      { key: 'rating', label: 'Intensité nominale', num: true, value: 63, options: RCD_RATINGS.map((v) => ({ value: v, label: v + ' A' })) },
+      { key: 'type', label: 'Type', value: 'AC', options: RCD_TYPES.map((v) => ({ value: v, label: v })) },
+      { key: 'poles', label: 'Pôles', value: '2P', options: ['2P', '4P'].map((v) => ({ value: v, label: v })) },
+    ],
+    build: (d) => ({ label: d.label, poles: d.poles, params: { diff: d.diff, rating: d.rating, type: d.type } }),
+  },
+  socket: {
+    title: 'Type de prise',
+    fields: [
+      REPERE_FIELD,
+      { key: 'socketType', label: 'Type de prise', value: DEFAULT_SOCKET_TYPE, options: SOCKET_TYPES.map((t) => ({ value: t.key, label: t.name })) },
+    ],
+    build: (d) => ({ label: d.label, socketType: d.socketType }),
+  },
+  switch: {
+    title: 'Type d’interrupteur',
+    fields: [
+      REPERE_FIELD,
+      { key: 'switchType', label: 'Type d’interrupteur', value: DEFAULT_SWITCH_TYPE, options: SWITCH_TYPES.map((t) => ({ value: t.key, label: t.name })) },
+    ],
+    build: (d) => ({ label: d.label, switchType: d.switchType }),
+  },
+};
+
+/** Ouvre la boîte de dialogue. Résout { propriétés } ou null si annulé. */
+function askProps(symbolType) {
+  const cfg = PROMPTS[symbolType];
+  const dlg = $('#prop-dialog');
+  const form = $('#prop-form');
+  $('#prop-title').textContent = cfg.title;
+  $('#prop-fields').innerHTML = cfg.fields.map((f) => (f.text
+    ? `<label class="prop-field"><span>${escHtml(f.label)}</span>
+      <input type="text" name="${f.key}" value="${escHtml(f.value)}" placeholder="${escHtml(f.placeholder || '')}" autocomplete="off">
+    </label>`
+    : `<label class="prop-field"><span>${escHtml(f.label)}</span>
+      <select name="${f.key}">${f.options.map((o) => `<option value="${escHtml(o.value)}"${String(o.value) === String(f.value) ? ' selected' : ''}>${escHtml(o.label)}</option>`).join('')}</select>
+    </label>`)).join('');
+  return new Promise((resolve) => {
+    const onClose = () => {
+      dlg.removeEventListener('close', onClose);
+      if (dlg.returnValue !== 'ok') { resolve(null); return; }
+      const data = {};
+      for (const f of cfg.fields) {
+        const raw = form.elements[f.key].value;
+        data[f.key] = f.num ? Number(raw) : raw;
+      }
+      resolve(cfg.build(data));
+    };
+    dlg.addEventListener('close', onClose);
+    dlg.showModal();
+  });
+}
+
+/** Propriétés à demander avant de poser `type` sous `parentId`. `{}` si rien à demander
+ *  (ou si la pose est impossible : addElement signalera l'erreur), `null` si annulé. */
+async function promptFor(type, parentId) {
+  const parent = nodeOf(parentId);
+  if (!PROMPTS[type] || !parent || !canAccept(parent.symbolType, type, null)) return {};
+  return askProps(type);
+}
+
+/** Applique les propriétés demandées à un élément nouvellement créé. */
+function applyProps(e, p) {
+  if (!p) return;
+  // repère saisi : verrouillé (la numérotation automatique ne le modifie pas)
+  if (p.label && p.label.trim()) { e.label = p.label.trim(); e.labelLocked = true; e.showLabel = true; }
+  if (p.poles) e.poles = p.poles;
+  if (p.params) e.params = { ...(e.params || {}), ...p.params };
+  if (p.socketType) e.socketType = p.socketType;
+  if (p.switchType) e.switchType = p.switchType;
+}
+
+async function addWithProps(type, parentId, dir) {
+  const props = await promptFor(type, parentId);
+  if (props === null) { status('Ajout annulé.'); return null; }
+  return addElement(type, parentId, dir, props);
+}
+
+function addElement(symbolType, parentId, dir, props = null) {
   const parent = nodeOf(parentId);
   if (!parent) return null;
   if ((parent.children || {})[dir] != null) { status('Ce point d’ancrage est déjà occupé.'); return null; }
-  if (!canAccept(parent.symbolType, symbolType)) {
+  if (!canAccept(parent.symbolType, symbolType, dir)) {
     status(`Un ${symbolName(parent.symbolType)} ne peut pas recevoir un ${symbolName(symbolType)}.`);
     return null;
   }
   const e = createElement(symbolType, parentId, dir);
   e.label = NO_AUTO_LABEL.includes(symbolType) ? '' : nextGlobalLabel(symbolType);
+  if (isCircuitStart(e)) e.showLabel = true;
+  applyProps(e, props);
   // une barre de tableau reste horizontale par defaut (hors sens de pose)
   e.orient = symbolType === 'tableau' ? 0 : orientForDir(dir);
   parent.children = parent.children || {};
   parent.children[dir] = e.id;
   project.elements.push(e);
   selectedId = e.id;
+  selectedIds = new Set([e.id]);
   lastAddDir = dir;          // les prochains ajouts suivront cette direction
   lastAddId = e.id;          // le prochain élément s'accrochera au dernier ajouté
-  noteUsage(symbolType);     // alimente les catégories « Récents »
   markDirty();
   refreshAll();
   return e;
 }
 
-function addViaPalette(symbolType) {
-  const t = resolveTarget();
+/** Bibliothèque : choisit (ou désarme, si déjà choisi) le symbole posé sur les « + ». */
+function setArmed(type) {
+  armedSymbol = type;
   pendingAnchor = null;
-  if (!t) { status('Aucun point d’ancrage libre. Insérez un node.'); switchTab('schema'); return; }
-  const e = addElement(symbolType, t.parentId, t.dir);
   switchTab('schema');
-  if (e) status(`${symbolName(symbolType)} ajouté (${e.label}). Cliquez un « + » pour continuer.`);
+  if (type) status(`${symbolName(type)} sélectionné : cliquez un « + » orange. Échap pour arrêter.`);
+  else status('Sélection annulée.');
+  refreshAll();
 }
 
-/** Insère un node (point de dérivation) entre un parent et son enfant. */
-function insertNode(parentId, dir) {
+function addViaPalette(symbolType) {
+  setArmed(armedSymbol === symbolType ? null : symbolType);
+}
+
+/** Insère un élément entre un parent et son enfant (node par défaut, ou symbole armé). */
+function insertNode(parentId, dir, type = 'node', props = null) {
   const parent = nodeOf(parentId);
   if (!parent) return;
   const oldChildId = (parent.children || {})[dir] ?? null;
-  const c = createElement('node', parentId, dir);
-  c.orient = orientForDir(dir);
+  const old = oldChildId != null ? nodeOf(oldChildId) : null;
+  if (!canAccept(parent.symbolType, type, dir)) { status(`Un ${symbolName(parent.symbolType)} ne peut pas recevoir un ${symbolName(type)}.`); return; }
+  if (old && !canAccept(type, old.symbolType, baseDir(dir))) { status(`Un ${symbolName(type)} ne peut pas recevoir un ${symbolName(old.symbolType)}.`); return; }
+  const c = createElement(type, parentId, dir);
+  c.orient = type === 'tableau' ? 0 : orientForDir(dir);
+  c.label = NO_AUTO_LABEL.includes(type) ? '' : nextGlobalLabel(type);
+  if (isCircuitStart(c)) c.showLabel = true;
+  applyProps(c, props);
   parent.children = parent.children || {};
   parent.children[dir] = c.id;
   project.elements.push(c);
-  if (oldChildId != null) {
-    const old = nodeOf(oldChildId);
-    const dirs = anchorsOf('node');
-    const keep = dirs.includes(dir) ? dir : dirs[0];
-    if (old) { c.children[keep] = old.id; old.parent = c.id; old.dir = keep; }
+  if (old) {
+    const keep = type === 'tableau' ? 'top-1' : baseDir(dir);
+    c.children[keep] = old.id; old.parent = c.id; old.dir = keep;
   }
   selectedId = c.id;
+  selectedIds = new Set([c.id]);
   markDirty();
   refreshAll();
+  if (type !== 'node') { status(`${symbolName(type)} inséré dans la ligne.`); return; }
   status('Node inséré. Ajoutez-y des éléments.');
   lastAddDir = dir;          // la chaîne continue dans le même sens
   lastAddId = c.id;
@@ -335,19 +526,36 @@ function deleteElement(id) {
   const parent = nodeOf(e.parent);
   if (!parent) return;
   const myDir = e.dir;
-  const parentAnchors = anchorsOf(parent.symbolType);
+  const parentAnchors = anchorKeysOf(parent);
   parent.children = parent.children || {};
 
   const kids = [];
-  for (const dir of ANCHOR_DIRECTIONS) {
-    const cid = (e.children || {})[dir];
+  for (const dir of Object.keys(e.children || {})) {
+    const cid = e.children[dir];
     if (cid != null) { const k = nodeOf(cid); if (k) kids.push({ child: k, dir }); }
   }
+  // tableau : le point d'ancrage disparaît avec son élément ; les sorties suivantes remontent
+  if (parent.symbolType === 'tableau') {
+    removeOutput(parent, myDir);
+    for (const k of kids) {
+      if (!canAccept('tableau', k.child.symbolType, k.dir)) { removeSubtree(k.child.id); continue; }
+      const used = Object.keys(parent.children).map(outputIndex);
+      const key = 'top-' + ((used.length ? Math.max(...used) : -1) + 2);
+      parent.children[key] = k.child.id; k.child.parent = parent.id; k.child.dir = key;
+    }
+    project.elements = project.elements.filter((x) => x.id !== id);
+    selectOnly(parent.id);
+    markDirty();
+    refreshAll();
+    status('Point d’ancrage supprimé avec son élément.');
+    return parent.id;
+  }
+
   delete parent.children[myDir];
 
   let promoted = null;
   const same = kids.find((k) => k.dir === myDir);
-  if (same && parentAnchors.includes(myDir)) {
+  if (same && parentAnchors.includes(myDir) && (parent.symbolType !== 'tableau' || canAccept('tableau', same.child.symbolType, myDir))) {
     parent.children[myDir] = same.child.id;
     same.child.parent = parent.id; same.child.dir = myDir;
     promoted = same.child;
@@ -356,7 +564,7 @@ function deleteElement(id) {
 
   for (const k of kids) {
     let target = null, tdir = null;
-    const pf = freeAnchorDirs(parent);
+    const pf = parent.symbolType === 'tableau' && !canAccept('tableau', k.child.symbolType, k.dir) ? [] : freeAnchorDirs(parent);
     if (pf.length) {
       target = parent;
       tdir = pf.includes(k.dir) ? k.dir : pf[0];
@@ -374,10 +582,18 @@ function deleteElement(id) {
     }
   }
   project.elements = project.elements.filter((x) => x.id !== id);
-  if (selectedId === id) selectedId = null;
+  selectOnly(parent.id);
   markDirty();
   refreshAll();
   status('Élément supprimé.');
+  return parent.id;
+}
+
+/** Sélectionne uniquement `id` (null = aucune sélection). */
+function selectOnly(id) {
+  selectedId = id;
+  selectedIds = new Set(id == null ? [] : [id]);
+  pendingAnchor = null;
 }
 
 function removeSubtree(rootId) {
@@ -388,8 +604,8 @@ function removeSubtree(rootId) {
     if (remove.has(id)) continue;
     remove.add(id);
     const n = nodeOf(id);
-    if (n) for (const dir of ANCHOR_DIRECTIONS) {
-      const cid = (n.children || {})[dir];
+    if (n) for (const dir of Object.keys(n.children || {})) {
+      const cid = n.children[dir];
       if (cid != null) stack.push(cid);
     }
   }
@@ -404,36 +620,9 @@ function elementListLabel(node) {
 }
 
 function renderElementList() {
-  const host = $('#element-list');
-  if (!host) return;
-  host.innerHTML = '';
-  const walk = (node, depth, out) => {
-    out.push({ node, depth });
-    for (const dir of ANCHOR_DIRECTIONS) {
-      const cid = (node.children || {})[dir];
-      if (cid != null) { const c = nodeOf(cid); if (c) walk(c, depth + 1, out); }
-    }
-  };
-  const rows = [];
-  walk(project.supply, 0, rows);
-  for (const { node, depth } of rows) {
-    const row = document.createElement('div');
-    row.className = 'circuit-item' + (node.id === selectedId ? ' active' : '');
-    const name = document.createElement('span');
-    name.className = 'name';
-    name.style.paddingLeft = depth * 10 + 'px';
-    name.textContent = elementListLabel(node);
-    row.appendChild(name);
-    row.addEventListener('click', () => selectElement(node.id));
-    if (!isSupplyId(node.id)) {
-      const del = document.createElement('button');
-      del.textContent = '✕';
-      del.title = 'Supprimer';
-      del.addEventListener('click', (ev) => { ev.stopPropagation(); deleteElement(node.id); });
-      row.appendChild(del);
-    }
-    host.appendChild(row);
-  }
+  const ta = $('#schema-json');
+  if (!ta) return;
+  ta.value = JSON.stringify(project, null, 2);
 }
 
 /* ------------------------------------------------------------- liste BOM */
@@ -540,17 +729,19 @@ function renderIssues() {
 }
 
 function refreshAll() {
+  syncOutputs();
+  renumberCircuits();
   renderElementList();
   renderBom();
   renderIssues();
   renderProps();
-  renderRecents();
   refreshPaletteAccept();
   renderSchema($('#canvas'), project, {
     viewBox: `${view.x} ${view.y} ${view.w} ${view.h}`,
     selectedIds,
     selectedId,
-    showAnchors: dragActive,
+    showAnchors: dragActive || !!armedSymbol,
+    accepts: armedSymbol ? (n) => canAccept(n.symbolType, armedSymbol) : null,
   });
   refreshTitleBlock();
 }
@@ -567,20 +758,30 @@ function clearDirty(file) {
 
 $('#btn-new').addEventListener('click', async () => {
   if (dirty && !confirm('Des modifications ne sont pas enregistrées. Créer un nouveau projet ?')) return;
-  project = emptyProject();
-  loadProject(project, null);
-  status('Nouveau projet. Remplissez les informations d’installation.');
+  loadProject(JSON.parse(JSON.stringify(DEFAULT_SCHEMA)), null);
+  status('Nouveau projet pré-rempli. Remplissez les informations d’installation.');
 });
 
-$('#btn-save').addEventListener('click', async () => {
+/** Enregistre le projet dans le stockage local (même effet que Ctrl+S). */
+function saveLocal() {
   project.info.projet.dateModification = new Date().toISOString().slice(0, 10);
-  const file = await window.elecschema.save(project);
-  if (file) {
-    await window.elecschema.openPath(file).catch(() => { /* ajout aux récents seul */ });
-    loadRecents();
-  }
-  clearDirty(file);
-  status(file ? `Enregistré : ${file}` : 'Enregistrement annulé.');
+  persistSnapshot();
+  dirty = false;
+  $('#project-file').textContent = (currentFile ? currentFile.split(/[\\/]/).pop() : 'sans titre');
+  status('Enregistré (stockage local).');
+}
+
+$('#btn-save').addEventListener('click', saveLocal);
+
+$('#btn-export').addEventListener('click', () => {
+  project.info.projet.dateModification = new Date().toISOString().slice(0, 10);
+  const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = suggestedName() + '.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  status('JSON exporté.');
 });
 
 async function loadRecents() {
@@ -685,6 +886,29 @@ function normalizeTypes(p) {
       e.label = ''; e.labelLocked = false; e.detail = '';
       delete e.labelPos; delete e.showLabel; delete e.poles;
     }
+    // Tableau : sorties nommées top-1, top-2… ; anciens ancrages (top, right…) convertis.
+    if (e.symbolType === 'tableau') {
+      e.orient = 0;
+      const kids = Object.entries(e.children || {}).filter(([, v]) => v != null);
+      e.children = {};
+      const taken = new Set();
+      const pending = [];
+      for (const [key, cid] of kids) {
+        if (key === 'bottom') { e.children.bottom = cid; continue; }
+        if (/^top(-\d+)?$/.test(key) && !taken.has(outputIndex(key))) { taken.add(outputIndex(key)); e.children['top-' + (outputIndex(key) + 1)] = cid; }
+        else pending.push(cid);
+      }
+      let i = 0;
+      for (const cid of pending) {
+        while (taken.has(i)) i++;
+        taken.add(i); e.children['top-' + (i + 1)] = cid;
+      }
+      e.outputs = Math.max(e.outputs || TABLEAU_OUTPUTS, Math.max(-1, ...taken) + 2);
+      for (const [key, cid] of Object.entries(e.children)) {
+        const k = (p.elements || []).find((x) => x && x.id === cid);
+        if (k) { k.parent = e.id; k.dir = key; }
+      }
+    }
   }
 }
 
@@ -704,6 +928,7 @@ function loadProject(data, filePath) {
   selectedIds = new Set();
   selectedId = null;
   pendingAnchor = null;
+  armedSymbol = null;
   lastAddDir = null;
   lastAddId = null;
   history.past.length = 0;
@@ -777,26 +1002,41 @@ ${clone.outerHTML}
 
 function renderPalette() {
   const host = $('#palette-groups');
-  host.innerHTML = '<h4>Récents</h4><div id="palette-recents" class="palette-recents"></div>' +
+  host.innerHTML = '<h4>Favoris</h4><div id="palette-favs" class="palette-favs"></div>' +
     SYMBOL_CATEGORIES.map((cat) => {
     const items = Object.entries(SYMBOLS)
       .filter(([, s]) => s.category === cat.id)
-      .map(([key]) => symBtnHtml(key))
+      .map(([key]) => symBtnHtml(key, true))
       .join('');
     return `<h4>${escHtml(cat.name)}</h4>${items}`;
   }).join('');
 
   host.querySelectorAll('.sym-btn').forEach(bindSymBtn);
+  host.querySelectorAll('.fav-star').forEach(bindStar);
+  renderFavorites();
   refreshPaletteAccept();
 }
 
-/** HTML d'un bouton de symbole (palette, section Récents, menu contextuel). */
-function symBtnHtml(key) {
+/** HTML d'un bouton de symbole (palette, favoris, menu contextuel).
+ *  `star` : ajoute l'étoile « favori » à côté (palette uniquement). */
+function symBtnHtml(key, star = false) {
   const s = SYMBOLS[key];
   if (!s) return '';
   const thumb = `<img class="sym-thumb" src="${symbolUrl(key)}" alt="">`;
-  return `<button class="sym-btn" draggable="true" data-symbol="${key}" title="${escHtml(s.name)} (tableau 2.23 – ${s.ref})">
+  const btn = `<button class="sym-btn" draggable="true" data-symbol="${key}" title="${escHtml(s.name)} (tableau 2.23 – ${s.ref})">
           ${thumb}<span class="sym-name">${escHtml(s.name)}</span></button>`;
+  if (!star) return btn;
+  const on = isFavorite(key);
+  return `<div class="sym-row">${btn}<button class="fav-star${on ? ' on' : ''}" data-fav="${key}" title="${on ? 'Retirer des favoris' : 'Ajouter aux favoris'}">${on ? '★' : '☆'}</button></div>`;
+}
+
+/** Étoile : bascule le favori, puis reconstruit la palette. */
+function bindStar(btn) {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleFavorite(btn.dataset.fav);
+    renderPalette();
+  });
 }
 
 /** Câble un bouton : glisser-déposer, clic, et ouverture du menu si ancrage en attente. */
@@ -810,62 +1050,50 @@ function bindSymBtn(btn) {
   btn.addEventListener('click', () => addViaPalette(btn.dataset.symbol));
 }
 
-/** Remplit la section « Récents » : les 5 symboles les plus utilisés. */
-function renderRecents() {
-  const host = $('#palette-recents');
+/** Remplit la section « Favoris » de la palette. */
+function renderFavorites() {
+  const host = $('#palette-favs');
   if (!host) return;
-  const list = topSymbols(5);
+  const list = favoriteKeys();
   if (!list.length) {
-    host.innerHTML = '<p class="hint">Posez des éléments : les plus utilisés apparaîtront ici.</p>';
+    host.innerHTML = '<p class="hint">Cliquez l’étoile ☆ d’un symbole pour le mettre en favori.</p>';
     return;
   }
-  host.innerHTML = list.map(symBtnHtml).join('');
+  host.innerHTML = list.map((k) => symBtnHtml(k, true)).join('');
   host.querySelectorAll('.sym-btn').forEach(bindSymBtn);
+  host.querySelectorAll('.fav-star').forEach(bindStar);
 }
 
 /** Anti-erreur : grise dans la palette les symboles que la cible courante
  *  (ancrage cliqué ou élément sélectionné) n'a pas le droit de recevoir. */
 function refreshPaletteAccept() {
   const target = pendingAnchor ? nodeOf(pendingAnchor.parentId) : selectedNode();
-  document.querySelectorAll('.sym-btn').forEach((btn) => {
+  document.querySelectorAll('#palette-groups .sym-btn').forEach((btn) => {
     btn.classList.toggle('nope', !!target && !canAccept(target.symbolType, btn.dataset.symbol));
+    btn.classList.toggle('armed', btn.dataset.symbol === armedSymbol);
   });
 }
 
-/* ------------------------------------------------------------ éléments récents */
+/* ------------------------------------------------------------- symboles favoris */
 
-const RECENT_KEY = 'elecschema.recent';   // { symbole: nombre d'ajouts }
+const FAV_KEY = 'elecschema.favorites';   // liste ordonnée de clés de symbole
 
-function noteUsage(symbolType) {
+/** Favoris valides (symboles connus), dans l'ordre d'ajout. */
+function favoriteKeys() {
   try {
-    const raw = JSON.parse(localStorage.getItem(RECENT_KEY) || '{}');
-    raw[symbolType] = (raw[symbolType] || 0) + 1;
-    localStorage.setItem(RECENT_KEY, JSON.stringify(raw));
-  } catch (err) { /* ignore */ }
+    const list = JSON.parse(localStorage.getItem(FAV_KEY) || '[]');
+    return Array.isArray(list) ? list.filter((k) => SYMBOLS[k]) : [];
+  } catch (err) { return []; }
 }
 
-/** Les n symboles les plus utilisés dans l'installation : d'abord la fréquence
- *  dans le projet courant, puis — s'il y a moins de n types — l'historique
- *  d'ajouts pour compléter la liste. */
-function topSymbols(n = 5) {
-  const out = [];
-  const seen = new Set();
-  const counts = new Map();
-  for (const e of project.elements) {
-    if (e && e.symbolType) counts.set(e.symbolType, (counts.get(e.symbolType) || 0) + 1);
-  }
-  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr'));
-  for (const [k] of sorted) { if (out.length >= n) break; out.push(k); seen.add(k); }
-  if (out.length < n) {
-    let hist = [];
-    try { hist = Object.entries(JSON.parse(localStorage.getItem(RECENT_KEY) || '{}')); } catch (err) { /* ignore */ }
-    hist.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr'));
-    for (const [k] of hist) {
-      if (out.length >= n) break;
-      if (!seen.has(k) && SYMBOLS[k]) { out.push(k); seen.add(k); }
-    }
-  }
-  return out;
+function isFavorite(key) {
+  return favoriteKeys().includes(key);
+}
+
+function toggleFavorite(key) {
+  const list = favoriteKeys();
+  const next = list.includes(key) ? list.filter((k) => k !== key) : [...list, key];
+  try { localStorage.setItem(FAV_KEY, JSON.stringify(next)); } catch (err) { /* ignore */ }
 }
 
 /* ------------------------------------------- menu contextuel sur un point d'ancrage */
@@ -873,24 +1101,72 @@ function topSymbols(n = 5) {
 const anchorMenu = $('#anchor-menu');
 let menuGuard = false;   // évite la fermeture immédiate par le clic d'ouverture
 
-function openAnchorMenu(clientX, clientY, parentId, dir) {
+let anchorCtx = null;   // { parentId, dir } du menu ouvert
+
+/** Liste du menu : favoris (ou résultats de recherche parmi tous les symboles).
+ *  Un symbole impossible à cet endroit reste affiché, grisé. */
+function renderAnchorMenuList(parentId, dir, query) {
   const parent = nodeOf(parentId);
   if (!parent) return;
-  const items = topSymbols(5).filter((k) => canAccept(parent.symbolType, k));
-  if (!items.length) { status(`Un ${symbolName(parent.symbolType)} ne peut rien recevoir ici.`); return; }
   const list = anchorMenu.querySelector('.anchor-menu-list');
-  list.innerHTML = items.map((k) => symBtnHtml(k)).join('');
+  const q = query.trim().toLowerCase();
+  const keys = q
+    ? Object.keys(SYMBOLS).filter((k) => SYMBOLS[k].name.toLowerCase().includes(q) || k.includes(q))
+    : favoriteKeys();
+  if (!keys.length) {
+    list.innerHTML = `<p class="hint">${q ? 'Aucun élément trouvé.' : 'Aucun favori : marquez-en avec l’étoile.'}</p>`;
+    return;
+  }
+  list.innerHTML = keys.map((k) => symBtnHtml(k)).join('');
+  const insert = anchorCtx && anchorCtx.mode === 'insert';
   list.querySelectorAll('.sym-btn').forEach((btn) => {
+    const type = btn.dataset.symbol;
+    const ok = placeable(parent, dir, type, insert);
+    btn.classList.toggle('nope', !ok);
     btn.addEventListener('click', () => {
-      const type = btn.dataset.symbol;
+      if (!ok) {
+        status(insert ? `${symbolName(type)} ne peut pas être intercalé ici.` : `Un ${symbolName(parent.symbolType)} ne peut pas recevoir un ${symbolName(type)}.`);
+        return;
+      }
       closeAnchorMenu();
       pendingAnchor = null;
-      const el = addElement(type, parentId, dir);
-      if (el) status(`${symbolName(type)} ajouté sur le point d’ancrage.`);
+      if (insert) {
+        insertWithProps(type, parentId, dir);
+      } else {
+        addWithProps(type, parentId, dir).then((el) => {
+          if (el) status(`${symbolName(type)} ajouté sur le point d’ancrage.`);
+        });
+      }
     });
   });
+}
+
+/** Peut-on poser `type` sur ce point (ajout), ou l'intercaler entre le parent et son enfant ? */
+function placeable(parent, dir, type, insert) {
+  if (!canAccept(parent.symbolType, type, dir)) return false;
+  if (!insert) return true;
+  const old = nodeOf((parent.children || {})[dir]);
+  return !old || canAccept(type, old.symbolType);
+}
+
+/** Intercale un élément (propriétés demandées d'abord). */
+async function insertWithProps(type, parentId, dir) {
+  const props = await promptFor(type, parentId);
+  if (props === null) { status('Ajout annulé.'); return; }
+  insertNode(parentId, dir, type, props);
+}
+
+function openAnchorMenu(clientX, clientY, parentId, dir, mode = 'add') {
+  const parent = nodeOf(parentId);
+  if (!parent) return;
+  anchorCtx = { parentId, dir, mode };
+  anchorMenu.querySelector('.anchor-menu-head').textContent = mode === 'insert' ? 'Intercaler un élément' : 'Ajouter sur ce point d’ancrage';
+  const search = anchorMenu.querySelector('.anchor-search');
+  search.value = '';
+  renderAnchorMenuList(parentId, dir, '');
   anchorMenu.dataset.anchor = `${parentId}:${dir}`;
   anchorMenu.hidden = false;
+  search.focus();
   // positionne le menu au point cliqué, sans sortir de l'écran
   const r = anchorMenu.getBoundingClientRect();
   const x = Math.max(8, Math.min(clientX, window.innerWidth - r.width - 8));
@@ -900,6 +1176,18 @@ function openAnchorMenu(clientX, clientY, parentId, dir) {
   menuGuard = true;
   setTimeout(() => { menuGuard = false; }, 0);
 }
+
+const anchorSearch = anchorMenu.querySelector('.anchor-search');
+anchorSearch.addEventListener('input', () => {
+  if (anchorCtx) renderAnchorMenuList(anchorCtx.parentId, anchorCtx.dir, anchorSearch.value);
+});
+anchorSearch.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { closeAnchorMenu(); return; }
+  if (e.key === 'Enter') {
+    const first = anchorMenu.querySelector('.anchor-menu-list .sym-btn:not(.nope)');
+    if (first) first.click();
+  }
+});
 
 function closeAnchorMenu() {
   if (!anchorMenu) return;
@@ -966,7 +1254,7 @@ function highlightAnchor(anchorEl) {
   if (anchorEl) anchorEl.classList.add('drop-hover');
 }
 
-canvasHost.addEventListener('drop', (e) => {
+canvasHost.addEventListener('drop', async (e) => {
   e.preventDefault();
   canvasHost.classList.remove('drag-over');
   highlightAnchor(null);
@@ -977,7 +1265,7 @@ canvasHost.addEventListener('drop', (e) => {
   if (!anchorEl) { status('Déposez le symbole sur un point d’ancrage (« + »).'); return; }
   const [pid, dir] = anchorEl.dataset.anchor.split(':');
   pendingAnchor = null;
-  const el = addElement(type, Number(pid), dir);
+  const el = await addWithProps(type, Number(pid), dir);
   if (el) status(`${symbolName(type)} ajouté (${el.label}).`);
 });
 
@@ -1002,17 +1290,18 @@ svgEl.addEventListener('pointerdown', (e) => {
     gesture = { pan: true, x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false };
   } else if (e.button === 0 && anchorEl) {
     const [pid, dir] = anchorEl.dataset.anchor.split(':');
+    e.preventDefault();
+    if (armedSymbol) { addWithProps(armedSymbol, Number(pid), dir); return; }
     selectedId = Number(pid);
     pendingAnchor = { parentId: Number(pid), dir };
     refreshAll();
     status('Point d’ancrage choisi — choisissez un symbole dans la palette.');
     openAnchorMenu(e.clientX, e.clientY, Number(pid), dir);
-    e.preventDefault();
     return;
   } else if (e.button === 0 && linkEl) {
     const [pid, dir] = linkEl.dataset.link.split(':');
-    insertNode(Number(pid), dir);
     e.preventDefault();
+    openAnchorMenu(e.clientX, e.clientY, Number(pid), dir, 'insert');
     return;
   } else if (e.button === 0 && hit) {
     gesture = { pan: false };
@@ -1058,21 +1347,23 @@ document.addEventListener('keydown', (e) => {
 
   if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
   if (mod && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) { e.preventDefault(); redo(); return; }
-  if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); $('#btn-save').click(); return; }
+  if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); saveLocal(); return; }
   if (mod && e.key.toLowerCase() === 'n') { e.preventDefault(); $('#btn-new').click(); return; }
 
-  if (activeTab !== 'schema' || isTyping(e.target)) return;
+  if (activeTab !== 'schema' || isTyping(e.target) || $('#prop-dialog').open) return;
   if (e.key === 'Escape' && !anchorMenu.hidden) { closeAnchorMenu(); return; }
   if (e.key === 'Delete' || e.key === 'Backspace') {
     const ids = [...selectedIds].filter((id) => !isSupplyId(id));
     if (ids.length) {
       e.preventDefault();
-      for (const id of ids) deleteElement(id);
-      deselect();
+      let parentId = null;
+      for (const id of ids) parentId = deleteElement(id) ?? parentId;
+      if (parentId != null && nodeOf(parentId)) { selectOnly(parentId); refreshAll(); } else deselect();
       status(ids.length + ' element(s) supprime(s).');
     }
   } else if (e.key === 'Escape') {
-    deselect();
+    if (armedSymbol) setArmed(null);
+    else deselect();
   }
 });
 
@@ -1118,27 +1409,44 @@ function renderProps() {
 
   const supply = node.symbolType === 'compteur';
   const isNode = node.symbolType === 'node';
-  $('#e-type').value = supply ? 'Compteur (arrivée)' : (isNode ? 'Node' : symbolName(node.symbolType));
+  const tableau = node.symbolType === 'tableau';
+  const isSocket = node.symbolType === 'socket';
+  const typeSel = $('#e-type');
+  // Type : modifiable pour une prise (type de prise), sinon readonly (nom du symbole)
+  if (isSocket) {
+    typeSel.disabled = false;
+    typeSel.innerHTML = SOCKET_TYPES.map((t) => `<option value="${t.key}">${t.name}</option>`).join('');
+    typeSel.value = node.socketType || DEFAULT_SOCKET_TYPE;
+  } else {
+    typeSel.disabled = true;
+    typeSel.innerHTML = `<option>${escHtml(supply ? 'Compteur (arrivée)' : (isNode ? 'Node' : symbolName(node.symbolType)))}</option>`;
+  }
   $('#e-label-lbl').hidden = isNode;
   $('#e-locked-lbl').hidden = isNode;
   $('#e-label').value = node.label || '';
   $('#e-locked').checked = !!node.labelLocked;
-  $('#e-detail-lbl').hidden = !supply;
-  $('#e-detail').value = node.detail || '';
-  $('#e-orient-lbl').hidden = isNode;
+  $('#e-showlabel-lbl').hidden = isNode;
+  $('#e-showlabel').checked = node.showLabel === true;
+  $('#e-count-lbl').hidden = !isSocket;
+  if (isSocket) {
+    $('#e-count').value = node.count || 1;
+    $('#e-count-val').textContent = (node.count || 1) > 1 ? (node.count || 1) + 'x' : '';
+  }
+  // un tableau est toujours horizontal : pas d'orientation modifiable
+  $('#e-orient-lbl').hidden = isNode || tableau;
   $('#e-orient').value = String(node.orient || 0);
-  $('#e-labelpos-lbl').hidden = supply || isNode;
+  // le texte d'un tableau est toujours en bas, horizontal : pas de position ni d'orientation
+  $('#e-labelpos-lbl').hidden = supply || isNode || tableau;
   $('#e-labelpos').value = node.labelPos || 'bottom';
   $('#e-labeloffset-lbl').hidden = isNode;
   const off = node.labelOffset == null ? -5 : Number(node.labelOffset);
   $('#e-labeloffset').value = String(off);
   $('#e-labeloffset-val').value = off + ' px';
   // orientation du texte : masquee pour un node et pour le compteur (texte fixe)
-  $('#e-labelrot-lbl').hidden = supply || isNode;
+  $('#e-labelrot-lbl').hidden = supply || isNode || tableau;
   $('#e-labelrot').value = node.labelRot || 'auto';
-  // option « Afficher le repère » : disponible sur chaque élément, false par défaut
-  $('#e-showlabel-lbl').hidden = isNode;
-  $('#e-showlabel').checked = node.showLabel === true;
+  $('#e-detail-lbl').hidden = !supply;
+  $('#e-detail').value = node.detail || '';
 
   const prot = isProtection(node.symbolType);
   const isRcd = node.symbolType === 'rcd';
@@ -1165,14 +1473,7 @@ function renderProps() {
   if (isMcbRcd) {
     $('#e-poles').value = node.poles || (node.symbolType === 'rcd' ? '2P' : '1P');
   }
-  const isSocket = node.symbolType === 'socket';
-  $('#e-sockettype-lbl').hidden = !isSocket;
-  if (isSocket) {
-    $('#e-sockettype').innerHTML = SOCKET_TYPES.map((t) => `<option value="${t.key}">${t.name}</option>`).join('');
-    $('#e-sockettype').value = node.socketType || DEFAULT_SOCKET_TYPE;
-  }
-  $('#e-count-lbl').hidden = !isSocket;
-  if (isSocket) $('#e-count').value = node.count || 1;
+
 
   const isSwitch = node.symbolType === 'switch';
   $('#e-switchtype-lbl').hidden = !isSwitch;
@@ -1185,13 +1486,17 @@ function renderProps() {
   $('#e-fil-box').hidden = !isFil;
   if (isFil) {
     const c = node.cable || (node.cable = { ...DEFAULT_CABLE });
-    $('#e-fil-n').value = c.n ?? 3;
-    $('#e-fil-terre').checked = !!c.terre;
+    // ancien format numérique : 3 → '3X', ou '3G' si conducteur de terre
+    if (typeof c.n === 'number') c.n = String(c.n) + (c.terre ? 'G' : 'X');
+    fillSel('#e-fil-n', FIL_N_VALUES.map((v) => [v, v]), c.n || '3G');
     fillSel('#e-fil-section', SECTIONS.map((s) => [String(s), String(s).replace('.', ',') + ' mm²']), c.section ?? 2.5);
     fillSel('#e-fil-cable', CABLE_TYPES.map((t) => [t, t]), c.type || 'XVB');
     fillSel('#e-fil-montage', MOUNT_TYPES.map((m) => [m.key, m.name]), c.montage || 'encastre_conduit');
   }
 }
+
+/** Nombre de conducteurs (listes X = sans terre, G = avec terre). */
+const FIL_N_VALUES = ['1X', '2X', '3X', '4X', '5X', '6X', '7X', '2G', '3G', '4G', '5G', '6G', '7G'];
 
 /** Remplit un <select> une seule fois puis sélectionne la valeur. */
 function fillSel(id, pairs, value) {
@@ -1202,7 +1507,7 @@ function fillSel(id, pairs, value) {
 
 $('#e-label').addEventListener('input', (e) => {
   const n = selectedNode(); if (!n) return;
-  n.label = e.target.value; markDirty(); refreshAll();
+  n.label = e.target.value; n.labelLocked = true; markDirty(); refreshAll();
 });
 $('#e-locked').addEventListener('change', (e) => {
   const n = selectedNode(); if (!n) return;
@@ -1214,7 +1519,7 @@ $('#e-detail').addEventListener('input', (e) => {
 });
 $('#e-orient').addEventListener('change', (e) => {
   const n = selectedNode(); if (!n) return;
-  n.orient = Number(e.target.value); markDirty(); refreshAll();
+  n.orient = n.symbolType === 'tableau' ? 0 : Number(e.target.value); markDirty(); refreshAll();
 });
 $('#e-labelpos').addEventListener('change', (e) => {
   const n = selectedNode(); if (!n) return;
@@ -1263,11 +1568,13 @@ $('#e-icb').addEventListener('input', (e) => {
 });
 $('#e-count').addEventListener('input', (e) => {
   const n = selectedNode(); if (!n || n.symbolType !== 'socket') return;
-  n.count = Math.max(1, Number(e.target.value) || 1); markDirty(); refreshAll();
+  n.count = Math.max(1, Number(e.target.value) || 1);
+  $('#e-count-val').textContent = n.count > 1 ? n.count + 'x' : '';
+  markDirty(); refreshAll();
 });
-$('#e-sockettype').addEventListener('change', (e) => {
-  const n = selectedNode(); if (!n || n.symbolType !== 'socket') return;
-  n.socketType = e.target.value; markDirty(); refreshAll();
+$('#e-type').addEventListener('change', (e) => {
+  const n = selectedNode(); if (!n) return;
+  if (n.symbolType === 'socket') { n.socketType = e.target.value; markDirty(); refreshAll(); }
 });
 $('#e-switchtype').addEventListener('change', (e) => {
   const n = selectedNode(); if (!n || n.symbolType !== 'switch') return;
@@ -1275,11 +1582,7 @@ $('#e-switchtype').addEventListener('change', (e) => {
 });
 $('#e-fil-n').addEventListener('input', (e) => {
   const n = selectedNode(); if (!n || n.symbolType !== 'fil') return;
-  (n.cable || (n.cable = {})).n = Math.max(1, Number(e.target.value) || 1); markDirty(); refreshAll();
-});
-$('#e-fil-terre').addEventListener('change', (e) => {
-  const n = selectedNode(); if (!n || n.symbolType !== 'fil') return;
-  (n.cable || (n.cable = {})).terre = e.target.checked; markDirty(); refreshAll();
+  (n.cable || (n.cable = {})).n = e.target.value; markDirty(); refreshAll();
 });
 $('#e-fil-section').addEventListener('change', (e) => {
   const n = selectedNode(); if (!n || n.symbolType !== 'fil') return;
@@ -1295,23 +1598,33 @@ $('#e-fil-montage').addEventListener('change', (e) => {
 });
 $('#e-del').addEventListener('click', () => { if (selectedId != null && !isSupplyId(selectedId)) deleteElement(selectedId); });
 
-$('#btn-add-node').addEventListener('click', () => {
-  const t = resolveTarget();
-  pendingAnchor = null;
-  if (!t) { status('Aucun point d’ancrage libre.'); return; }
-  insertNode(t.parentId, t.dir);
+$('#btn-apply-json').addEventListener('click', () => {
+  const ta = $('#schema-json');
+  try {
+    const data = JSON.parse(ta.value);
+    if (!data || !data.supply || !Array.isArray(data.elements)) throw new Error('Format invalide');
+    loadProject(data, null);
+    status('Schéma JSON appliqué.');
+  } catch (err) {
+    alert('JSON invalide : ' + err.message);
+  }
 });
 
 /* -------------------------------------------------------------------- init */
 
-let savedTab = null;
-try { savedTab = localStorage.getItem(TAB_KEY); } catch (err) { /* ignore */ }
-restoreAutosave();
-fitView();
-renderPalette();
-loadInfoForm();
-loadRecents();
-refreshAll();
-updateHistoryButtons();
-switchTab(['info', 'schema', 'bom'].includes(savedTab) ? savedTab : 'info');
-status('Prêt. Onglet « Informations sur l’installation » pour commencer.');
+document.addEventListener('DOMContentLoaded', () => {
+  const APP_VERSION = '0.3.0';
+  $('#app-version').textContent = 'v' + APP_VERSION;
+
+  let savedTab = null;
+  try { savedTab = localStorage.getItem(TAB_KEY); } catch (err) { /* ignore */ }
+  restoreAutosave();
+  fitView();
+  renderPalette();
+  loadInfoForm();
+  loadRecents();
+  refreshAll();
+  updateHistoryButtons();
+  switchTab(['info', 'schema', 'bom'].includes(savedTab) ? savedTab : 'info');
+  status('Prêt. Onglet « Informations sur l’installation » pour commencer.');
+});

@@ -150,7 +150,7 @@ const SYMBOLS = {
   // Pseudo-symbole inséré entre deux éléments (pas dans la palette).
   node: {
     name: 'Node (point de dérivation)', ref: 'D', prefix: 'D', category: 'cables',
-    w: 40, h: 40, file: 'symbols/carrefour.svg',
+    w: 20, h: 20, file: 'symbols/carrefour.svg',
   },
 };
 
@@ -184,6 +184,8 @@ export const SOCKET_TYPES = [
   { key: 'earth', name: 'Avec protection terre', file: 'symbols/socket_earth.svg' },
   { key: 'childproof', name: 'Avec protection enfant', file: 'symbols/socket_childproof.svg' },
   { key: 'earth_childproof', name: 'Avec protection terre et enfant (défaut)', file: 'symbols/socket_earth_childproof.svg' },
+  { key: 'earth_childproof_double', name: 'Double avec protection terre et enfant', file: 'symbols/socket_earth_childproof_double.svg' },
+  { key: 'earth_childproof_triple', name: 'Triple avec protection terre et enfant', file: 'symbols/socket_earth_childproof_triple.svg' },
   { key: 'switch', name: 'Avec interrupteur bipolaire', file: 'symbols/socket_switch.svg' },
   { key: 'switch_lock', name: 'Avec interrupteur bipolaire de verrouillage', file: 'symbols/socket_switch_lock.svg' },
   { key: 'transformer', name: 'Avec transformateur de séparation', file: 'symbols/socket_transfo.svg' },

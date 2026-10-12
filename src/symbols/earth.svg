@@ -1,1 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40"><g fill="none" stroke="#111827" stroke-width="2"><path d="M20 0 V18 M12 18 H28 M15 23 H25 M18 28 H22"/></g></svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+  <title>earth.svg</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <g>
+      <path d="M20 40 L20 22 M28 22 L12 22 M25 17 L15 17 M22 12 L18 12" fill="none" stroke="#111827" stroke-width="2"/>
+    </g>
+  </g>
+</svg>

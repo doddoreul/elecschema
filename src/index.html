@@ -13,12 +13,13 @@
     <span class="spacer"></span>
     <button id="btn-new" title="Nouveau projet (Ctrl+N)">Nouveau</button>
     <button id="btn-open" title="Ouvrir un projet (Ctrl+O)">Ouvrir…</button>
-    <button id="btn-save" title="Enregistrer (Ctrl+S)">Enregistrer…</button>
+    <button id="btn-save" title="Enregistrer dans le stockage local (Ctrl+S)">Enregistrer</button>
     <button id="btn-undo" title="Annuler (Ctrl+Z)" disabled>↶</button>
     <button id="btn-redo" title="Rétablir (Ctrl+Maj+Z)" disabled>↷</button>
     <span class="spacer"></span>
     <span id="recent-label" class="recents-label">Récents</span>
     <select id="recent-select" class="recents" title="Projets récents"></select>
+    <button id="btn-export" title="Exporter le schéma en JSON">Exporter…</button>
     <button id="btn-pdf" title="Exporter le schéma en PDF">PDF…</button>
   </header>
 
@@ -121,13 +122,14 @@
           <div id="palette-groups"></div>
           <div id="anchor-menu" class="anchor-menu" hidden>
             <div class="anchor-menu-head">Ajouter sur ce point d’ancrage</div>
+            <input class="anchor-search" type="search" placeholder="Rechercher un élément…" autocomplete="off">
             <div class="anchor-menu-list"></div>
-            <p class="hint">Choisissez un élément récent, ou cliquez ailleurs pour annuler.</p>
+            <p class="hint">Favoris, ou recherche (Entrée = premier disponible). Grisé = impossible ici. Échap ou clic ailleurs pour annuler.</p>
           </div>
           <hr>
-          <h3>Éléments posés</h3>
-          <div id="element-list"></div>
-          <button id="btn-add-node" class="primary">+ Ajouter un node</button>
+          <h3>Schéma JSON</h3>
+          <textarea id="schema-json" rows="12" spellcheck="false"></textarea>
+          <button id="btn-apply-json" class="primary">Appliquer</button>
           <p class="hint">Cliquez un « + » d'ancrage puis un symbole (ou glissez un symbole). Le « + » au milieu d'un conducteur insère un node. <kbd>Suppr</kbd> supprime. <kbd>Échap</kbd> désélectionne. Molette = zoom, clic sur le fond = déplacer.</p>
           <div class="zoom-row">
             <button id="btn-zoom-out">−</button>
@@ -151,10 +153,15 @@
           <div id="props-empty" class="hint">Sélectionnez un élément.</div>
 
           <div id="props-element" hidden>
-            <label>Type<input id="e-type" type="text" readonly></label>
+            <label>Type<select id="e-type"></select></label>
             <label id="e-label-lbl">Repère<input id="e-label" type="text" maxlength="20"></label>
             <label class="check" id="e-locked-lbl"><input id="e-locked" type="checkbox"> Verrouiller le repère</label>
-            <label id="e-detail-lbl">Désignation<input id="e-detail" type="text" maxlength="30" placeholder="ex. Compteur kWh"></label>
+            <label class="check" id="e-showlabel-lbl"><input id="e-showlabel" type="checkbox"> Afficher le repère sur le schéma</label>
+            <label id="e-count-lbl">Nombre de prises
+              <input id="e-count" type="number" min="1" max="12">
+              <output id="e-count-val"></output>
+            </label>
+            <hr class="props-sep">
             <label id="e-orient-lbl">Orientation<select id="e-orient">
               <option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="-90">-90°</option>
             </select></label>
@@ -168,7 +175,7 @@
             <label id="e-labelrot-lbl">Orientation du texte<select id="e-labelrot">
               <option value="auto">Automatique</option><option value="0">0 deg</option><option value="90">90 deg</option><option value="180">180 deg</option><option value="-90">-90 deg</option>
             </select></label>
-            <label class="check" id="e-showlabel-lbl"><input id="e-showlabel" type="checkbox"> Afficher le repère sur le schéma</label>
+            <label id="e-detail-lbl">Désignation<input id="e-detail" type="text" maxlength="30" placeholder="ex. Compteur kWh"></label>
             <fieldset class="mini" id="e-prot-box" hidden>
               <legend>Protection</legend>
               <label id="e-rating-lbl">Calibre (A)<select id="e-rating"></select></label>
@@ -183,12 +190,12 @@
               <label id="e-icb-lbl">Pouvoir de coupure (A)<input id="e-icb" type="number"></label>
             </fieldset>
             <label id="e-switchtype-lbl">Type d'interrupteur<select id="e-switchtype"></select></label>
-            <label id="e-sockettype-lbl">Type de prise<select id="e-sockettype"></select></label>
-            <label id="e-count-lbl">Nombre de prises<input id="e-count" type="number" min="1" max="12"></label>
             <fieldset class="mini" id="e-fil-box" hidden>
               <legend>Fil / câble</legend>
-              <label>Nombre de conducteurs<input id="e-fil-n" type="number" min="2" max="8"></label>
-              <label class="check"><input id="e-fil-terre" type="checkbox"> Avec conducteur de terre</label>
+              <label>Nombre de conducteurs<select id="e-fil-n">
+                <option>1X</option><option>2X</option><option>3X</option><option>4X</option><option>5X</option><option>6X</option><option>7X</option>
+                <option>2G</option><option>3G</option><option>4G</option><option>5G</option><option>6G</option><option>7G</option>
+              </select></label>
               <label>Section<select id="e-fil-section"></select></label>
               <label>Type de câble<select id="e-fil-cable"></select></label>
               <label>Type de montage<select id="e-fil-montage"></select></label>
@@ -250,6 +257,7 @@
     <span id="status">Prêt.</span>
     <span class="spacer"></span>
     <span id="project-file" class="file-name"></span>
+    <span id="app-version" class="version"></span>
   </footer>
 
   <div id="dialog" class="dialog-backdrop" hidden>
@@ -263,6 +271,16 @@
     </div>
   </div>
 
+  <dialog id="prop-dialog" class="prop-dialog">
+    <form method="dialog" id="prop-form">
+      <h3 id="prop-title"></h3>
+      <div id="prop-fields"></div>
+      <menu class="prop-actions">
+        <button type="submit" value="cancel" formnovalidate>Annuler</button>
+        <button type="submit" value="ok" class="primary">Ajouter</button>
+      </menu>
+    </form>
+  </dialog>
   <script src="ui.js" type="module"></script>
 </body>
 </html>

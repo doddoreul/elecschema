@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 40 40">
+  <defs>
+    <style>
+      .cls-1{fill:none;stroke:#111827;stroke-width:2}
+      .cls-2{fill:#ffffff;stroke:#111827;stroke-width:2}
+    </style>
+  </defs>
+  <title>socket_earth_childproof.svg</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <g>
+      <path d="M20 41.97 L20 27.97 M30 27.97 L10 27.97" class="cls-1"/>
+      <path d="M14 21.97 C14 25.284 16.686 27.97 20 27.97 C23.314 27.97 26 25.284 26 21.97" class="cls-2"/>
+      <path d="M15.005 21 L10.723 21" class="cls-1"/>
+      <path d="M29.284 21 L25.003 21" class="cls-1"/>
+    </g>
+    <g>
+      <path d="M20 31.97 L20 17.97 M30 17.97 L10 17.97" class="cls-1"/>
+      <path d="M14 11.97 C14 15.284 16.686 17.97 20 17.97 C23.314 17.97 26 15.284 26 11.97" class="cls-2"/>
+      <path d="M15.005 11 L10.723 11" class="cls-1"/>
+      <path d="M29.284 11 L25.003 11" class="cls-1"/>
+    </g>
+  </g>
+</svg>

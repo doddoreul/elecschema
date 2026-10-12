@@ -107,11 +107,12 @@ Decisions actees :
   « retournerait » le texte) ; ou valeur imposée `0 / 90 / 180 / -90`. Le pivot du groupe
   de texte vaut `spinRot = rot - orient`. À `orient = -90` : repère en bas et horizontal.
   Champ masqué pour un node (aucune propriété) et pour le compteur (texte fixe).
-- **Récents & menu contextuel** : `topSymbols(5)` = frequence dans le projet courant, completee
-  par l'historique `localStorage 'elecschema.recent'` (`noteUsage` a chaque `addElement`).
-  Section **« Récents »** en tête de palette (`renderRecents`, rafraichi par `refreshAll`).
+- **Favoris & menu contextuel** : chaque symbole de la palette a une **étoile** (`.fav-star`, `bindStar`)
+  qui bascule le favori (`localStorage 'elecschema.favorites'`, `toggleFavorite`, `favoriteKeys`).
+  Section **« Favoris »** en tête de palette (`renderFavorites`, reconstruite par `renderPalette`).
+  Les anciens « Récents » (fréquence) sont supprimés.
   Clic sur un « + » d'ancrage -> **menu contextuel** `#anchor-menu` (position fixe au point
-  clique) listant les 5 recents autorises ; choix -> ajout direct sur cet ancrage.
+  clique) listant les favoris + champ de recherche sur tous les symboles (`renderAnchorMenuList`) ; les symboles impossibles ici restent affichés grisés (`.nope`) ; choix -> ajout direct sur cet ancrage.
   Fermeture : clic externe, `Echap`, ou apres ajout.
 - **Ajouts en chaîne** : un ajout depuis la palette s'accroche a l'element **selectionne**;
   a defaut, au **dernier element ajoute** (`lastAddId`), et toujours dans la **meme direction**
@@ -131,7 +132,7 @@ Decisions actees :
   pas d'orientation ni position de texte dans le panneau (seuls « Node » et « Supprimer »
   restent affichés), aucun texte dessiné sur le schéma, exclu du BOM.
   `normalizeTypes` nettoie les anciens champs hérités (label, labelPos, showLabel, poles…).
-- Suppression d'un element : ses enfants remontent au parent (1er ancrage libre), sinon au
+- Suppression d'un element : le **parent** est sélectionné ensuite (`selectOnly`). Ses enfants remontent au parent (1er ancrage libre), sinon au
   frere promu, sinon le sous-arbre est supprime.
 - Compteur = racine, unique, **en bas a gauche**, editable au clic.
 - Reperes auto par prefixe (Q, X, E, F, D...), globaux au projet.
@@ -171,6 +172,23 @@ Decisions actees :
   - reçoit circuits (disjoncteurs), circuits sous différentiel, sectionneurs, fils, nodes…
   **Étape suivante** : départs numérotés sur la barre (`top-1..n`, `bottom-1..n`) via
   `anchorsOf('tableau')` + extension de `children` (clés composites) et du layout.
+
+- **Propriétés à l'ajout** (`PROMPTS`, `askProps`, `promptFor`, dialogue `#prop-dialog`) : disjoncteur (calibre 16 A, courbe C, pôles 2P), différentiel (sensibilité 30 mA, intensité 63 A, type AC, pôles 2P), prise (type terre + enfant), interrupteur (simple). Chaque invite a aussi le champ **Repère** (texte, vide = automatique) ; un repère saisi est verrouillé (`applyProps`). Annuler = rien n'est posé. Appliqué par `addWithProps` (ancrage, dépôt, menu, symbole armé) et `insertNode` (entre éléments).
+- **Mode « Trikker-like »** (branche `like-trikker`) :
+  - Clic sur un symbole de la palette = **armé** (`armedSymbol`, surbrillance orange). Chaque clic sur un « + » orange pose une copie ; le symbole reste armé. Clic sur le même symbole ou Échap = désarmer. Seuls les « + » acceptés par le symbole sont affichés (`opts.accepts`).
+  - « + » gris entre deux éléments : ouvre le **menu contextuel en mode « intercaler »** (`openAnchorMenu(..., 'insert')`, `placeable`, `insertWithProps`). Aucun type par défaut : l'utilisateur choisit (node compris). Le menu n'affiche grisés que les types impossibles sur le parent ou devant l'enfant existant. L'enfant suit dans la ligne.
+  - **Circuits** (`renumberCircuits`, appelé dans `refreshAll`) : disjoncteur/fusible sous tableau, différentiel, compteur ou node = début de circuit → lettre A, B… Z, AA, AB (`letterOf`). Symboles du circuit → `lettre + n` (1, 2…). Fil, node, tableau et sectionneur sans repère auto. Un repère saisi à la main verrouille l'élément (`labelLocked`) et lui conserve son nom.
+  - Le repère d'un début de circuit s'affiche par défaut (`showLabel`).
+  - Le clic sur un « + » sans symbole armé garde le menu contextuel et le mode chaîné (`resolveTarget`, bouton « + Node »).
+- **Tableau** (`tableau`) :
+  - Une entrée à **gauche** (occupée par le parent, le conducteur arrive au bout de la barre), des **sorties en haut** : clés `top-1`, `top-2`… (`anchorKeysOf`, `baseDir`, `outputIndex` dans `standards.js`).
+  - `node.outputs` = nombre de sorties, **toujours une sortie vierge après la dernière occupée** (minimum 2) : recalculé à chaque rafraîchissement (`syncOutputs`, appelée dans `refreshAll`). La barre s'élargit à l'ajout et se réduit à la suppression (`tabSpan`).
+  - La sortie `top-k` place l'enfant dans la colonne `k` (`computeLayout`, `portOf`). La barre est dessinée horizontalement (`drawBar`). Le texte d'un tableau est **toujours en bas, horizontal** (position et orientation du texte masquées, `drawBar` force `labelPos: 'bottom'`). **Un tableau n'est jamais pivoté** : orient forcée à 0 (`normalizeTypes`, champ Orientation masqué, valeur ignorée à la saisie).
+  - Supprimer un élément posé sur une sortie retire **ce point d'ancrage** (`removeOutput`) : les sorties suivantes remontent d'un cran. Ses enfants acceptés se reposent en fin de barre ; les autres sont supprimés.
+  - Accepte `rcd`, `breaker`, `sectionneur` et `fil` (`TABLEAU_OUTPUT_TYPES`, en tête de `canAccept`).
+  - Disposition (`computeLayout` dans `render.js`) : routage orthogonal. Chaque enfant part de son port (de préférence dans sa direction, sinon de biais avec pénalité), puis tourne au besoin. Un tracé est refusé s'il touche un élément ou un autre fil (`routeFree`, `segHit`). Les branches rectilignes sont posées avant les détours. Quand un détour est nécessaire, la branche bloquante est décalée (`bias`, `blockerOf`) et tout est recalculé (plafonné à 6 décalages par branche, 30 itérations). Résultat mis en cache (`layoutMemo`).
+  - **Limite connue** : dans les configurations très denses (élément entouré de ses propres enfants sur ses 4 ancrages), le plafond peut laisser un passage forcé. Cas rares, pas de garantie formelle.
+  - Migration à l'ouverture (`normalizeTypes`) : clé `top` → `top-1`, autres clés renumérotées.
 
 ## Mise en page (render.js)
 
@@ -285,8 +303,7 @@ Mais la verite vient de la mesure DOM via `getBBox()`, pas de l'image.
 - Ne modifier dans les fichiers que le necessaire. Pas de regroupement de
   fonctions, pas de reecriture "propre" non demandee.
 - **Ne pas recompiler les .exe** sans demande explicite.
-- Faire le **minimum de tests** : `node --check` + un run Electron avec
-  `--enable-logging=stderr`. Pas de capture d'ecran systematique.
+- Faire le **minimum de tests** : `node --check` uniquement. **Ne pas lancer Electron** à chaque prompt (seulement sur demande explicite). Pas de capture d'ecran systematique.
 - Reponses tres courtes : une phrase si possible.
 - Petites modifications : modifier directement le code sans presenter de plan.
 - Ne pas reformuler la demande ni decrire chaque etape.
