@@ -161,6 +161,12 @@ Decisions actees :
   en plus (`autosave:write`, debounce 400 ms, `userData/autosave.json`, ecriture atomique)
   et sert de repli si le `localStorage` est vide (profil efface). Enregistrer (Ctrl+S)
   ecrit dans le stockage local.
+- **Onglet actif** : memorise a chaque bascule (`switchTab`, `localStorage 'elecschema.tab'`)
+  et restaure au chargement (`savedTabName()` dans `DOMContentLoaded`, puis re-applique apres
+  « Reprendre » pour ne pas retomber sur « Informations »).
+- **Clavier** (`ui.js`, `keydown`) : `Ctrl+Z/Y` annuler/retablir, `Ctrl+S` enregistrer,
+  `Ctrl+N` nouveau, `Ctrl+A` **ne selectionne plus tout le texte** de la page (sauf dans un
+  champ de saisie, ou le comportement natif est conserve).
 - **Format de fichier `.elx`** (`src/format.js`) : JSON enveloppe (`format`,
   `formatVersion`, `schemaVersion`, `app`, `exportedAt`, `project`) puis **encode en
   base64**. « Exporter » telecharge un `.elx` ; « Ouvrir » le decode et verifie la

@@ -40,6 +40,8 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T3.8 | `Ctrl+Z` / `Ctrl+Y` | Annuler / rétablir |
 | T3.9 | `Maj + clic` sur plusieurs éléments | Sélection multiple |
 | T3.10 | « Recentrer » (barre de zoom) | Le schéma se recentre dans la fenêtre **sans changer le zoom** |
+| T3.11 | `Ctrl+A` (focus hors champ de saisie) | Le texte de la page n'est **plus** sélectionné ; dans un champ de saisie, `Ctrl+A` sélectionne toujours le contenu du champ |
+| T3.12 | Ouvrir un onglet, puis **actualiser la page** (`F5`) et « Reprendre » | On revient sur l'onglet qui était ouvert (Informations / Schéma unifilaire / Implantation / Composants) |
 
 ## T4 — Propriétés
 
