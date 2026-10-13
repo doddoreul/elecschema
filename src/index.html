@@ -264,6 +264,15 @@
               <label class="plan-field">Épaisseur (cm) <input id="plan-wall-t" type="number" min="1" step="1" value="20"></label>
               <button id="plan-wall-del">Supprimer le mur</button>
             </div>
+            <h3>Non placés</h3>
+            <p class="count">Éléments du schéma à poser (glisser-déposer ou cliquer puis cliquer le plan).</p>
+            <div id="plan-unplaced"></div>
+            <div id="plan-place-panel" class="plan-bg-panel" hidden>
+              <h3>Symbole sélectionné</h3>
+              <p id="plan-place-info" class="count"></p>
+              <label class="plan-field">Rotation (°) <input id="plan-place-rot" type="number" step="90" value="0"></label>
+              <button id="plan-place-del">Retirer du plan</button>
+            </div>
             <p id="plan-hint" class="count"></p>
           </aside>
         </div>

@@ -1,7 +1,7 @@
 // Contrôleur d'interface : onglets, informations, palette, arbre d'éléments, BOM.
 // Toute mutation du projet passe par markDirty() + refreshAll() pour rester synchronisé.
 
-import { emptyProject, createElement, syncIdCounter, nodeById, treeOrder, nextId, PREFIXES, migrateProject, normalizeTypes, isCircuitStart, renumberCircuits } from './model.js';
+import { emptyProject, createElement, syncIdCounter, nodeById, treeOrder, nextId, PREFIXES, migrateProject, normalizeTypes, isCircuitStart, renumberCircuits, ensurePlan } from './model.js';
 import { encodeElx, decodeElx, checkCompatibility, FILE_EXT, APP_VERSION, referencedAssets } from './format.js';
 import { initPlan, refreshPlan, resetPlanView } from './plan-ui.js';
 import { assetsObject, assetsReplace, saveAssetsIdb, loadAssetsIdb } from './plan-assets.js';
@@ -745,13 +745,15 @@ function renderIssues() {
   host.querySelectorAll('[data-issue]').forEach((li) => {
     li.addEventListener('click', () => {
       const issue = issues[Number(li.dataset.issue)];
-      if (issue.elementId != null) { selectElement(issue.elementId); switchTab('schema'); }
+      if (issue.rule.id === 'BE-09') { switchTab('plan'); }
+      else if (issue.elementId != null) { selectElement(issue.elementId); switchTab('schema'); }
       else status(`${issue.rule.severity.toUpperCase()} ${issue.rule.id} — ${issue.message}`);
     });
   });
 }
 
 function refreshAll() {
+  ensurePlan(project);   // nettoie les placements orphelins (élément supprimé du schéma)
   syncOutputs();
   renumberCircuits(project);
   renderElementList();
@@ -1828,7 +1830,7 @@ document.addEventListener('DOMContentLoaded', () => {
   switchTab(['info', 'schema', 'bom'].includes(savedTab) ? savedTab : 'info');
   status('Prêt. Sélectionnez un projet pour commencer.');
 
-  initPlan({ getProject: () => project, markDirty, status, activeTab: () => activeTab });
+  initPlan({ getProject: () => project, markDirty, status, activeTab: () => activeTab, selectElement, refreshAll });
 
   // Affiche l'écran d'accueil (reprendre, nouveau, ouvrir, récents)
   showWelcome();

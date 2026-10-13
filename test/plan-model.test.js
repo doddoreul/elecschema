@@ -6,7 +6,7 @@ import { emptyProject, migrateProject, SCHEMA_VERSION } from '../src/model.js';
 import {
   emptyPlan, normalizePlan, ensurePlan, addLevel, removeLevel, renameLevel, moveLevel,
   addWall, placeElement, unplaceElement, placedIds, unplacedElements, levelBounds,
-  nearestWall, orthoTarget, snap, pxPerCm, paperMm, chooseScale, effectiveScale, addRoom,
+  nearestWall, orthoTarget, snap, pxPerCm, paperMm, chooseScale, effectiveScale, addRoom, symbolSideCm,
 } from '../src/plan-model.js';
 import { encodeElx, decodeElx, referencedAssets } from '../src/format.js';
 
@@ -99,6 +99,13 @@ test('unplacedElements : compteur et posables seulement', () => {
   addEl(p, 5, 'fil');
   const ids = unplacedElements(p).map((e) => e.elementId);
   assert.deepEqual(ids, [1, 2, 4]);
+});
+
+test('taille des symboles : constante sur papier (4 mm), proportionnelle à l’échelle en cm', () => {
+  // 4 mm sur papier : 1:100 -> 40 cm réels ; 1:50 -> 20 cm ; 1:250 -> 100 cm
+  assert.equal(symbolSideCm(100), 40);
+  assert.equal(symbolSideCm(50), 20);
+  assert.equal(symbolSideCm(250), 100);
 });
 
 test('échelle : 1:100 -> 0,2 px/cm ; distance exacte sur le papier', () => {

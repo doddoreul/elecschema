@@ -5,7 +5,9 @@
 
 import { DEFAULT_ICB, isProtection, DEFAULT_CABLE, TABLEAU_OUTPUTS, ANCHOR_DIRECTIONS, outputIndex } from './standards.js';
 import { DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
-import { emptyPlan, normalizePlan } from './plan-model.js';
+import { emptyPlan, normalizePlan, ensurePlan } from './plan-model.js';
+
+export { ensurePlan };
 
 export const SCHEMA_VERSION = 4;
 const DOMAINE = 'DOMESTIQUE';

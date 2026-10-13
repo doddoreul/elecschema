@@ -4,7 +4,7 @@
 // nouvel équipement n'est créé ici. Le fond de plan est une couche temporaire
 // (image hors du projet, voir plan-ui.js) : `bg` ne référence qu'une clé d'image.
 
-import { PLAN_EXCLUDED, PLAN_SCALES } from './standards.js';
+import { PLAN_EXCLUDED, PLAN_SCALES, PLAN_SYMBOL_MM } from './standards.js';
 
 export const PLAN_STEP_CM = 5;                    // pas d'accrochage à la grille
 export const DEFAULT_WALL_CM = 20;                // épaisseur de mur par défaut
@@ -288,6 +288,12 @@ export function hasPlanContent(level) {
 /** Pixels de page par cm réel pour l'échelle 1:N (à 2 px/mm). 1:100 -> 0,2 px/cm. */
 export function pxPerCm(n) {
   return PAGE_PX_PER_CM_NUMERATOR / n;
+}
+
+/** Côté d'un symbole sur le plan (cm réels) : PLAN_SYMBOL_MM sur papier, à l'échelle 1:N.
+ *  Constant sur papier quelle que soit l'échelle. */
+export function symbolSideCm(n) {
+  return PLAN_SYMBOL_MM * n / 10;
 }
 
 /** Longueur réelle (cm) -> longueur sur papier (mm) à l'échelle 1:N. */

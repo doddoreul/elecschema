@@ -320,6 +320,14 @@ function placeLabel(g, node, def, cls = 'lbl') {
   if (det) txt(spin, dx, dy, det, 'lbl-sm', 'middle');
 }
 
+/** URL du fichier SVG d'un élément (même résolution pour le schéma et le plan d'implantation). */
+export function symbolHref(node) {
+  return node.symbolType === 'socket' ? socketUrl(node.socketType)
+    : node.symbolType === 'switch' ? switchUrl(node.switchType)
+    : node.symbolType === 'fil' ? filUrl(node)
+    : symbolUrl(node.symbolType);
+}
+
 function symbolGroup(svg, def, href, cx, cy, selected, attrs, orient = 0) {
   const g = el('g', { transform: `translate(${cx},${cy})`, class: 'sym-wrap' + (selected ? ' selected' : ''), ...attrs }, svg);
   // le groupe pivoté contient TOUT l'élément (image + zone cliquable) :
@@ -459,11 +467,7 @@ export function renderSchema(root, project, opts = {}) {
     const sel = opts.selectedIds ? opts.selectedIds.has(node.id) : opts.selectedId === node.id;
     if (node.symbolType === 'tableau') { drawBar(node, c, sel); continue; }
     const def = symbolOf(node.symbolType);
-    const href = node.symbolType === 'socket' ? socketUrl(node.socketType)
-      : node.symbolType === 'switch' ? switchUrl(node.switchType)
-      : node.symbolType === 'fil' ? filUrl(node)
-      : symbolUrl(node.symbolType);
-    const { g, rot } = symbolGroup(svg, def, href, cx, cy, sel, { 'data-el': node.id }, node.orient || 0);
+    const { g, rot } = symbolGroup(svg, def, symbolHref(node), cx, cy, sel, { 'data-el': node.id }, node.orient || 0);
     placeLabel(rot, node, def);
   }
 

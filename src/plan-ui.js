@@ -4,11 +4,14 @@
 import {
   levelById, addLevel, removeLevel, renameLevel, moveLevel, hasPlanContent, levelBounds,
   effectiveScale, chooseScale, nextPlanId, addWall, removeWall, wallLength, paperMm,
-  snap, orthoTarget,
+  snap, orthoTarget, placeElement, unplaceElement, findPlacement, unplacedElements,
+  symbolSideCm,
 } from './plan-model.js';
 import { PLAN_SCALES } from './standards.js';
+import { symbolName } from './symbols.js';
+import { nodeById, circuitStartOf } from './model.js';
 import { prepareImage, assetSet } from './plan-assets.js';
-import { renderPlanLevel, el } from './plan-render.js';
+import { renderPlanLevel, el, planLabel } from './plan-render.js';
 
 const $ = (sel) => document.querySelector(sel);
 const DEFAULT_VIEW = { x: -200, y: -200, w: 1600, h: 1000 };
@@ -23,10 +26,13 @@ const ui = {
   tool: 'select',       // 'select' | 'wall' | 'calib'
   calibPts: [],
   spaceDown: false,
-  drag: null,           // glissement en cours : pan | bg | end | wall
+  drag: null,           // glissement en cours : pan | bg | end | wall | place | pick
   draft: null,          // point de départ d'un mur en cours de tracé
   cursor: null,         // point visé (aperçu du mur en cours)
   selWall: null,        // id du mur sélectionné
+  selPlace: null,       // elementId du symbole sélectionné sur le plan
+  placeArmed: null,     // elementId armé depuis la liste « Non placés »
+  n: 100,               // échelle effective courante (pour la taille des symboles)
 };
 
 function plan() { return deps.getProject().plan; }
@@ -40,6 +46,13 @@ function currentLevel() {
 
 function selectedWall(lv) {
   return ui.selWall == null ? null : lv.walls.find((w) => w.id === ui.selWall) || null;
+}
+
+function project() { return deps.getProject(); }
+
+function nodeOf(elementId) {
+  const p = project();
+  return elementId === p.supply.id ? p.supply : nodeById(p, elementId);
 }
 
 const svgEl = () => $('#plan-canvas');
@@ -95,6 +108,15 @@ export function initPlan(d) {
   });
   $('#plan-wall-del').addEventListener('click', deleteSelectedWall);
 
+  $('#plan-place-rot').addEventListener('change', (e) => {
+    const found = ui.selPlace != null ? findPlacement(plan(), ui.selPlace) : null;
+    if (!found) return;
+    const r = Number(e.target.value);
+    if (Number.isFinite(r)) { found.placement.rot = ((r % 360) + 360) % 360; deps.markDirty(); }
+    refreshPlan();
+  });
+  $('#plan-place-del').addEventListener('click', removeSelectedPlace);
+
   svg.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e, e.deltaY > 0 ? 1.1 : 1 / 1.1); }, { passive: false });
   svg.addEventListener('pointerdown', onPointerDown);
   svg.addEventListener('pointermove', onPointerMove);
@@ -119,13 +141,46 @@ function onKeyDown(e) {
     if (ui.tool === 'calib') { setTool('select'); return; }
     if (ui.draft) { ui.draft = null; drawOverlay(); return; }
     if (ui.tool === 'wall') { setTool('select'); return; }
-    ui.selWall = null; refreshPlan();
+    if (ui.placeArmed != null) { ui.placeArmed = null; refreshPlan(); return; }
+    if (ui.selPlace != null || ui.selWall != null) { ui.selPlace = null; ui.selWall = null; refreshPlan(); }
     return;
   }
   if (e.key === 'Enter' && ui.draft) { ui.draft = null; drawOverlay(); return; }
-  if ((e.key === 'Delete' || e.key === 'Backspace') && ui.selWall != null) {
+  if ((e.key === 'Delete' || e.key === 'Backspace')) {
+    if (ui.selPlace != null) { e.preventDefault(); removeSelectedPlace(); return; }
+    if (ui.selWall != null) { e.preventDefault(); deleteSelectedWall(); return; }
+  }
+  if (e.key.toLowerCase() === 'r' && ui.selPlace != null) {
     e.preventDefault();
-    deleteSelectedWall();
+    const found = findPlacement(plan(), ui.selPlace);
+    if (found) { found.placement.rot = (((found.placement.rot || 0) + 90) % 360); deps.markDirty(); refreshPlan(); }
+    return;
+  }
+  const step = 5;
+  const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+  if (moves[e.key]) {
+    e.preventDefault();
+    nudge(moves[e.key][0], moves[e.key][1]);
+  }
+}
+
+/** Déplace le symbole sélectionné, sinon le mur sélectionné (accrochage à la grille). */
+function nudge(dx, dy) {
+  const lv = currentLevel();
+  if (ui.selPlace != null) {
+    const found = findPlacement(plan(), ui.selPlace);
+    if (found) {
+      found.placement.x = snap(found.placement.x + dx);
+      found.placement.y = snap(found.placement.y + dy);
+      deps.markDirty(); refreshPlan();
+    }
+  } else if (ui.selWall != null) {
+    const w = selectedWall(lv);
+    if (w) {
+      w.x1 = snap(w.x1 + dx); w.y1 = snap(w.y1 + dy);
+      w.x2 = snap(w.x2 + dx); w.y2 = snap(w.y2 + dy);
+      deps.markDirty(); refreshPlan();
+    }
   }
 }
 
@@ -143,17 +198,21 @@ export function refreshPlan() {
   if (!deps || deps.activeTab() !== 'plan') return;
   const p = plan();
   const lv = currentLevel();
+  ui.n = effectiveScale(lv);
   renderLevelBar(p);
   renderScale(lv);
   renderBgPanel(lv);
   renderWallPanel(lv);
   renderToolButtons();
-  renderPlanLevel(svgEl(), lv, ui.view, ui.selWall);
+  renderUnplaced(project());
+  renderPlacePanel();
+  renderPlanLevel(svgEl(), lv, ui.view, { project: project(), n: ui.n, selWall: ui.selWall, selPlace: ui.selPlace });
   drawOverlay();
+  svgEl().classList.toggle('place-armed', ui.placeArmed != null);
   $('#plan-hint').textContent = hintText(lv);
 }
 
-/** Calque d'aperçu : brouillon de mur, poignées du mur sélectionné, points de calibration.
+/** Calque d'aperçu : brouillon de mur, poignées, anneau du symbole, points de calibration.
  *  Redessiné seul pendant les mouvements (le fond n'est pas recréé). */
 function drawOverlay() {
   const g = svgEl().querySelector('#plan-overlay');
@@ -168,6 +227,16 @@ function drawOverlay() {
   if (w && ui.tool === 'select') {
     for (const [x, y, end] of [[w.x1, w.y1, '1'], [w.x2, w.y2, '2']]) {
       el('circle', { cx: x, cy: y, r: ui.view.w / 120, class: 'plan-handle', 'data-end': end }, g);
+    }
+  }
+  if (ui.selPlace != null) {
+    const found = findPlacement(plan(), ui.selPlace);
+    if (found) {
+      const node = nodeOf(found.placement.elementId);
+      const def = symbolOf(node.symbolType === 'compteur' ? 'kwh' : node.symbolType);
+      const side = symbolSideCm(ui.n);
+      const h = side * def.h / def.w;
+      el('rect', { x: found.placement.x - side / 2 - 3, y: found.placement.y - h / 2 - 3, width: side + 6, height: h + 6, class: 'plan-sel-ring' }, g);
     }
   }
   for (const pt of ui.calibPts) el('circle', { cx: pt.x, cy: pt.y, r: ui.view.w / 150, class: 'plan-calib' }, g);
@@ -219,6 +288,36 @@ function renderWallPanel(lv) {
   $('#plan-wall-info').textContent = `Longueur ${Math.round(len)} cm — sur papier à 1:${scale} : ${paperMm(len, scale).toFixed(1)} mm`;
 }
 
+/** Liste « Non placés » : éléments posables pas encore placés, triés de façon stable. */
+function renderUnplaced(p) {
+  const host = $('#plan-unplaced');
+  const list = unplacedElements(p);
+  host.innerHTML = list.length === 0 ? '<p class="count">Tout est placé.</p>' : '';
+  for (const it of list) {
+    const node = nodeOf(it.elementId);
+    const div = document.createElement('div');
+    div.className = 'plan-unplaced-item';
+    div.dataset.id = it.elementId;
+    const lbl = esc(planLabel(p, node) || '—');
+    const tp = esc(symbolName(node.symbolType === 'compteur' ? 'kwh' : node.symbolType));
+    div.innerHTML = `<span class="lbl">${lbl}</span><span class="tp">${tp}</span>`;
+    host.appendChild(div);
+    makeDraggable(div);
+  }
+}
+
+function renderPlacePanel() {
+  const found = ui.selPlace != null ? findPlacement(plan(), ui.selPlace) : null;
+  $('#plan-place-panel').hidden = !found;
+  if (!found) return;
+  const node = nodeOf(found.placement.elementId);
+  const start = circuitStartOf(project(), node);
+  const nom = node.symbolType === 'compteur' ? 'Compteur' : symbolName(node.symbolType);
+  $('#plan-place-info').textContent =
+    `${planLabel(project(), node) || '—'} · ${nom} · ${found.level.name}` + (start ? ` · circuit ${start.label || '—'}` : '');
+  $('#plan-place-rot').value = String(found.placement.rot || 0);
+}
+
 function hintText(lv) {
   if (ui.tool === 'calib') {
     return ui.calibPts.length === 0
@@ -228,8 +327,9 @@ function hintText(lv) {
   if (ui.tool === 'wall') {
     return 'Mur : clic pour commencer, clic pour poursuivre. Entrée, Échap ou double-clic pour finir. Alt : angle libre.';
   }
+  if (ui.placeArmed != null) return 'Cliquez sur le plan pour poser. Échap pour annuler.';
   if (lv.bg && !lv.bg.locked) return 'Fond déverrouillé : glissez-le. Verrouillez-le avant de tracer.';
-  return 'Clic sur un mur : sélection (poignées pour l’étirer). Molette : zoom · Espace ou bouton milieu : déplacer la vue.';
+  return 'Clic sur un mur ou un symbole : sélection. R : rotation. Suppr : retirer. Molette : zoom · Espace ou bouton milieu : déplacer la vue.';
 }
 
 /* ----------------------------------------------------------------- vue (zoom) */
@@ -281,6 +381,16 @@ function toWorld(e) {
   return { x: p.x, y: p.y };
 }
 
+function toWorldFromClient(cx, cy) {
+  const svg = svgEl();
+  const pt = svg.createSVGPoint();
+  pt.x = cx; pt.y = cy;
+  const m = svg.getScreenCTM();
+  if (!m) return { x: 0, y: 0 };
+  const p = pt.matrixTransform(m.inverse());
+  return { x: p.x, y: p.y };
+}
+
 /** Point visé : extrémité de mur proche (accrochage prioritaire), sinon grille 5 cm.
  *  En cours de tracé, orthogonal sauf Alt. */
 function targetPoint(e) {
@@ -326,9 +436,23 @@ function onPointerDown(e) {
     return;
   }
 
-  // outil Sélection : poignée > mur > fond
+  // Pose depuis la liste (clic après armement, ou glisser-déposer géré dans makeDraggable)
+  if (ui.placeArmed != null) {
+    const id = ui.placeArmed;
+    if (placeElement(plan(), lv.id, id, snap(toWorld(e).x), snap(toWorld(e).y))) {
+      ui.selPlace = id;
+      ui.placeArmed = null;
+      deps.selectElement(id);          // sélection partagée avec le schéma
+      deps.markDirty();
+    }
+    refreshPlan();
+    return;
+  }
+
+  // outil Sélection : poignée > mur > symbole > fond
   const handle = e.target.closest?.('[data-end]');
   const wallEl = e.target.closest?.('[data-wall]');
+  const placeEl = e.target.closest?.('[data-placement]');
   if (handle) {
     const w = selectedWall(lv);
     if (w) {
@@ -339,6 +463,7 @@ function onPointerDown(e) {
   }
   if (wallEl) {
     ui.selWall = wallEl.dataset.wall;
+    ui.selPlace = null;
     const w = selectedWall(lv);
     const start = toWorld(e);
     ui.drag = { kind: 'wall', wall: w.id, start, orig: { x1: w.x1, y1: w.y1, x2: w.x2, y2: w.y2 }, moved: false };
@@ -346,13 +471,25 @@ function onPointerDown(e) {
     refreshPlan();
     return;
   }
+  if (placeEl) {
+    const id = Number(placeEl.dataset.placement);
+    ui.selPlace = id;
+    ui.selWall = null;
+    const found = findPlacement(plan(), id);
+    const start = toWorld(e);
+    ui.drag = { kind: 'place', id, start, orig: found ? { x: found.placement.x, y: found.placement.y } : null, moved: false };
+    svgEl().setPointerCapture(e.pointerId);
+    deps.selectElement(id);            // sélection partagée avec le schéma
+    refreshPlan();
+    return;
+  }
   if (lv.bg && !lv.bg.locked && e.target.closest?.('[data-bg]')) {
     ui.drag = { kind: 'bg', start: toWorld(e), bx: lv.bg.x, by: lv.bg.y, moved: false };
-    ui.selWall = null;
+    ui.selWall = null; ui.selPlace = null;
     svgEl().setPointerCapture(e.pointerId);
     return;
   }
-  if (ui.selWall != null) { ui.selWall = null; refreshPlan(); }
+  if (ui.selWall != null || ui.selPlace != null) { ui.selWall = null; ui.selPlace = null; refreshPlan(); }
 }
 
 function onPointerMove(e) {
@@ -398,6 +535,15 @@ function onPointerMove(e) {
     d.moved = true;
     updateWallEl(w);
     drawOverlay();
+  } else if (d.kind === 'place') {
+    const found = findPlacement(plan(), d.id);
+    if (!found || !d.orig) return;
+    const pt = toWorld(e);
+    found.placement.x = snap(d.orig.x + (pt.x - d.start.x));
+    found.placement.y = snap(d.orig.y + (pt.y - d.start.y));
+    d.moved = true;
+    updatePlaceEl(found);
+    drawOverlay();
   }
 }
 
@@ -408,12 +554,17 @@ function onPointerUp(e) {
   if (d && d.moved) { deps.markDirty(); refreshPlan(); }
 }
 
-/** Met à jour seulement la ligne d'un mur pendant un glissement (pas de re-rendu complet). */
+/** Met à jour seulement un objet pendant un glissement (pas de re-rendu complet). */
 function updateWallEl(w) {
   const line = svgEl().querySelector(`[data-wall="${w.id}"]`);
   if (!line) return;
   line.setAttribute('x1', w.x1); line.setAttribute('y1', w.y1);
   line.setAttribute('x2', w.x2); line.setAttribute('y2', w.y2);
+}
+
+function updatePlaceEl(found) {
+  const g = svgEl().querySelector(`[data-placement="${found.placement.elementId}"]`);
+  if (g) g.setAttribute('transform', `translate(${found.placement.x},${found.placement.y})`);
 }
 
 /* ----------------------------------------------------------------- murs */
@@ -426,12 +577,65 @@ function deleteSelectedWall() {
   deps.markDirty(); refreshPlan();
 }
 
+/* ---------------------------------------------------------------- placements */
+
+/** Retire le symbole du plan ; l'élément du schéma est conservé. */
+function removeSelectedPlace() {
+  if (ui.selPlace == null) return;
+  unplaceElement(plan(), ui.selPlace);
+  ui.selPlace = null;
+  deps.markDirty(); refreshPlan();
+}
+
+/** Glisser-déposer depuis la liste « Non placés ». Clic simple = armer. */
+function makeDraggable(item) {
+  item.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    const id = Number(item.dataset.id);
+    const sx = e.clientX, sy = e.clientY;
+    let ghost = null;
+    const move = (ev) => {
+      if (!ghost && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) {
+        ghost = document.createElement('div');
+        ghost.id = 'plan-ghost';
+        ghost.textContent = item.textContent;
+        document.body.appendChild(ghost);
+      }
+      if (ghost) { ghost.style.left = `${ev.clientX + 8}px`; ghost.style.top = `${ev.clientY + 8}px`; }
+    };
+    const up = (ev) => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      const r = svgEl().getBoundingClientRect();
+      const inside = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+      if (ghost) {
+        ghost.remove();
+        if (inside) {
+          const pt = toWorldFromClient(ev.clientX, ev.clientY);
+          if (placeElement(plan(), currentLevel().id, id, snap(pt.x), snap(pt.y))) {
+            ui.selPlace = id;
+            ui.placeArmed = null;
+            deps.selectElement(id);
+            deps.markDirty();
+          }
+          refreshPlan();
+        }
+      } else {
+        ui.placeArmed = ui.placeArmed === id ? null : id;
+        refreshPlan();
+      }
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  });
+}
+
 /* ------------------------------------------------------------------ niveaux */
 
 function selectLevel(id) {
   if (id === ui.levelId) return;
   ui.levelId = id;
-  ui.tool = 'select'; ui.calibPts = []; ui.draft = null; ui.selWall = null;
+  ui.tool = 'select'; ui.calibPts = []; ui.draft = null; ui.selWall = null; ui.selPlace = null; ui.placeArmed = null;
   fitLevel(currentLevel());
   refreshPlan();
 }
@@ -439,7 +643,7 @@ function selectLevel(id) {
 async function addLevelFlow() {
   const lv = addLevel(plan());
   ui.levelId = lv.id;
-  ui.selWall = null; ui.draft = null;
+  ui.selWall = null; ui.selPlace = null; ui.draft = null;
   fitLevel(lv);
   deps.markDirty(); refreshPlan();
 }
@@ -463,7 +667,7 @@ function removeFlow() {
   if (hasPlanContent(lv) && !confirm(`Supprimer l’étage « ${lv.name} » et son tracé ? Les éléments du schéma sont conservés.`)) return;
   removeLevel(p, lv.id);
   ui.levelId = p.levels[0].id;
-  ui.selWall = null; ui.draft = null;
+  ui.selWall = null; ui.selPlace = null; ui.draft = null;
   fitLevel(currentLevel());
   deps.markDirty(); refreshPlan();
 }
@@ -559,5 +763,7 @@ export function resetPlanView() {
   ui.drag = null;
   ui.draft = null;
   ui.selWall = null;
+  ui.selPlace = null;
+  ui.placeArmed = null;
   fitLevel(currentLevel());
 }

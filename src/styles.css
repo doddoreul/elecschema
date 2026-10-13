@@ -347,3 +347,14 @@ tbody tr:hover { background: #f9fafb; }
 .plan-calib { fill: #dc2626; }
 .plan-bg { cursor: default; }
 .plan-bg.locked { pointer-events: none; }
+.plan-unplaced { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 10px; }
+.plan-unplaced-item { display: flex; gap: 8px; align-items: baseline; border: 1px solid var(--line); border-radius: 5px; background: #f9fafb; padding: 6px 8px; font-size: 12px; cursor: grab; }
+.plan-unplaced-item:hover { background: #eef2f7; }
+.plan-unplaced-item .lbl { font-weight: 600; color: #111827; }
+.plan-unplaced-item .tp { color: var(--muted); }
+.plan-sym-hit { fill: transparent; stroke: transparent; }
+.plan-sym.selected .plan-sym-hit { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 5 4; }
+.plan-label { fill: #374151; font-family: sans-serif; }
+.plan-sel-ring { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 5 4; }
+#plan-canvas.place-armed { cursor: crosshair; }
+#plan-ghost { position: fixed; z-index: 200; pointer-events: none; opacity: .75; font-size: 12px; border: 1px solid var(--accent); background: #fff; padding: 3px 7px; border-radius: 5px; }

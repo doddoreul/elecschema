@@ -6,6 +6,7 @@
 // vérification manuelle par un professionnel.
 
 import { nodeById } from './model.js';
+import { PLAN_EXCLUDED } from './standards.js';
 
 export const RULE_SEVERITY = { ERROR: 'erreur', WARN: 'avertissement', INFO: 'info' };
 
@@ -108,6 +109,26 @@ export const RULES_BE = [
       if (!i.dessinateur?.nom) missing.push('dessinateur');
       if (missing.length === 0) return [];
       return [{ elementId: null, message: `Informations manquantes : ${missing.join(', ')}.` }];
+    },
+  },
+  {
+    id: 'BE-09',
+    severity: RULE_SEVERITY.INFO,
+    message: 'Appareillage non placé sur le plan',
+    source: "Implantation de l'appareillage",
+    verified: false,
+    check: (p) => {
+      const levels = p.plan?.levels || [];
+      const placements = levels.reduce((n, l) => n + (l.placements?.length || 0), 0);
+      if (placements === 0) return [];   // pas de plan : pas d'alerte
+      const placed = new Set();
+      for (const l of levels) for (const x of l.placements || []) placed.add(x.elementId);
+      const out = [];
+      for (const e of [p.supply, ...(p.elements || [])]) {
+        if (!e || PLAN_EXCLUDED.includes(e.symbolType) || placed.has(e.id)) continue;
+        out.push({ elementId: e.id, message: `${e.symbolType} non placé sur le plan.` });
+      }
+      return out;
     },
   },
 ];

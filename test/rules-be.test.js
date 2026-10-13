@@ -6,9 +6,9 @@ import { validate, RULES_BE } from '../src/rules-be.js';
 
 const ids = (issues) => issues.map((i) => i.rule.id);
 
-test('les 6 règles sont définies et ordonnées', () => {
-  assert.equal(RULES_BE.length, 6);
-  assert.deepEqual(RULES_BE.map((r) => r.id), ['BE-01', 'BE-03', 'BE-04', 'BE-05', 'BE-06', 'BE-08']);
+test('les 7 règles sont définies et ordonnées', () => {
+  assert.equal(RULES_BE.length, 7);
+  assert.deepEqual(RULES_BE.map((r) => r.id), ['BE-01', 'BE-03', 'BE-04', 'BE-05', 'BE-06', 'BE-08', 'BE-09']);
 });
 
 test('BE-01 : schéma sans élément', () => {
@@ -64,4 +64,17 @@ test('BE-08 : dossier incomplet (adresse/société/dessinateur)', () => {
   const s = createElement('socket', p.supply.id, 'right');
   p.supply.children.right = s.id; p.elements.push(s);
   assert.ok(ids(validate(p)).includes('BE-08'));
+});
+
+test('BE-09 : appareillage non placé — seulement si le plan contient un placement', () => {
+  const p = emptyProject();
+  const s = createElement('socket', p.supply.id, 'right');
+  p.supply.children.right = s.id; p.elements.push(s);
+  assert.ok(!ids(validate(p)).includes('BE-09'), 'pas de plan : pas d’alerte');
+  p.plan.levels[0].placements.push({ elementId: p.supply.id, x: 0, y: 0, rot: 0 });
+  p.plan.levels[0].placements.push({ elementId: s.id, x: 100, y: 100, rot: 0 });
+  assert.ok(!ids(validate(p)).includes('BE-09'), 'tout est placé');
+  const s2 = createElement('light', p.supply.id, 'left');
+  p.supply.children.left = s2.id; p.elements.push(s2);
+  assert.ok(ids(validate(p)).includes('BE-09'), 'un élément reste non placé');
 });
