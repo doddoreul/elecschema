@@ -338,6 +338,8 @@ tbody tr:hover { background: #f9fafb; }
 .plan-bg-panel { margin-top: 6px; }
 .plan-bg-panel[hidden] { display: none; }
 .plan-field { display: block; margin: 6px 0; font-size: 12px; }
+.plan-checks { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0; font-size: 12px; }
+.plan-checks label { display: inline-flex; align-items: center; gap: 4px; margin: 0; }
 #plan-dialog-input { width: 100%; box-sizing: border-box; margin-top: 4px; }
 .plan-sep { width: 1px; align-self: stretch; background: var(--line); margin: 0 4px; }
 .plan-wall { stroke: #111827; stroke-linecap: square; fill: none; }
