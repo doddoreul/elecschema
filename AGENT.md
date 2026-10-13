@@ -71,7 +71,7 @@ src/
   platform.js     shim web de window.elexio (hors Electron : PDF/ouverture)
 tools/serve-browser.js    serveur de test navigateur
 tools/check-syntax.mjs    verificateur de syntaxe (npm run check)
-test/                     tests automatises node:test (model, rules-be, layout, format)
+test/                     tests automatises node:test (model, plan-model, rules-be, layout, format)
 .github/workflows/pages.yml  deploiement Pages
 .github/workflows/ci.yml     syntaxe + tests (node --test)
 TESTS.md          cas de test manuels
@@ -129,7 +129,7 @@ Decisions actees :
   de texte vaut `spinRot = rot - orient`. À `orient = -90` : repère en bas et horizontal.
   Champ masqué pour un node (aucune propriété) et pour le compteur (texte fixe).
 - **Favoris & menu contextuel** : chaque symbole de la palette a une **étoile** (`.fav-star`, `bindStar`)
-  qui bascule le favori (`localStorage 'elecschema.favorites'`, `toggleFavorite`, `favoriteKeys`).
+  qui bascule le favori (`localStorage 'elexio.favorites'`, `toggleFavorite`, `favoriteKeys`).
   Section **« Favoris »** en tête de palette (`renderFavorites`, reconstruite par `renderPalette`).
   Les anciens « Récents » (fréquence) sont supprimés.
   Clic sur un « + » d'ancrage -> **menu contextuel** `#anchor-menu` (position fixe au point
@@ -156,14 +156,17 @@ Decisions actees :
 - Reperes auto par prefixe (Q, X, E, F, D...), globaux au projet.
 - Unifilaire uniquement : jamais de schema developpe.
 - **Autosave permanent** : le projet courant est serialise dans `localStorage`
-  (`elecschema.autosave`) a *chaque* modification (`markDirty`/`restore`/`clearDirty`) et
+  (`elexio.autosave`) a *chaque* modification (`markDirty`/`restore`/`clearDirty`) et
   restaure au demarrage (`restoreAutosave()`). En bureau, un **miroir disque** est ecrit
   en plus (`autosave:write`, debounce 400 ms, `userData/autosave.json`, ecriture atomique)
   et sert de repli si le `localStorage` est vide (profil efface). Enregistrer (Ctrl+S)
   ecrit dans le stockage local.
-- **Onglet actif** : memorise a chaque bascule (`switchTab`, `localStorage 'elecschema.tab'`)
+- **Onglet actif** : memorise a chaque bascule (`switchTab`, `localStorage 'elexio.tab'`)
   et restaure au chargement (`savedTabName()` dans `DOMContentLoaded`, puis re-applique apres
   « Reprendre » pour ne pas retomber sur « Informations »).
+- **Cles `localStorage`** : prefixe **`elexio.*`** (`elexio.autosave`, `elexio.tab`,
+  `elexio.printPreview`, `elexio.favorites`, `elexio.planFrame`). `lsGet()` reprend a la
+  lecture l'ancienne cle `elecschema.*` et la recopie (migration douce, **rien supprime**).
 - **Clavier** (`ui.js`, `keydown`) : `Ctrl+Z/Y` annuler/retablir, `Ctrl+S` enregistrer,
   `Ctrl+N` nouveau, `Ctrl+A` **ne selectionne plus tout le texte** de la page (sauf dans un
   champ de saisie, ou le comportement natif est conserve).
@@ -229,7 +232,7 @@ Decisions actees :
 Onglet **Schéma d'implantation** : dessin par **etage**, coordonnees en **cm** (Y vers le bas).
 
 Modele (`plan-model.js`, pur) : `plan { seq, levels[] }` ;
-`level { id, name, bg, walls[], openings[], rooms[], placements[], printScale }`.
+`level { id, name, bg, walls[], openings[], rooms[], placements[], printScale, printCenter }`.
 - `wall { id, x1, y1, x2, y2, t }` ;
   `opening { id, kind:'door'|'window', wall, pos(0..1), w, hinge, open }` ;
   `room { id, name, x, y }` ; `placement { elementId, x, y, rot }`.
@@ -244,16 +247,28 @@ Modele (`plan-model.js`, pur) : `plan { seq, levels[] }` ;
   `compteur` et `tableau` sont placeables. Le compteur doit etre pose sur le plan (sinon BE-09).
 - **Taille des symboles** : `symbolSideCm(n) = PLAN_SYMBOL_MM * n / 10` — 4 mm sur papier a 1:N
   (donc 40 cm reels a 1:100). Constante sur papier, variable a l'ecran.
-- **Echelle** : `printScale` = `'auto'` (plus grande echelle normalisee qui tient dans la zone
-  utile A4, `chooseScale`) ou une valeur de `PLAN_SCALES`. `effectiveScale(lv)`.
-- `SCHEMA_VERSION = 4` : `migratePlan` / `normalizePlan` (idempotents) ; projet sans plan -> un
+- **Echelle** : `printScale` = entier **10…1000** (defaut 100 ; gamme `PLAN_SCALES` proposee).
+  `effectiveScale(lv)` borne l'entier. Plus de mode `'auto'` : la migration 4->5 remplace
+  `'auto'` par l'echelle qui cadrait le dessin (`fitScale`). Les nouveaux etages naissent a 1:100.
+- **Centre d'impression** : `printCenter {x,y}` ou `null` (defaut = centre du contenu, non
+  stocke). `normPrintCenter` le normalise ; la poignee de deplacement du cadre le regle.
+- **Geometrie de page (mm)** — constantes pour que l'ecran et le PDF coincident exactement :
+  `PLAN_PAGE_MM {297,210}`, `PLAN_MARGIN_MM 10`, `PLAN_PRINTABLE_MM`, `PLAN_PLOT_MM {10,22,277,140}`,
+  `PLAN_LEGEND_MM`, `PLAN_CART_MM {162,165,125,31}` ; `cmToPaperMm(cm,n)=cm*10/n`,
+  `paperMmToCm`, `symbolSideCm(n)=4n/10`. `planFrame(lv)` renvoie `{n, center, sheet, printable,
+  plot, legend, cartouche}` en **cm monde** (le centre du contenu est pose au centre de la zone
+  de trace). `fitScale(bounds, plot)` choisit l'echelle entiere qui tient ; `frameOverflow`
+  detecte un dessin trop grand (confirmation a l'export). `scaleBar`/`niceBarCm` calent une
+  barre graphique de ~15 mm sur papier (a 1:100 : 1 m = 10 mm).
+- `SCHEMA_VERSION = 5` : `migratePlan` / `normalizePlan` (idempotents) ; projet sans plan -> un
   niveau vide. Integrite : placements orphelins / non posables / doublons retires, ouvertures
   sans mur supprimees, position bornee.
 
 Rendu (`plan-render.js`) : `renderPlanLevel(svg, level, view, opts)` dessine fond, murs,
 placements (repère non tourne + image pivitee), ouvertures (arc porte / double trait fenetre,
 mur interrompu), pieces. `opts.print` : fond blanc opaque, pas de grille, pas d'overlay
-(pour le PDF). `planLabel` = repère de l'element, sinon repère du debut de circuit.
+(pour le PDF). `opts.frame` (ecran) : rectangle blanc de la feuille A4 sous le dessin.
+`planLabel` = repère de l'element, sinon repère du debut de circuit.
 
 Interactions (`plan-ui.js`) : outils **Selection / Mur / Porte / Fenetre / Texte**, presentes
 par des **icones** (`assets/selection.png`, `firewall.png`, `opened-door-aperture.png`,
@@ -270,19 +285,34 @@ clic-armer) ; deplacement (grille 5 cm), rotation (champ + `R`), retrait (`Suppr
 element schema conserve) ; selection partagee (clic symbole plan -> `selectElement` schema).
 Etages : ajout / renommage (double-clic) / monter / descendre / suppression.
 
-Barre d'outils du plan sur **trois lignes** (`.plan-bar-row`) : (1) etages + echelle
-d'impression ; (2) outils (Selection, Mur, Porte, Fenetre, Texte) + reglages d'ouverture
+Barre d'outils du plan sur **trois lignes** (`.plan-bar-row`) : (1) etages + **echelle 1:N**
+(champ numerique `#plan-scale-input`, bornes 10…1000, suggestions `PLAN_SCALES` via
+`#plan-scale-list`, boutons `#plan-scale-dec`/`#plan-scale-inc` ; changer N recale la vue sur
+la feuille) ; (2) outils (Selection, Mur, Porte, Fenetre, Texte) + reglages d'ouverture
 (largeur, miroirs : boutons a icone `assets/flip.png`, `aria-label` Miroir horizontal /
 vertical ; l'icone du miroir horizontal est pivotee de 90° via `#plan-opening-hinge .plan-icon`) ;
 (3) bouton **Afficher / masquer le dessin** (ne garde que
 l'arriere-plan ; murs, ouvertures, textes, symboles et grille disparaissent ; etat visible
-via `aria-pressed`), bouton **Recentrer** (`fitLevel()`, réajuste le dessin à la fenêtre :
-ajuste le zoom et recadre), boutons **zoom − / +** (`zoomCenter()`, autour du centre de la
-zone de travail) et curseur **opacite des elements** (groupe `.plan-elements` en SVG ; vue
-seule, non enregistree). Le fond a son propre curseur « opacite de l'arriere-plan »
-(`bg.opacity`, enregistre dans le projet) et des boutons **« − » / « + »** dans le panneau de
-droite (« Taille de l'arriere-plan ») qui l'agrandissent / le retrecissent autour de son
-centre (`scaleBg()`) ; ces boutons ne sont actifs que fond **deverrouille**.
+via `aria-pressed`), case **Afficher le cadre A4** (`#plan-frame-show`, memorisee dans
+`localStorage 'elexio.planFrame'`), bouton **Recentrer** (`fitViewToSheet()`, cadre la feuille
+entiere), **Centrer le cadre** (`centerViewOnFrame()`, centrage sans changer le zoom),
+**Ajuster au dessin** (`fitDrawing()` : choisit l'echelle qui tient le trace et recentre),
+boutons **zoom − / +** de la vue (`zoomCenter()`) et curseur **opacite des elements**
+(groupe `.plan-elements` en SVG ; vue seule, non enregistree). Le fond a son propre curseur
+« opacite de l'arriere-plan » (`bg.opacity`, enregistre dans le projet) et des boutons
+**« − » / « + »** dans le panneau de droite (« Taille de l'arriere-plan ») qui l'agrandissent /
+le retrecissent autour de son centre (`scaleBg()`) ; ces boutons ne sont actifs que fond
+**deverrouille**.
+
+**Cadre A4 a l'ecran** (`drawFrame`, `planFrame`) : feuille blanche, zones imprimable / de
+trace, cartouche, etiquette « {etage} — 1:N », **voile** grisant tout ce qui est hors zone de
+trace (non imprime) et **poignee** au centre de la zone de trace qui regle `printCenter`
+(glisser = le cadre suit le curseur). Traits en `vector-effect: non-scaling-stroke` (epaisseur
+constante au zoom) ; calque d'ecran marque `ui-only`. WYSIWYG avec le PDF (hors zone : attenue
+a l'ecran, coupe dans le PDF).
+
+Origine/licence des icones `src/assets/*.png` (selection, firewall, opened-door-aperture,
+window, text, flip) **non documentee** — a confirmer par le proprietaire.
 
 Panneau de droite « Ouverture selectionnee » : info + suppression. Le champ
 **Largeur (cm)** et les deux boutons **Miroir horizontal / Miroir vertical** sont dans la
@@ -302,8 +332,13 @@ leur liste change (import/suppression) ; restauration = fusion IndexedDB + disqu
 Le `.elx` ne contient que les images **referencees** (`referencedAssets`).
 
 PDF (`plan-print.js`) : `buildPlanPages(project)` -> une page A4 paysage par etage non vide
-(`hasPlanContent`), apres le schema et avant les listes. Titre, echelle numerique + barre
-graphique, legende des symboles utilises, cartouche. CSS d'impression `.plan-*` dans `ui.js`.
+(`hasPlanContent`), apres le schema et avant les listes. **Rendu en mm** : un SVG
+`viewBox 0 0 277 186` (zone imprimable), contenu monde dans un `<g clip-path>` (hors zone
+coupe), transform `10/N`, cartouche `drawCartouche` a l'echelle 0,5, barre ~15 mm. Titre,
+echelle numerique, legende des symboles utilises. L'echelle est donc **exacte** : 1:N annonce
+= 1:N mesure (verifie au PDF : mur 1000 cm a 1:100 = 100,0 mm ; barre 1 m = 10,0 mm).
+`planOverflowLevels(project)` -> etages qui debordent, pour la confirmation avant export.
+CSS d'impression `.plan-*` dans `ui.js`.
 
 `ui.js` : `ensurePlan(project)` dans `refreshAll` (nettoie les placements orphelins) ;
 `initPlan(deps)` recoit `{ getProject, markDirty, status, activeTab, selectElement, refreshAll }`.
@@ -353,6 +388,7 @@ delta 30 mA en amont, BE-04 protection sans calibre, BE-05 reperes en double,
 BE-06 symbole sans repere, BE-08 dossier incomplet, **BE-09 appareillage non place
 sur le plan** (info ; declenche uniquement si le plan contient au moins un placement).
 **Toutes ont `verified: false`** : jamais confrontees au texte officiel RGIE.
+Les messages BE-06/BE-09 nomment le symbole (`symbolName`) et, s'il existe, son repere.
 
 Le clic sur une alerte BE-09 ouvre l'onglet **Implantation** (les autres selectionnent
 l'element dans le schema).
@@ -400,7 +436,7 @@ non signes -> SmartScreen "Editeur inconnu" au 1er lancement. Normal.
 
 Commandes :
 ```
-npm run build          # NSIS (dist/Elexio-Setup-0.3.0.exe) + portable (dist/Elexio-portable-0.3.0.exe)
+npm run build          # NSIS (dist/Elexio-Setup-0.4.0.exe) + portable (dist/Elexio-portable-0.4.0.exe)
 npm run build:portable # portable seul
 npm run build:dir      # version decompressee dist/win-unpacked (test rapide)
 ```
@@ -414,15 +450,24 @@ valide de `win` (schéma `WindowsConfiguration`).
 
 ## Etat actuel (oct. 2026)
 
+- **Audit 0.4.0 corrige** (branche `schema-implantation`) : PDF du plan **a l'echelle
+  exacte** (rendu en mm ; mesure : mur 1000 cm a 1:100 = 100,0 mm, barre 1 m = 10,0 mm),
+  export PDF via **fichier temporaire** (`loadFile` ; plus de plafond `data:` ~2 Mo),
+  ouverture par dialogue **ajoute aux recents**, `APP_VERSION`/`package.json` synchronises
+  (test), CI sur **toutes les branches**, messages **BE-06/BE-09 lisibles** (`symbolName` +
+  repere), cles `localStorage 'elexio.*'` (migration depuis `'elecschema.*'` a la lecture).
+  **Cadre A4 a l'ecran** (feuille, zones, cartouche, voile, poignee `printCenter`) et
+  **zoom general 1:N** (champ + `−`/`+`, `PLAN_SCALES`, Recentrer / Centrer le cadre /
+  Ajuster au dessin). Modeles **v5**.
 - Etapes 1-6, 8-9 et 14 livrees. **Etape 7 (PDF) livree** : `buildPrintHtml()` +
   handler `pdf:export`. Dossier : cartouche general, schema (une page A4 par page de
   mise en page), **plan d'implantation** (une page par etage non vide), liste des
   circuits, liste du materiel. En navigateur, `window.print()`.
-  Les SVG de symboles sont **inlines en `data:`** (`print-assets.js`) avant chargement :
-  le PDF ne depend plus de l'acces `file:` depuis la page `data:`.
+  Les SVG de symboles sont **inlines en `data:`** (`print-assets.js`) ; l'export ecrit un
+  fichier temporaire (`os.tmpdir()`) puis `loadFile` (supprime en `finally`).
 - **Etape 15 (schema d'implantation) livree** : onglet **Implantation** (plan par etage,
   murs, portes/fenetres, pieces, symboles, fond de plan calibrable) + pages PDF du plan.
-  Modeles v4 (`src/plan-model.js`), rendu `src/plan-render.js`, interactions
+  Modeles v5 (`src/plan-model.js`), rendu `src/plan-render.js`, interactions
   `src/plan-ui.js`, images `src/plan-assets.js`, PDF `src/plan-print.js`.
   Regle **BE-09** (appareillage non place). **Export CSV supprime** definitivement.
 - **Mise en page multi-pages** : cadres A4 paysage cote a cote, cartouche sur chaque
@@ -430,9 +475,10 @@ valide de `win` (schéma `WindowsConfiguration`).
   panoramique a la barre d'espace (curseur main).
 - **Refonte ancrages** : modele en arbre d'elements + points d'ancrage ; nodes ;
   compteur en bas a gauche. Remplace circuits/difs. Legacy migre a l'ouverture.
-- Nom : **Elexio** (ex-ElecSchema). Version 0.3.0.
+- Nom : **Elexio** (ex-ElecSchema). Version 0.4.0.
 - Electron **44** (supportee) + electron-builder **26** ; build NSIS + portable avec
-  icone `build/icon.ico`. Release publiee : `v0.3.0` (2 .exe, hors du depot git).
+  icone `build/icon.ico`. Releases publiees : `v0.3.0` et `v0.4.0` (2 .exe, hors du
+  depot git).
 - Depot : https://github.com/doddoreul/elexio (public). Pages :
   https://doddoreul.github.io/elexio/
 - Credential GitHub stocke via Git Credential Manager (chiffre, pas dans .git/config).

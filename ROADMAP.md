@@ -26,6 +26,7 @@
 | 13 | Qualite : tests auto (node:test) + CI + durcissement | LIVREE |
 | 14 | Format de fichier `.elx` (versionne, base64) | LIVREE |
 | 15 | Schema d'implantation (plan, murs, ouvertures, symboles, PDF) | LIVREE |
+| 16 | Audit 0.4.0 (PDF exact, cadre A4, zoom 1:N, correctifs D1-D6) | LIVREE |
 
 ---
 
@@ -39,8 +40,8 @@ Le modele « circuits + composants » a ete remplace par un **arbre d'elements**
 - Notion de **groupe sous differentiel** : tout element place sous un differentiel.
 - **Tableau** : sorties en haut (`top-n`), sortie de terre en bas.
 - Reperes automatiques par prefixe, lettres de circuit (A, B...).
-- **Mise en page** A4 paysage (594x420 px a 2 px/mm), pages cote a cote, cartouche
-  sur chaque page ; dossier PDF par page.
+- **Mise en page** A4 paysage (geometrie en mm ; zone imprimable 277x186 mm, marge 10 mm),
+  pages cote a cote, cartouche sur chaque page ; dossier PDF par page.
 
 Voir `AGENT.md` (source de verite) et `src/model.js`, `src/standards.js`, `src/render.js`.
 
@@ -105,11 +106,15 @@ interactions dans `src/plan-ui.js`, fond de plan dans `src/plan-assets.js`
   glisser-deposer ou clic-armer ; taille **constante sur papier** (4 mm).
 - **Fond de plan** : image importee, reduite (<= 2400 px, JPEG 0,85), calibrable,
   jamais serialisee dans le projet (cle d'image seulement ; autosave disque / IndexedDB).
-- **`SCHEMA_VERSION = 4`** : migration idempotente depuis v3, plan par defaut vide.
+- **`SCHEMA_VERSION = 5`** : migration idempotente depuis v3/v4 (l'ancien `'auto'` devient
+  l'echelle qui cadre le dessin), plan par defaut vide.
 - **PDF** : une page A4 paysage par etage non vide, apres le schema et avant les listes,
   avec titre, echelle numerique + barre graphique, legende des symboles et cartouche.
+  **Rendu en mm et a l'echelle exacte** (1:N annonce = 1:N mesure ; contenu coupe hors
+  zone de trace) ; l'ecran affiche le meme **cadre A4** (feuille, zones, cartouche, voile)
+  et un **zoom general 1:N** (champ + `−`/`+`, poignee `printCenter`).
 - **BE-09** (info) : appareillage non place sur le plan — signale seulement si le plan
-  contient deja au moins un placement.
+  contient deja au moins un placement ; message lisible (`symbolName` + repere).
 - **Export CSV supprime** definitivement (modele, UI, menu, PDF).
 
 ---
@@ -173,6 +178,21 @@ version — migration automatique si le modele est plus ancien, avertissement si
 recent — et tolerance des anciens `.json` en clair. `main.js` est reduit a la
 lecture/ecriture du texte brut ; le decodage et la validation sont dans le rendu (ESM
 partage navigateur/bureau).
+
+---
+
+### Etape 16 - Audit 0.4.0
+
+Correction des ecarts releves sur la 0.4.0 (branche `schema-implantation`) :
+PDF du plan a l'echelle exacte (unites mm, clip de la zone de trace, barre graphique
+exacte) ; cadre A4 a l'ecran (feuille, zones, cartouche, voile hors zone, poignee
+`printCenter`, case « Afficher le cadre A4 » memorisee) ; zoom general 1:N (champ
+editable + `−`/`+`, suggestions `PLAN_SCALES`, Recentrer / Centrer le cadre / Ajuster au
+dessin ; plus de mode `'auto'`) ; export PDF par **fichier temporaire** (`loadFile` au
+lieu d'une URL `data:` plafonnee par Chromium) ; ouverture par dialogue **ajoutee aux
+recents** ; `APP_VERSION` alignee sur `package.json` (test de coherence) ; CI declenchee
+sur **toutes les branches** ; messages **BE-06/BE-09 lisibles** ; cles `localStorage`
+renommees `elexio.*` avec reprise (sans suppression) des anciennes `elecschema.*`.
 
 ---
 

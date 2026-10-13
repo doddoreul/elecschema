@@ -97,12 +97,12 @@
 - **Symboles** : instances des éléments du schéma (aucun nouvel équipement), glisser-déposer ou
   clic-armer ; **tableau** et **compteur** placeables
 - **Fond de plan** : image importée, calibrable, jamais incluse dans le projet (fichier `.elx` : images référencées seulement)
-- **Échelle** : automatique (plus grande échelle normalisée qui tient) ou imposée ; règle **BE-09** (appareillage non placé)
+- **Échelle 1:N** : champ réglable (`+` / `−`, suggestions) ; **cadre A4 à l'écran** fidèle au PDF (feuille, zone imprimable, zone de tracé, cartouche, hors zone atténué) ; règle **BE-09** (appareillage non placé)
 
 **Dossier PDF**
 1. cartouche général (chantier, occupant, installateur, contrôle, projet)
 2. schéma unifilaire (une page A4 par page de mise en page)
-3. plan d'implantation (une page A4 paysage par étage non vide : titre, échelle + barre graphique, légende, cartouche)
+3. plan d'implantation (une page A4 paysage par étage non vide : titre, échelle **exacte** + barre graphique, légende, cartouche)
 4. liste des circuits
 5. liste des matériaux (regroupée)
 
@@ -145,7 +145,7 @@ src/
   symbols/        fichiers SVG autonomes
   standards.js    valeurs normalisées (calibres, sections, ancrages, pages A4)
   render.js       rendu SVG (grille, mise en page, cartouche)
-  plan-model.js   modèle du plan d'implantation (pur) + migration v4
+  plan-model.js   modèle du plan d'implantation (pur) + migration v5
   plan-render.js  rendu SVG du plan (écran)
   plan-ui.js      interactions de l'onglet implantation
   plan-assets.js  magasin d'images de fond (hors projet, IndexedDB)

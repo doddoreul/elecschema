@@ -3,9 +3,12 @@
 Cas de test **manuels**. À dérouler avant chaque version.
 
 Tests **automatisés** (aucune dépendance) : `npm test` (`node --test`) couvre le
-modèle (migrations legacy → v4), les **7** règles BE, les propriétés de layout, le
-plan d'implantation (modèle, format `.elx` avec images) et le comptage des pages de plan ;
-`npm run check` vérifie la syntaxe de tout le JS. CI : `.github/workflows/ci.yml`.
+modèle (migrations legacy → **v5**), la cohérence `APP_VERSION`/`package.json`, les **7**
+règles BE, les propriétés de layout, le plan d'implantation (géométrie mm, `fitScale`,
+migration `'auto'`, format `.elx` avec images) et le comptage des pages de plan ;
+`npm run check` vérifie la syntaxe de tout le JS. CI : `.github/workflows/ci.yml`
+(déclenchée sur **toutes les branches**). Les distances du PDF se mesurent au repère papier
+(1 mm = 2,8346 pt) : mur de 1000 cm à 1:100 = **100,0 ±0,5 mm** ; barre 1 m = **10,0 ±0,3 mm**.
 Les cas ci-dessous restent la référence pour l'UI et le bureau.
 
 App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
@@ -122,7 +125,7 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T10.11 | `Suppr` sur un symbole posé | Retiré du plan (l'élément du schéma est conservé) |
 | T10.12 | Ajouter un étage (bouton), double-clic sur l'onglet d'étage | Nouvel étage ; renommage au double-clic |
 | T10.13 | Importer un fond (`png`/`jpg`/`webp`) | Fond réduit affiché ; calibrage à 2 points ; le projet reste léger |
-| T10.14 | « PDF… » avec au moins un étage tracé | Une page A4 paysage par étage non vide, après le schéma : titre, échelle + barre, légende, cartouche |
+| T10.14 | « PDF… » avec au moins un étage tracé | Une page A4 paysage par étage non vide, après le schéma : titre, échelle + barre, légende, cartouche. **Échelle exacte** (à 1:100, un mur de 1000 cm mesure 100 mm ; ce qui dépasse la zone de tracé est coupé) |
 | T10.15 | Étages sans tracé | Aucune page de plan générée pour eux |
 | T10.16 | Plan vide | Aucune page de plan ; PDF sinon inchangé |
 | T10.17 | Élément du schéma non posé (plan non vide) | Alerte **BE-09** ; clic → onglet Implantation |
@@ -133,12 +136,24 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T10.22 | Sélectionner une porte : « Miroir vertical » (barre d'outils) | Le battant et l'arc basculent de l'autre côté du mur |
 | T10.23 | Sélectionner une fenêtre | Pas de réglages de porte (miroirs) : le groupe « Porte » reste masqué |
 | T10.24 | Sélectionner une ouverture | Le champ **« Largeur (cm) »** apparaît dans la barre d'outils du haut (il n'est plus dans le panneau de droite) ; le modifier change la largeur |
-| T10.25 | Bouton « Recentrer » (barre d'outils) | Le dessin est **réajusté à la fenêtre** : le zoom est recalculé pour que l'étage tienne entièrement et il est recentré |
+| T10.25 | Bouton « Recentrer » (barre d'outils) | La vue cadre **toute la feuille A4** (et non le seul dessin), recentrée |
 | T10.26 | Cliquer un symbole posé (fond présent, verrouillé **ou** déverrouillé) | Sélection + anneau de sélection, **sans erreur console** ; les autres éléments restent sélectionnables même fond déverrouillé |
 | T10.27 | Fond **déverrouillé** : boutons « − » / « + » (panneau « Fond de plan ») | L'arrière-plan rétrécit / s'agrandit autour de son centre (définir la taille) ; boutons **désactivés** quand le fond est verrouillé |
 | T10.28 | Volet « Non placés » | La liste est dans un **volet à gauche** de la zone de travail (elle n'est plus dans le panneau de droite) ; glisser-déposer / clic-armer inchangés |
-| T10.29 | Barre d'outils du plan | **Trois lignes** : (1) étages + échelle d'impression ; (2) outils Sélection / Mur / Porte / Fenêtre / **Texte** ; (3) Afficher-masquer / Recentrer / **zoom − +** / opacité des éléments |
+| T10.29 | Barre d'outils du plan | **Trois lignes** : (1) étages + **échelle 1:N** (champ + `−`/`+`) ; (2) outils Sélection / Mur / Porte / Fenêtre / **Texte** ; (3) Afficher-masquer / **Afficher le cadre A4** / Recentrer / Centrer le cadre / Ajuster au dessin / zoom − + / opacité |
 | T10.30 | Boutons **zoom − / +** (barre d'outils) | Le dessin se dézoome / zoome autour du **centre de la zone de travail** (le curseur d'opacité et « Recentrer » restent inchangés) |
 | T10.31 | Barre dédiée « Texte » (taille, **G**, *I*, <u>S</u>) | N'apparaît **que** quand un texte est sélectionné ; disparaît à la désélection |
 | T10.32 | Réglages de la barre « Texte » | « Taille » (Petite / Normale / Grande / Très grande) change la taille du texte ; G / I / S activent/désactivent gras / italique / souligné (bouton surligné si actif) |
 | T10.33 | Boutons d'outils (Sélection, Mur, Porte, Fenêtre, Texte) | Affichés en **icônes** ; l'outil actif est surligné en bleu avec l'icône **inversée** (blanche) ; infobulle + `aria-label` conservés |
+| T10.34 | Champ **échelle 1:N** (barre, ligne 1) : saisir 50, puis `+` / `−` | La valeur est bornée à 10…1000 ; `+` / `−` passent au palier suivant (`PLAN_SCALES` ou ±10) ; la vue se recale sur la feuille |
+| T10.35 | Suggestions du champ échelle | Les échelles `PLAN_SCALES` (20, 25, 50, 75, 100, 125, 150, 200, 250, 500) sont proposées |
+| T10.36 | Case « Afficher le cadre A4 » | Affiche / masque feuille, zone imprimable, zone de tracé, cartouche et étiquette « {étage} — 1:N » ; l'état survit à un rechargement (`localStorage 'elexio.planFrame'`) |
+| T10.37 | Élément hors de la zone de tracé | **Atténué à l'écran** par un voile ; **coupé dans le PDF** (WYSIWYG) |
+| T10.38 | Poignée au centre de la zone de tracé (outil Sélection) | Glisser déplace le cadre (réglage `printCenter`, enregistré dans le projet) ; le cadre suit le curseur |
+| T10.39 | Bouton « Centrer le cadre » | Recentre la vue sur le cadre **sans** changer le zoom |
+| T10.40 | Bouton « Ajuster au dessin » | Choisit l'échelle entière qui fait tenir le tracé à la page, puis recentre |
+| T10.41 | Exporter en PDF alors qu'un tracé déborde de la zone | Une **confirmation** prévient du débordement avant l'export |
+| T10.42 | Exporter en PDF un projet **volumineux** (fond de plan) | L'export aboutit (rendu via fichier temporaire ; plus d'échec lié à la taille du HTML) |
+| T10.43 | Ouvrir un projet par **dialogue** (« Ouvrir… ») | Le projet apparaît dans **Récents** (l'export PDF, lui, n'ajoute aucun chemin) |
+| T10.44 | Ancien `localStorage` (`elecschema.*`) présent | Au 1er chargement, `autosave`, `tab`, `printPreview` et `favorites` sont **repris** dans `elexio.*` ; les clés d'origine sont **conservées** (rien supprimé) |
+| T10.45 | Ouvrir un projet 0.3.0 / 0.4.0 (échelle `'auto'`) | Ouvre sans perte ; `'auto'` devient l'échelle entière qui cadre le dessin ; réenregistrer reste au format `.elx` v5 |
