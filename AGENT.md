@@ -256,7 +256,8 @@ conserve) ; selection partagee (clic symbole plan -> `selectElement` schema). Et
 ajout / renommage (double-clic) / monter / descendre / suppression.
 Vue : bouton **Afficher / masquer le dessin** (ne garde que l'arriere-plan ; murs,
 ouvertures, pieces, symboles et grille disparaissent ; etat visible via `aria-pressed`),
-bouton **Recentrer** (`centerLevel()`, centrage sans changer le zoom) et
+bouton **Recentrer** (`fitLevel()`, réajuste le dessin à la fenêtre : ajuste le zoom et
+recadre) et
 curseur **opacite des elements** place dans la **barre d'outils du haut** (groupe
 `.plan-elements` en SVG ; vue seule, non enregistree). Le fond a son propre curseur
 « opacite de l'arriere-plan » (`bg.opacity`, enregistre dans le projet) et des boutons

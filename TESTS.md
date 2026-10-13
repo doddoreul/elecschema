@@ -131,6 +131,6 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T10.22 | Sélectionner une porte : « Miroir vertical » (barre d'outils) | Le battant et l'arc basculent de l'autre côté du mur |
 | T10.23 | Sélectionner une fenêtre | Pas de réglages de porte (miroirs) : le groupe « Porte » reste masqué |
 | T10.24 | Sélectionner une ouverture | Le champ **« Largeur (cm) »** apparaît dans la barre d'outils du haut (il n'est plus dans le panneau de droite) ; le modifier change la largeur |
-| T10.25 | Bouton « Recentrer » (barre d'outils) | Le dessin se recentre dans la fenêtre **sans changer le zoom** |
+| T10.25 | Bouton « Recentrer » (barre d'outils) | Le dessin est **réajusté à la fenêtre** : le zoom est recalculé pour que l'étage tienne entièrement et il est recentré |
 | T10.26 | Cliquer un symbole posé (fond présent, verrouillé **ou** déverrouillé) | Sélection + anneau de sélection, **sans erreur console** ; les autres éléments restent sélectionnables même fond déverrouillé |
 | T10.27 | Fond **déverrouillé** : boutons « − » / « + » (panneau « Fond de plan ») | L'arrière-plan rétrécit / s'agrandit autour de son centre (définir la taille) ; boutons **désactivés** quand le fond est verrouillé |
