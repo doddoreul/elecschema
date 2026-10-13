@@ -135,9 +135,10 @@ bureau. Avertissement « trace contraint » quand le layout atteint son plafond.
 PDF : SVG des symboles inlines en `data:` (`print-assets.js`), plus de dependance
 `file:` ; reperage des circuits (`renumberCircuits`) deplace dans `model.js`.
 
-**Suivi :** Electron 33 est en fin de support. Passer a une version supportee
-(`electron@^44`) puis **re-tester l'export PDF et `npm run build`**. Risque reduit :
-le PDF n'utilise plus `file://` depuis la page `data:` (les SVG sont inlines en `data:`).
+Electron passe a **44** (supportee) + electron-builder **26** lors de la preparation
+du build .exe (oct. 2026). A valider sur un lancement reel : export PDF, ouverture
+`.elx`, rendu des icones. Risque PDF reduit : plus de `file://` depuis la page `data:`
+(SVG inlines en `data:`).
 
 ### Etape 14 - Format de fichier `.elx`
 

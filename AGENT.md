@@ -273,23 +273,27 @@ BE-06 symbole sans repere, BE-08 dossier incomplet.
 
 ## Build des .exe
 
-`signAndEditExecutable: false` (pas de certificat). Consequence : electron-builder
-ne patche PAS les metadonnees de version de l'exe.
+Electron **44** (supportee) + electron-builder **26** (voir package.json). Icône :
+`build/icon.ico` (PNG-in-ICO 256 px) + source `build/icon.png` (remplacer les deux
+pour changer l'icône).
 
-Workflow qui marche :
+electron-builder patche l'exe (icône, version, description) via `resedit`
+(`signAndEditExecutable` par défaut). Pas de certificat de signature : artefacts
+non signes -> SmartScreen "Editeur inconnu" au 1er lancement. Normal.
+
+Commandes :
 ```
-npm version 0.2.0 --no-git-tag-version
-node node_modules/electron-builder/out/cli/cli.js --win --x64 --dir
-& "$env:LOCALAPPDATA\electron-builder\Cache\winCodeSign\<hash>\rcedit-x64.exe" `
-  dist\win-unpacked\Elexio.exe --set-file-version "0.2.0.0" --set-product-version "0.2.0.0" ...
-node node_modules/electron-builder/out/cli/cli.js --win --x64 --prepackaged "dist\win-unpacked"
+npm run build          # NSIS (dist/Elexio-Setup-0.3.0.exe) + portable (dist/Elexio-portable-0.3.0.exe)
+npm run build:portable # portable seul
+npm run build:dir      # version decompressee dist/win-unpacked (test rapide)
 ```
 
-Ne PAS tenter `signAndEditExecutable: true` : electron-builder retélécharge
-winCodeSign qui plante sur des liens symboles macOS (privilege absent), et ce a
-chaque fois dans un nouveau dossier.
+Premier build : télécharge Electron + NSIS + winCodeSign dans
+`%LOCALAPPDATA%\electron-builder\Cache` (les suivants passent hors ligne).
+`dist/` est gitignore (seul `dist/Projets/` — donnees utilisateur — est conserve).
 
-Artefacts non signes -> SmartScreen "Editeur inconnu" au 1er lancement. Normal.
+Note schéma : dans electron-builder 26, `publisherName` n'est plus une propriété
+valide de `win` (schéma `WindowsConfiguration`).
 
 ## Etat actuel (oct. 2026)
 
@@ -304,6 +308,8 @@ Artefacts non signes -> SmartScreen "Editeur inconnu" au 1er lancement. Normal.
 - **Refonte ancrages** : modele en arbre d'elements + points d'ancrage ; nodes ;
   compteur en bas a gauche. Remplace circuits/difs. Legacy migre a l'ouverture.
 - Nom : **Elexio** (ex-ElecSchema). Version 0.3.0.
+- Electron **44** (supportee) + electron-builder **26** ; build NSIS + portable avec
+  icone `build/icon.ico`.
 - Depot : https://github.com/doddoreul/elexio (public). Pages :
   https://doddoreul.github.io/elexio/
 - Credential GitHub stocke via Git Credential Manager (chiffre, pas dans .git/config).

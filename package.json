@@ -20,7 +20,8 @@
     "productName": "Elexio",
     "copyright": "Usage personnel",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "build"
     },
     "files": [
       "main.js",
@@ -30,9 +31,7 @@
       "src/**/*"
     ],
     "win": {
-      "signAndEditExecutable": false,
-      "verifyUpdateCodeSignature": false,
-      "publisherName": "Elexio",
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -52,14 +51,15 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true
+      "createDesktopShortcut": true,
+      "artifactName": "Elexio-Setup-${version}.${ext}"
     },
     "portable": {
       "artifactName": "Elexio-portable-${version}.exe"
     }
   },
   "devDependencies": {
-    "electron": "^33.0.0",
-    "electron-builder": "^25.1.8"
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3"
   }
 }

@@ -106,8 +106,14 @@ node tools/serve-browser.js   # navigateur local (http://127.0.0.1:8791)
 ```bash
 npm run build          # installeur NSIS + portable, dans dist/
 npm run build:portable # portable seul
-npm run build:dir       # version décompressée
+npm run build:dir       # version décompressée (test rapide)
 ```
+
+Le build produit `dist/Elexio-Setup-<version>.exe` (installable) et
+`dist/Elexio-portable-<version>.exe`. Icône de l'app : `build/icon.ico` (+ source
+`build/icon.png`) — à remplacer par ta propre icône quand tu veux. Electron 44
+(supporté) + electron-builder 26. Pas de signature : SmartScreen « Éditeur inconnu »
+au premier lancement, normal.
 
 Vérification de la syntaxe : `npm run check` — Tests automatiques : `npm test`
 
