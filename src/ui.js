@@ -982,8 +982,9 @@ function suggestedName() {
     .filter(Boolean).join('-').replace(/[^\w\-\.À-ÿ]+/g, '_');
 }
 
-/** Dossier PDF : cartouche général, schéma (une page, mis à l'échelle), liste des circuits,
- *  liste des matériaux. (Schéma d'implantation : à venir.) */
+/** Dossier PDF : cartouche général, schéma (une page par page de mise en page),
+ *  plan d'implantation (une page par étage non vide), liste des circuits,
+ *  liste des matériaux. */
 function buildPrintHtml() {
   const i = project.info;
   const ch = i.chantier, oc = i.occupant, ins = i.installateur, dd = i.dessinateur, ct = i.controle, pr = i.projet;

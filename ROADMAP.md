@@ -1,7 +1,7 @@
 # ROADMAP - Elexio
 
 **Cible :** schema unifilaire domestique belge, editeur drag & drop, validation RGIE.
-**Hors perimetre :** schema d'implantation, profil France, import DWG/PDF.
+**Hors perimetre :** profil France, import DWG/PDF/DXF.
 **Scope :** habitation uniquement. Mono **et** triphase. Pas d'industriel. Pas de schema developpe.
 **Contraintes :** 100 % standalone, pas de cloud, pas de licence payante, installable **et** portable.
 
@@ -25,6 +25,7 @@
 | 12 | Renommage Elexio + version navigateur GitHub Pages | LIVREE |
 | 13 | Qualite : tests auto (node:test) + CI + durcissement | LIVREE |
 | 14 | Format de fichier `.elx` (versionne, base64) | LIVREE |
+| 15 | Schema d'implantation (plan, murs, ouvertures, symboles, PDF) | LIVREE |
 
 ---
 
@@ -87,6 +88,29 @@ Les symboles de protection (`breaker`, `rcd`, `fuse`) portent desormais
 
 Toutes les regles gardent `verified: false` : aucune n'a ete confrontee au texte
 officiel RGIE. A faire valider par un professionnel.
+
+### Etape 15 - Schema d'implantation
+
+Nouvel onglet **Schéma d'implantation** : dessin d'implantation par **étage**, en
+coordonnees **cm** (Y vers le bas). Modele pur dans `src/plan-model.js` (niveaux,
+murs, ouvertures, pieces, placements, echelle), rendu SVG dans `src/plan-render.js`,
+interactions dans `src/plan-ui.js`, fond de plan dans `src/plan-assets.js`
+(image **hors** du projet), pages PDF dans `src/plan-print.js`.
+
+- **Murs** : polyligne, orthogonal par defaut (`Alt` = angle libre), epaisseur 20 cm.
+- **Portes / fenetres** : posees sur le mur le plus proche (arc + double trait),
+  deplacables le long du mur, largeur reglable.
+- **Pieces** : libelles libres, deplacables, renommables.
+- **Symboles** : instances d'elements du schema (aucun nouvel equipement) ;
+  glisser-deposer ou clic-armer ; taille **constante sur papier** (4 mm).
+- **Fond de plan** : image importee, reduite (<= 2400 px, JPEG 0,85), calibrable,
+  jamais serialisee dans le projet (cle d'image seulement ; autosave disque / IndexedDB).
+- **`SCHEMA_VERSION = 4`** : migration idempotente depuis v3, plan par defaut vide.
+- **PDF** : une page A4 paysage par etage non vide, apres le schema et avant les listes,
+  avec titre, echelle numerique + barre graphique, legende des symboles et cartouche.
+- **BE-09** (info) : appareillage non place sur le plan — signale seulement si le plan
+  contient deja au moins un placement.
+- **Export CSV supprime** definitivement (modele, UI, menu, PDF).
 
 ---
 
@@ -154,7 +178,7 @@ partage navigateur/bureau).
 
 ## Suite possible
 
-- Page **schema d'implantation** (onglet desactive pour l'instant).
 - Icone et metadonnees de version signees.
-- Tests automatises : `node --test` sur modele/regles/layout (fait) ; tests d'UI (Playwright) a faire.
+- Tests automatises : `node --test` sur modele/regles/layout/plan (fait) ; tests d'UI (Playwright) a faire.
 - Recherche dans la palette, renommage en masse.
+- Schema d'implantation : liaisons entre symboles, cotes automatiques, export DXF.

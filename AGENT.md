@@ -26,13 +26,13 @@ Un groupe sous différentiel peut être placé sous un différentiel, et ainsi d
 
 ## Stack
 
-Electron 33 + JS natif (aucune lib lourde). Node 24. Windows 10/11.
+Electron 44 + JS natif (aucune lib lourde). Node 24. Windows 10/11.
 
 ## Commandes
 
 ```
 npm start                                      lancer
-npm test                                       tests auto (node --test : modele, regles, layout)
+npm test                                       tests auto (node --test : modele, regles, layout, plan, format)
 npm run check                                  syntaxe (node --check sur tout le JS)
 npm run build                                  NSIS + portable -> dist/
 npm version X.Y.Z --no-git-tag-version         bumper version
@@ -52,16 +52,21 @@ main.js           processus principal : fenetres, ouverture, PDF, recents
 preload.js        pont isole (contextBridge -> window.elexio, sandbox:true)
 print-assets.js   inlining des SVG du PDF (file: -> data:), pur/CJS
 src/
-  index.html      4 onglets + panneaux proprietes (1 onglet desactive : implantation)
+  index.html      4 onglets + panneaux proprietes (dont implantation)
   styles.css
-  model.js        modele de donnees (arbre d'elements, migrations, reperage circuits)
-  format.js       format de fichier .elx (JSON enveloppe + base64, versionne)
+  model.js        modele de donnees (arbre d'elements, migrations, reperage circuits, ensurePlan)
+  format.js       format de fichier .elx (JSON enveloppe + base64, versionne, images)
   default-schema.js  schema pre-rempli a la creation
   symbols.js      31 symboles + SOCKET_TYPES (10) + SWITCH_TYPES (7)
   symbols/        52 fichiers SVG autonomes (dessins, pas de JS)
-  standards.js    valeurs normalisees (calibres, sections, delta, courbes, pages A4)
-  render.js       rendu SVG + mise en page A4 + cartouche
-  rules-be.js     6 regles de validation
+  standards.js    valeurs normalisees (calibres, sections, delta, courbes, pages A4, PLAN_*)
+  render.js       rendu SVG + mise en page A4 + cartouche (symbolHref partage)
+  plan-model.js   plan d'implantation : modele pur (niveaux, murs, ouvertures, pieces, placements)
+  plan-render.js  rendu SVG d'un niveau de plan (ecran + mode print N&B)
+  plan-ui.js      interactions de l'onglet implantation (outils, zoom, panneau « Non places »)
+  plan-assets.js  images de fond de plan, hors du projet (memoire + IndexedDB)
+  plan-print.js   pages A4 du plan dans le dossier PDF (titre, echelle, legende, cartouche)
+  rules-be.js     7 regles de validation
   ui.js           onglets, formulaires, interactions
   platform.js     shim web de window.elexio (hors Electron : PDF/ouverture)
 tools/serve-browser.js    serveur de test navigateur
@@ -213,6 +218,49 @@ Decisions actees :
   - **Limite connue** : dans les configurations très denses (élément entouré de ses propres enfants sur ses 4 ancrages), le plafond peut laisser un passage forcé. Cas rares, pas de garantie formelle. Le layout renvoie `bump != null` quand le plafond est atteint ; `layoutForced()` l'expose et `ui.js` (panneau Controles) affiche alors un **avertissement « trace contraint »**.
   - Migration à l'ouverture (`normalizeTypes`) : clé `top` → `top-1`, autres clés renumérotées.
 
+## Plan d'implantation (plan-*.js)
+
+Onglet **Schéma d'implantation** : dessin par **etage**, coordonnees en **cm** (Y vers le bas).
+
+Modele (`plan-model.js`, pur) : `plan { seq, levels[] }` ;
+`level { id, name, bg, walls[], openings[], rooms[], placements[], printScale }`.
+- `wall { id, x1, y1, x2, y2, t }` ; `opening { id, kind:'door'|'window', wall, pos(0..1), w }` ;
+  `room { id, name, x, y }` ; `placement { elementId, x, y, rot }`.
+- Un placement est une **instance d'un element du schema** (`elementId`) : aucun nouvel
+  equipement. Un `elementId` n'est pose qu'**une fois**, tous niveaux confondus.
+- **Non placeables** : `PLAN_EXCLUDED` (`node`, `fil`, `breaker`, `rcd`, `fuse`, `sectionneur`).
+  `compteur` et `tableau` sont placeables. Le compteur doit etre pose sur le plan (sinon BE-09).
+- **Taille des symboles** : `symbolSideCm(n) = PLAN_SYMBOL_MM * n / 10` — 4 mm sur papier a 1:N
+  (donc 40 cm reels a 1:100). Constante sur papier, variable a l'ecran.
+- **Echelle** : `printScale` = `'auto'` (plus grande echelle normalisee qui tient dans la zone
+  utile A4, `chooseScale`) ou une valeur de `PLAN_SCALES`. `effectiveScale(lv)`.
+- `SCHEMA_VERSION = 4` : `migratePlan` / `normalizePlan` (idempotents) ; projet sans plan -> un
+  niveau vide. Integrite : placements orphelins / non posables / doublons retires, ouvertures
+  sans mur supprimees, position bornee.
+
+Rendu (`plan-render.js`) : `renderPlanLevel(svg, level, view, opts)` dessine fond, murs,
+placements (repère non tourne + image pivitee), ouvertures (arc porte / double trait fenetre,
+mur interrompu), pieces. `opts.print` : fond blanc opaque, pas de grille, pas d'overlay
+(pour le PDF). `planLabel` = repère de l'element, sinon repère du debut de circuit.
+
+Interactions (`plan-ui.js`) : outils **Selection / Mur / Porte / Fenetre / Piece** ;
+zoom molette, pan milieu ou espace ; panneau **« Non places »** (glisser-deposer ou clic-armer) ;
+deplacement (grille 5 cm), rotation (champ + `R`), retrait (`Suppr`/bouton ; element schema
+conserve) ; selection partagee (clic symbole plan -> `selectElement` schema). Etages :
+ajout / renommage (double-clic) / monter / descendre / suppression.
+
+Fond de plan (`plan-assets.js`) : image **hors du projet** (le projet ne garde que la cle
+`bg.asset`). Reduite (<= 2400 px, JPEG 0,85), refus > 20 Mo. Calibrable (2 points + distance
+reelle). Autosave disque (Electron) / IndexedDB (navigateur), **jamais** `localStorage`. Le
+`.elx` ne contient que les images **referencees** (`referencedAssets`).
+
+PDF (`plan-print.js`) : `buildPlanPages(project)` -> une page A4 paysage par etage non vide
+(`hasPlanContent`), apres le schema et avant les listes. Titre, echelle numerique + barre
+graphique, legende des symboles utilises, cartouche. CSS d'impression `.plan-*` dans `ui.js`.
+
+`ui.js` : `ensurePlan(project)` dans `refreshAll` (nettoie les placements orphelins) ;
+`initPlan(deps)` recoit `{ getProject, markDirty, status, activeTab, selectElement, refreshAll }`.
+
 ## Mise en page (render.js)
 
 Arbre d'ancrage sur une **grille** (1 element / cellule, sans recouvrement) :
@@ -252,10 +300,14 @@ Arbre d'ancrage sur une **grille** (1 element / cellule, sans recouvrement) :
 
 ## Regles
 
-`src/rules-be.js`, 6 regles : BE-01 schema sans element (erreur), BE-03 prise sans
+`src/rules-be.js`, 7 regles : BE-01 schema sans element (erreur), BE-03 prise sans
 delta 30 mA en amont, BE-04 protection sans calibre, BE-05 reperes en double,
-BE-06 symbole sans repere, BE-08 dossier incomplet.
+BE-06 symbole sans repere, BE-08 dossier incomplet, **BE-09 appareillage non place
+sur le plan** (info ; declenche uniquement si le plan contient au moins un placement).
 **Toutes ont `verified: false`** : jamais confrontees au texte officiel RGIE.
+
+Le clic sur une alerte BE-09 ouvre l'onglet **Implantation** (les autres selectionnent
+l'element dans le schema).
 
 ## Pieges connus
 
@@ -298,11 +350,17 @@ valide de `win` (schéma `WindowsConfiguration`).
 
 ## Etat actuel (oct. 2026)
 
-- Etapes 1-6 et 8-9 livrees. **Etape 7 (PDF) livree** : `buildPrintHtml()` +
+- Etapes 1-6, 8-9 et 14 livrees. **Etape 7 (PDF) livree** : `buildPrintHtml()` +
   handler `pdf:export`. Dossier : cartouche general, schema (une page A4 par page de
-  mise en page), liste des circuits, liste du materiel. En navigateur, `window.print()`.
+  mise en page), **plan d'implantation** (une page par etage non vide), liste des
+  circuits, liste du materiel. En navigateur, `window.print()`.
   Les SVG de symboles sont **inlines en `data:`** (`print-assets.js`) avant chargement :
   le PDF ne depend plus de l'acces `file:` depuis la page `data:`.
+- **Etape 15 (schema d'implantation) livree** : onglet **Implantation** (plan par etage,
+  murs, portes/fenetres, pieces, symboles, fond de plan calibrable) + pages PDF du plan.
+  Modeles v4 (`src/plan-model.js`), rendu `src/plan-render.js`, interactions
+  `src/plan-ui.js`, images `src/plan-assets.js`, PDF `src/plan-print.js`.
+  Regle **BE-09** (appareillage non place). **Export CSV supprime** definitivement.
 - **Mise en page multi-pages** : cadres A4 paysage cote a cote, cartouche sur chaque
   page, zoom + liste des pages dans le panneau de droite, deplacement du dessin entier,
   panoramique a la barre d'espace (curseur main).
@@ -310,7 +368,7 @@ valide de `win` (schéma `WindowsConfiguration`).
   compteur en bas a gauche. Remplace circuits/difs. Legacy migre a l'ouverture.
 - Nom : **Elexio** (ex-ElecSchema). Version 0.3.0.
 - Electron **44** (supportee) + electron-builder **26** ; build NSIS + portable avec
-  icone `build/icon.ico`.
+  icone `build/icon.ico`. Release publiee : `v0.3.0` (2 .exe, hors du depot git).
 - Depot : https://github.com/doddoreul/elexio (public). Pages :
   https://doddoreul.github.io/elexio/
 - Credential GitHub stocke via Git Credential Manager (chiffre, pas dans .git/config).

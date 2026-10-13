@@ -3,7 +3,8 @@
 Cas de test **manuels**. À dérouler avant chaque version.
 
 Tests **automatisés** (aucune dépendance) : `npm test` (`node --test`) couvre le
-modèle (migrations legacy → v3), les 6 règles BE et les propriétés de layout ;
+modèle (migrations legacy → v4), les **7** règles BE, les propriétés de layout, le
+plan d'implantation (modèle, format `.elx` avec images) et le comptage des pages de plan ;
 `npm run check` vérifie la syntaxe de tout le JS. CI : `.github/workflows/ci.yml`.
 Les cas ci-dessous restent la référence pour l'UI et le bureau.
 
@@ -100,3 +101,25 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T9.1 | `npm run build` | Installeur NSIS + portable dans `dist/` |
 | T9.2 | Lancer l'exe portable | Données dans `Projets\` à côté de l'exe ; pas d'installation |
 | T9.3 | Lancer l'installeur | Données dans `Documents\Elexio` |
+
+## T10 — Schéma d'implantation (onglet « Implantation »)
+
+| # | Action | Attendu |
+|---|---|---|
+| T10.1 | Onglet « Implantation » | Un niveau « Rez-de-chaussée », grille 5 cm, plan vide |
+| T10.2 | Outil **Mur**, clics successifs | Polyligne orthogonale ; `Alt` = angle libre ; `Entrée`/`Échap`/double-clic terminent |
+| T10.3 | Sélectionner un mur | Longueur en cm + équivalent papier à l'échelle ; épaisseur réglable |
+| T10.4 | Outil **Porte** puis clic près d'un mur | Porte posée (arc), mur interrompu ; glisser = déplacement le long des murs |
+| T10.5 | Outil **Fenêtre** | Double trait ; largeur réglable dans le panneau |
+| T10.6 | Outil **Pièce**, clic | Libellé « Pièce » ; renommable, déplaçable (flèches) |
+| T10.7 | Panneau « Non placés » : glisser un élément sur le plan | Symbole posé ; l'élément disparaît de la liste |
+| T10.8 | Clic simple sur un élément de la liste puis clic sur le plan | Symbole posé (mode clic-armer) |
+| T10.9 | Cliquer un symbole posé | Sélection sur le plan **et** dans le schéma ; anneau de sélection |
+| T10.10 | `R` ou champ Rotation | Symbole tourné de 90° |
+| T10.11 | `Suppr` sur un symbole posé | Retiré du plan (l'élément du schéma est conservé) |
+| T10.12 | Ajouter un étage (bouton), double-clic sur l'onglet d'étage | Nouvel étage ; renommage au double-clic |
+| T10.13 | Importer un fond (`png`/`jpg`/`webp`) | Fond réduit affiché ; calibrage à 2 points ; le projet reste léger |
+| T10.14 | « PDF… » avec au moins un étage tracé | Une page A4 paysage par étage non vide, après le schéma : titre, échelle + barre, légende, cartouche |
+| T10.15 | Étages sans tracé | Aucune page de plan générée pour eux |
+| T10.16 | Plan vide | Aucune page de plan ; PDF sinon inchangé |
+| T10.17 | Élément du schéma non posé (plan non vide) | Alerte **BE-09** ; clic → onglet Implantation |

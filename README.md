@@ -46,7 +46,8 @@
    - `Ctrl+S` ou **Enregistrer** : sauvegarde locale (retrouvée à la prochaine ouverture).
    - **Exporter…** : télécharge le schéma au format **`.elx`** (JSON enveloppé + base64 ; voir ci-dessous).
    - **PDF…** : dossier d'impression (cartouche général, schéma sur une page A4 par page
-     de mise en page, liste des circuits, liste des matériaux).
+     de mise en page, **plan d'implantation** — une page par étage non vide —, liste des
+     circuits, liste des matériaux).
 
 ### Raccourcis
 
@@ -85,13 +86,25 @@
 - Montages : apparent, encastré (± conduit), enterré, aérien
 
 **Contrôle**
-- 6 règles de cohérence (`src/rules-be.js`), panneau cliquable
+- 7 règles de cohérence (`src/rules-be.js`), panneau cliquable
+
+**Schéma d'implantation**
+- Dessin par **étage** (coordonnées en cm, Y vers le bas), calques fond / murs / ouvertures /
+  pièces / symboles
+- **Murs** : polyligne, orthogonal par défaut (`Alt` = angle libre), épaisseur 20 cm
+- **Portes / fenêtres** posées sur le mur le plus proche, déplaçables le long du mur, largeur réglable
+- **Pièces** : libellés libres (renommables, déplaçables)
+- **Symboles** : instances des éléments du schéma (aucun nouvel équipement), glisser-déposer ou
+  clic-armer ; **tableau** et **compteur** placeables
+- **Fond de plan** : image importée, calibrable, jamais incluse dans le projet (fichier `.elx` : images référencées seulement)
+- **Échelle** : automatique (plus grande échelle normalisée qui tient) ou imposée ; règle **BE-09** (appareillage non placé)
 
 **Dossier PDF**
 1. cartouche général (chantier, occupant, installateur, contrôle, projet)
 2. schéma unifilaire (une page A4 par page de mise en page)
-3. liste des circuits
-4. liste des matériaux (regroupée)
+3. plan d'implantation (une page A4 paysage par étage non vide : titre, échelle + barre graphique, légende, cartouche)
+4. liste des circuits
+5. liste des matériaux (regroupée)
 
 ---
 
@@ -132,7 +145,12 @@ src/
   symbols/        fichiers SVG autonomes
   standards.js    valeurs normalisées (calibres, sections, ancrages, pages A4)
   render.js       rendu SVG (grille, mise en page, cartouche)
-  rules-be.js     6 règles de validation
+  plan-model.js   modèle du plan d'implantation (pur) + migration v4
+  plan-render.js  rendu SVG du plan (écran)
+  plan-ui.js      interactions de l'onglet implantation
+  plan-assets.js  magasin d'images de fond (hors projet, IndexedDB)
+  plan-print.js   pages A4 du plan dans le dossier PDF
+  rules-be.js     7 règles de validation
   ui.js           onglets, formulaires, interactions
   platform.js     shim web de window.elexio (version navigateur : PDF/ouverture)
 tools/serve-browser.js  serveur local de test (navigateur)
