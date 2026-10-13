@@ -124,5 +124,5 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T10.16 | Plan vide | Aucune page de plan ; PDF sinon inchangé |
 | T10.17 | Élément du schéma non posé (plan non vide) | Alerte **BE-09** ; clic → onglet Implantation |
 | T10.18 | Bouton « Afficher / masquer le dessin » (actif) | **Tout** disparaît sauf l'arrière-plan (murs, ouvertures, pièces, symboles, grille) ; second clic : tout revient |
-| T10.19 | Importer un fond, puis **actualiser la page** et reprendre | Le fond est toujours là (miroir disque en bureau, IndexedDB en navigateur) |
+| T10.19 | Importer un fond, puis **actualiser la page** (voire fermer/rouvrir, ou actualiser aussitôt après l'import) et reprendre | Le fond est toujours là (miroir disque **et** IndexedDB ; écriture immédiate à l'import) |
 | T10.20 | Curseur « Opacité des éléments » | Murs, ouvertures, pièces et symboles deviennent plus / moins transparents (l'arrière-plan n'est pas touché) |

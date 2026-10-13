@@ -256,8 +256,10 @@ enregistre dans le projet).
 
 Fond de plan (`plan-assets.js`) : image **hors du projet** (le projet ne garde que la cle
 `bg.asset`). Reduite (<= 2400 px, JPEG 0,85), refus > 20 Mo. Calibrable (2 points + distance
-reelle). Autosave disque (Electron) / IndexedDB (navigateur), **jamais** `localStorage`. Le
-`.elx` ne contient que les images **referencees** (`referencedAssets`).
+reelle). Autosave : miroir disque (Electron, `assets` de `autosave.json`) **et** IndexedDB
+(les deux plateformes), **jamais** `localStorage`. Ecriture **immediate** des images des que
+leur liste change (import/suppression) ; restauration = fusion IndexedDB + disque + autosave.
+Le `.elx` ne contient que les images **referencees** (`referencedAssets`).
 
 PDF (`plan-print.js`) : `buildPlanPages(project)` -> une page A4 paysage par etage non vide
 (`hasPlanContent`), apres le schema et avant les listes. Titre, echelle numerique + barre
@@ -331,8 +333,14 @@ l'element dans le schema).
 6. **`src/platform.js` ne doit PAS definir `autosaveWrite`/`autosaveRead`.** `ui.js` s'en
    sert pour distinguer le bureau (miroir disque) du navigateur (IndexedDB) : des no-op
    dans le shim web font croire a un miroir disque et les images de fond ne sont plus
-   jamais ecrites (fonds perdus a l'actualisation). A la reprise, les images viennent de
-   `pending.assets` (disque) sinon `loadAssetsIdb()` — le localStorage seul ne les a pas.
+   jamais ecrites (fonds perdus a l'actualisation).
+7. **Persistance des images de fond.** Ecrites dans le miroir disque (bureau, champ
+   `assets` de `autosave.json`) **et** dans IndexedDB (filet permanent, les deux
+   plateformes). Des que la *liste* des images referencees change (import ou suppression),
+   l'ecriture est **immediate** (pas de debounce), pour survivre a un rechargement ou une
+   fermeture rapide ; le reste est differe de 400 ms. A la reprise, les images sont
+   fusionnees depuis IndexedDB + miroir disque + `pending.assets` (le localStorage seul ne
+   les contient pas : il ne garde que la cle `bg.asset`).
 
 ## Build des .exe
 

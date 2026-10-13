@@ -108,6 +108,7 @@ const TAB_KEY = 'elecschema.tab';   // onglet actif, conservé au refresh
 
 /** Persiste projet + fichier courant dans le localStorage (ne rien perdre au reload). */
 let autosaveFileTimer = null;
+let lastAssetsSig = '';   // empreinte des images référencées à la dernière écriture du miroir
 
 function persistSnapshot() {
   const rec = JSON.stringify({ project, file: currentFile });
@@ -116,20 +117,29 @@ function persistSnapshot() {
   } catch (err) {
     console.warn('Autosave local impossible :', err);
   }
-  // Miroir disque (bureau) : debounce 400 ms, jamais bloquant. Les images de fond
-  // (seulement celles référencées) vont dans ce miroir ; en navigateur, dans IndexedDB.
+  // Miroir persistant : fichier disque (bureau) et/ou IndexedDB (navigateur, filet de
+  // sécurité permanent). Le projet et le reste sont différés (400 ms) pour ne pas
+  // marteler le stockage ; en revanche, dès que la liste des images référencées change
+  // (import ou suppression d'un fond), on écrit TOUT DE SUITE : une image ne doit jamais
+  // être perdue par un rechargement ou une fermeture rapide avant l'échéance du différé.
+  const assets = referencedAssets(project, assetsObject());
+  const sig = Object.keys(assets).sort().join('|');
+  const hasDisk = typeof window.elexio?.autosaveWrite === 'function';
   clearTimeout(autosaveFileTimer);
-  if (typeof window.elexio?.autosaveWrite === 'function') {
-    autosaveFileTimer = setTimeout(() => {
-      const disk = JSON.stringify({ project, file: currentFile, assets: referencedAssets(project, assetsObject()) });
-      window.elexio.autosaveWrite(disk).catch((err) => console.warn('Autosave disque impossible :', err));
-    }, 400);
+  const writeDiskMirror = () => {
+    if (!hasDisk) return;
+    const disk = JSON.stringify({ project, file: currentFile, assets });
+    window.elexio.autosaveWrite(disk).catch((err) => console.warn('Autosave disque impossible :', err));
+  };
+  if (sig !== lastAssetsSig) {
+    // Ensemble d'images modifié : écriture immédiate (jamais attendre le différé).
+    lastAssetsSig = sig;
+    writeDiskMirror();
+    saveAssetsIdb(assets).then((ok) => {
+      if (!ok && !hasDisk) status('Fonds de plan non sauvegardés (stockage navigateur indisponible).');
+    });
   } else {
-    autosaveFileTimer = setTimeout(() => {
-      saveAssetsIdb(referencedAssets(project, assetsObject())).then((ok) => {
-        if (!ok) status('Fonds de plan non sauvegardés (stockage navigateur indisponible).');
-      });
-    }, 400);
+    autosaveFileTimer = setTimeout(writeDiskMirror, 400);
   }
 }
 
@@ -217,8 +227,10 @@ async function showWelcome() {
       resumeBtn.textContent = `Reprendre « ${name} »`;
       resumeBtn.hidden = false;
       resumeBtn.onclick = async () => {
-        // Images de fond : celles du miroir disque (bureau), sinon IndexedDB (navigateur).
-        const assets = pending.assets ?? disk?.assets ?? (await loadAssetsIdb()) ?? {};
+        // Images de fond : on réunit toutes les sources disponibles (IndexedDB, miroir
+        // disque, autosave) pour ne jamais en perdre une seule.
+        const idbAssets = (await loadAssetsIdb()) || {};
+        const assets = { ...idbAssets, ...(disk?.assets || {}), ...(pending.assets || {}) };
         loadProject(pending.project, pending.file, assets);
         status('Restauration du dernier état (sauvegarde locale/stockage).');
       };
