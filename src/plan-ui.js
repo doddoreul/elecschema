@@ -34,6 +34,7 @@ const ui = {
   selOpening: null,     // id de l'ouverture (porte/fenêtre) sélectionnée
   selRoom: null,        // id du libellé de pièce sélectionné
   placeArmed: null,     // elementId armé depuis la liste « Non placés »
+  hideElements: false,  // masquer les symboles posés (avant / après)
   n: 100,               // échelle effective courante (pour la taille des symboles)
 };
 
@@ -93,6 +94,7 @@ export function initPlan(d) {
   $('#plan-tool-door').addEventListener('click', () => setTool(ui.tool === 'door' ? 'select' : 'door'));
   $('#plan-tool-window').addEventListener('click', () => setTool(ui.tool === 'window' ? 'select' : 'window'));
   $('#plan-tool-room').addEventListener('click', () => setTool(ui.tool === 'room' ? 'select' : 'room'));
+  $('#plan-toggle-elements').addEventListener('click', toggleElements);
 
   $('#plan-bg-import').addEventListener('click', importBg);
   $('#plan-bg-calib').addEventListener('click', () => setTool(ui.tool === 'calib' ? 'select' : 'calib'));
@@ -259,7 +261,7 @@ function drawOverlay() {
       el('circle', { cx: x, cy: y, r: ui.view.w / 120, class: 'plan-handle', 'data-end': end }, g);
     }
   }
-  if (ui.selPlace != null) {
+  if (ui.selPlace != null && !ui.hideElements) {
     const found = findPlacement(plan(), ui.selPlace);
     if (found) {
       const node = nodeOf(found.placement.elementId);
@@ -287,6 +289,15 @@ function renderToolButtons() {
   for (const t of ['select', 'wall', 'door', 'window', 'room']) {
     $(`#plan-tool-${t}`)?.classList.toggle('active', ui.tool === t);
   }
+  const btn = $('#plan-toggle-elements');
+  if (btn) btn.textContent = ui.hideElements ? 'Afficher les éléments' : 'Masquer les éléments';
+  svgEl().classList.toggle('hide-elements', ui.hideElements);
+}
+
+/** Masque / affiche les symboles posés (comparaison avant / après). */
+function toggleElements() {
+  ui.hideElements = !ui.hideElements;
+  refreshPlan();
 }
 
 function renderScale(lv) {
