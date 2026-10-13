@@ -992,12 +992,35 @@ async function addCalibPoint(pt) {
 function askValue(title, label, value = '', type = 'text') {
   return new Promise((resolve) => {
     const dlg = $('#plan-dialog');
+    const form = $('#plan-dialog-form');
     const input = $('#plan-dialog-input');
     $('#plan-dialog-title').textContent = title;
     $('#plan-dialog-label').textContent = label;
     input.type = type;
     input.value = value;
-    dlg.addEventListener('close', () => resolve(dlg.returnValue === 'ok' ? input.value : null), { once: true });
+    dlg.returnValue = '';                          // remis à zéro à chaque ouverture
+
+    let done = false;
+    const finish = (ok) => {
+      if (done) return;                            // une seule résolution par boîte
+      done = true;
+      form.removeEventListener('submit', onSubmit);
+      dlg.removeEventListener('close', onClose);
+      dlg.removeEventListener('keydown', onKey);
+      resolve(ok ? input.value : null);
+    };
+    // Clé = bouton réellement cliqué (« ok » valide, « cancel » annule).
+    const onSubmit = (e) => finish(!e.submitter || e.submitter.value === 'ok');
+    // Entrée valide (sinon la soumission implicite viserait « Annuler », 1ᵉʳ bouton).
+    const onKey = (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); dlg.close('ok'); finish(true); }
+      else if (e.key === 'Escape') { finish(false); }
+    };
+    const onClose = () => finish(dlg.returnValue === 'ok');
+
+    form.addEventListener('submit', onSubmit);
+    dlg.addEventListener('close', onClose);
+    dlg.addEventListener('keydown', onKey);
     dlg.showModal();
     input.focus();
     input.select();
