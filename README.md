@@ -118,7 +118,7 @@ au premier lancement, normal.
 Vérification de la syntaxe : `npm run check` — Tests automatiques : `npm test`
 
 ```
-main.js           processus principal (fenêtres, fichiers, export PDF/CSV)
+main.js           processus principal (fenêtres, fichiers, export PDF)
 preload.js        pont isolé rendu <-> principal (window.elexio)
 print-assets.js   inlining des SVG du PDF (file: -> data:)
 index.html        redirection vers src/ (GitHub Pages)
@@ -134,7 +134,7 @@ src/
   render.js       rendu SVG (grille, mise en page, cartouche)
   rules-be.js     6 règles de validation
   ui.js           onglets, formulaires, interactions
-  platform.js     shim web de window.elexio (version navigateur : CSV/PDF/ouverture)
+  platform.js     shim web de window.elexio (version navigateur : PDF/ouverture)
 tools/serve-browser.js  serveur local de test (navigateur)
 test/             tests automatiques (node:test)
 ```

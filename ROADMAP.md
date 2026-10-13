@@ -1,6 +1,6 @@
 # ROADMAP - Elexio
 
-**Cible :** schema unifilaire domestique belge, editeur drag & drop, validation RGIE, CSV.
+**Cible :** schema unifilaire domestique belge, editeur drag & drop, validation RGIE.
 **Hors perimetre :** schema d'implantation, profil France, import DWG/PDF.
 **Scope :** habitation uniquement. Mono **et** triphase. Pas d'industriel. Pas de schema developpe.
 **Contraintes :** 100 % standalone, pas de cloud, pas de licence payante, installable **et** portable.
@@ -112,7 +112,7 @@ arrivee `3N~ 400/230 V`, bus L1/L2/L3, controle d'equilibrage.
 `src/rules-be.js`, 6 regles sourcees, panneau d'anomalies cliquable.
 
 ### Etape 6 - Liste composants
-Tableau detaille, materiel regroupe par designation, export CSV UTF-8 `;`.
+Tableau detaille, materiel regroupe par designation.
 
 ### Etape 8 - Finitions
 Annuler/retablir par instantane (150 pas), copier/coller symbole ou circuit,
@@ -130,7 +130,7 @@ Tests automatises sans dependance (`node --test` : modele/migrations, 6 regles,
 proprietes de layout) + workflow CI (syntaxe `node --check` + tests). Durcissement
 du processus principal : validation d'arbre, `openPath` limite aux recents,
 fenetre PDF verrouillee (`javascript:false`), ecritures atomiques, autosave miroir
-disque. Shim web `src/platform.js` : memes fonctions CSV/PDF en navigateur qu'en
+disque. Shim web `src/platform.js` : memes fonctions PDF/ouverture en navigateur qu'en
 bureau. Avertissement « trace contraint » quand le layout atteint son plafond.
 PDF : SVG des symboles inlines en `data:` (`print-assets.js`), plus de dependance
 `file:` ; reperage des circuits (`renumberCircuits`) deplace dans `model.js`.

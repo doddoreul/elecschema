@@ -161,20 +161,6 @@ ipcMain.handle('pdf:export', async (event, html, defaultName) => {
   return filePath;
 });
 
-/* ------------------------------------------------------------------ IPC : CSV */
-
-ipcMain.handle('csv:export', async (event, content, defaultName) => {
-  const dir = await ensureProjectsDir();
-  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
-    title: 'Exporter la liste des composants',
-    defaultPath: path.join(dir, `${defaultName || 'composants'}.csv`),
-    filters: [{ name: 'CSV (séparateur ;)', extensions: ['csv'] }],
-  });
-  if (canceled || !filePath) return null;
-  await writeFileAtomic(filePath, '\uFEFF' + content);
-  return filePath;
-});
-
 /* -------------------------------------------------------------- IPC : autosave */
 // Miroir disque de la sauvegarde locale (localStorage) : protège les données si
 // le profil est effacé. Écriture atomique, lecture tolérante.

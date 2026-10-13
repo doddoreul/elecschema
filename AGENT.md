@@ -48,7 +48,7 @@ node_modules\electron\dist\electron.exe . --enable-logging=stderr > rc.out 2>&1
 
 ```
 index.html        redirection (Pages) vers src/
-main.js           processus principal : fenetres, ouverture, PDF, CSV, recents
+main.js           processus principal : fenetres, ouverture, PDF, recents
 preload.js        pont isole (contextBridge -> window.elexio, sandbox:true)
 print-assets.js   inlining des SVG du PDF (file: -> data:), pur/CJS
 src/
@@ -63,7 +63,7 @@ src/
   render.js       rendu SVG + mise en page A4 + cartouche
   rules-be.js     6 regles de validation
   ui.js           onglets, formulaires, interactions
-  platform.js     shim web de window.elexio (hors Electron : CSV/PDF/ouverture)
+  platform.js     shim web de window.elexio (hors Electron : PDF/ouverture)
 tools/serve-browser.js    serveur de test navigateur
 tools/check-syntax.mjs    verificateur de syntaxe (npm run check)
 test/                     tests automatises node:test (model, rules-be, layout, format)
@@ -90,6 +90,7 @@ cable          { n, terre, section, type, montage }, fil uniquement
 ```
 
 Decisions actees :
+- **Aucun export CSV, jamais.**
 - **Arbre unique d'elements** ancres par points d'ancrage. Les anciens concepts
   `circuits` / `difs` sont **supprimes** (migration legacy -> nodes, voir `migrateProject`).
 - **Compteur : un seul point d'ancrage, a droite** (`freeAnchorDirs`, `drawAnchors`) ;

@@ -92,7 +92,6 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | # | Action | Attendu |
 |---|---|---|
 | T8.1 | Onglet « Composants » | Tableau regroupe par désignation, quantités correctes |
-| T8.2 | « Exporter CSV » | Fichier CSV UTF-8, séparateur `;` |
 
 ## T9 — Build
 

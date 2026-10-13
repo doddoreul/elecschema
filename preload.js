@@ -6,7 +6,6 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('elexio', {
   open: () => ipcRenderer.invoke('project:open'),
   exportPdf: (html, name) => ipcRenderer.invoke('pdf:export', html, name),
-  exportCsv: (content, name) => ipcRenderer.invoke('csv:export', content, name),
   recents: () => ipcRenderer.invoke('recents:list'),
   openPath: (p) => ipcRenderer.invoke('project:openPath', p),
   autosaveRead: () => ipcRenderer.invoke('autosave:read'),

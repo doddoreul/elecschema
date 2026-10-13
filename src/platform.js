@@ -7,14 +7,6 @@
   'use strict';
   if (typeof window.elexio === 'object') return; // déjà fourni (Electron : preload.js)
 
-  const save = (name, text, type) => {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([text], { type }));
-    a.download = name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  };
-
   window.elexio = {
     open() {
       return new Promise((res) => {
@@ -47,10 +39,6 @@
       w.document.close();
       w.print();
       return 'impression';
-    },
-    exportCsv: async (content, name) => {
-      save((name || 'composants') + '.csv', '\uFEFF' + content, 'text/csv;charset=utf-8');
-      return (name || 'composants') + '.csv';
     },
     // pas de miroir disque en navigateur : le localStorage suffit
     autosaveWrite: async () => true,

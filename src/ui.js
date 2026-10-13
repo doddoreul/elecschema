@@ -702,37 +702,6 @@ function renderBom() {
   $('#bom-groups').textContent = gRows.length ? `${gRows.length} désignations` : '';
 }
 
-$('#btn-bom-csv').addEventListener('click', async () => {
-  if (typeof window.elexio !== 'object') { alert('Export CSV disponible dans la version bureau.'); return; }
-  const csv = await window.elexio.exportCsv(buildBomCsv(), suggestedName() + '-composants');
-  if (csv) status(`CSV exporté : ${csv}`);
-});
-
-function buildBomCsv() {
-  const head = ['Repère', 'Emplacement', 'Symbole', 'Caractéristique', 'Type'];
-  const lines = [head.join(';')];
-  // Anti-injection de formule : une cellule débutant par = + - @ est neutralisée
-  // par une apostrophe (Excel / Calc la traitent alors comme du texte).
-  const q = (s) => {
-    let v = String(s ?? '');
-    if (/^[=+\-@]/.test(v)) v = "'" + v;
-    return '"' + v.replace(/"/g, '""') + '"';
-  };
-  for (const node of treeOrder(project)) {
-    const parent = nodeOf(node.parent);
-    const parentLabel = node.symbolType === 'compteur' ? '—'
-      : (parent ? (parent.label || (parent.symbolType === 'compteur' ? 'W1' : '—')) : '—');
-    lines.push([
-      node.label || (node.symbolType === 'compteur' ? 'W1' : '—'),
-      parentLabel,
-      node.symbolType === 'node' ? 'Node' : symbolLabel(node),
-      node.symbolType === 'compteur' ? (node.detail || 'Compteur') : (deviceDetail(node) || ''),
-      TYPE_LABELS[node.symbolType] || node.symbolType,
-    ].map(q).join(';'));
-  }
-  return lines.join('\r\n');
-}
-
 /* -------------------------------------------------------------- rendu global */
 
 function renderIssues() {
