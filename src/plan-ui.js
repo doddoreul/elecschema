@@ -17,7 +17,7 @@ const $ = (sel) => document.querySelector(sel);
 const DEFAULT_VIEW = { x: -200, y: -200, w: 1600, h: 1000 };
 const MIN_VIEW_CM = 50, MAX_VIEW_CM = 200000;
 const MIN_WALL_CM = 1;
-const BG_ZOOM_STEP = 1.15;   // pas d'agrandissement du fond par clic
+const BG_ZOOM_STEP = 1.05;   // pas d'agrandissement du fond par clic (+/- 5 %)
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 let deps = null;
