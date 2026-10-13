@@ -265,6 +265,20 @@
             </label>
           </div>
         </div>
+        <div id="plan-text-bar" class="plan-text-bar" hidden>
+          <span class="plan-text-bar-title">Texte</span>
+          <label class="plan-bar-field">Taille
+            <select id="plan-text-size">
+              <option value="0.75">Petite</option>
+              <option value="1">Normale</option>
+              <option value="1.5">Grande</option>
+              <option value="2">Très grande</option>
+            </select>
+          </label>
+          <button id="plan-text-bold" type="button" class="plan-fmt" title="Gras" aria-label="Gras" aria-pressed="false"><b>G</b></button>
+          <button id="plan-text-italic" type="button" class="plan-fmt" title="Italique" aria-label="Italique" aria-pressed="false"><i>I</i></button>
+          <button id="plan-text-underline" type="button" class="plan-fmt" title="Souligné" aria-label="Souligné" aria-pressed="false"><u>S</u></button>
+        </div>
         <div class="plan-body">
           <aside class="plan-palette">
             <h3>Non placés</h3>
@@ -300,7 +314,7 @@
             </div>
             <div id="plan-room-panel" class="plan-bg-panel" hidden>
               <h3>Texte sélectionné</h3>
-              <label class="plan-field">Texte <input id="plan-room-name" type="text" placeholder="Note, repère…"></label>
+              <label class="plan-field">Contenu <input id="plan-room-name" type="text" placeholder="Note, repère…"></label>
               <button id="plan-room-del">Supprimer le texte</button>
             </div>
             <div id="plan-wall-panel" class="plan-bg-panel" hidden>

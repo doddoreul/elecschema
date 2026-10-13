@@ -54,6 +54,19 @@ function selectedWall(lv) {
   return ui.selWall == null ? null : lv.walls.find((w) => w.id === ui.selWall) || null;
 }
 
+/** Texte (libellé libre) sélectionné dans le niveau courant. */
+function selectedRoom() {
+  return ui.selRoom != null ? currentLevel().rooms.find((x) => x.id === ui.selRoom) || null : null;
+}
+
+/** État visuel + accessible d'un bouton de mise en forme de texte. */
+function setFmtButton(sel, on) {
+  const b = $(sel);
+  if (!b) return;
+  b.classList.toggle('active', !!on);
+  b.setAttribute('aria-pressed', String(!!on));
+}
+
 function project() { return deps.getProject(); }
 
 function nodeOf(elementId) {
@@ -158,6 +171,22 @@ export function initPlan(d) {
   });
   $('#plan-room-del').addEventListener('click', deleteSelectedRoom);
 
+  // Barre « Texte » (visible seulement quand un texte est sélectionné) : taille + styles.
+  $('#plan-text-size').addEventListener('change', (e) => {
+    const r = selectedRoom();
+    if (!r) return;
+    r.size = Number(e.target.value) || 1;
+    deps.markDirty(); refreshPlan();
+  });
+  for (const [id, key] of [['#plan-text-bold', 'bold'], ['#plan-text-italic', 'italic'], ['#plan-text-underline', 'underline']]) {
+    $(id).addEventListener('click', () => {
+      const r = selectedRoom();
+      if (!r) return;
+      r[key] = !r[key];
+      deps.markDirty(); refreshPlan();
+    });
+  }
+
   $('#plan-place-rot').addEventListener('change', (e) => {
     const found = ui.selPlace != null ? findPlacement(plan(), ui.selPlace) : null;
     if (!found) return;
@@ -172,7 +201,12 @@ export function initPlan(d) {
   svg.addEventListener('pointermove', onPointerMove);
   svg.addEventListener('pointerup', onPointerUp);
   svg.addEventListener('pointercancel', onPointerUp);
-  svg.addEventListener('dblclick', () => { ui.draft = null; drawOverlay(); });
+  svg.addEventListener('dblclick', (e) => {
+    ui.draft = null;
+    const roomEl = e.target.closest?.('[data-room]');
+    if (roomEl) { editRoom(roomEl.dataset.room); return; }
+    drawOverlay();
+  });
   svg.addEventListener('contextmenu', (e) => e.preventDefault());
 
   document.addEventListener('keydown', onKeyDown);
@@ -382,11 +416,17 @@ function renderOpeningPanel(lv) {
   $('#plan-opening-w').value = String(o.w);
 }
 
-function renderRoomPanel(lv) {
-  const r = ui.selRoom != null ? lv.rooms.find((x) => x.id === ui.selRoom) : null;
+function renderRoomPanel() {
+  const r = selectedRoom();
   $('#plan-room-panel').hidden = !r;
+  const bar = $('#plan-text-bar');
+  if (bar) bar.hidden = !r;                       // barre dédiée : seulement texte sélectionné
   if (!r) return;
   $('#plan-room-name').value = r.name || '';
+  $('#plan-text-size').value = String(r.size > 0 ? r.size : 1);
+  setFmtButton('#plan-text-bold', r.bold);
+  setFmtButton('#plan-text-italic', r.italic);
+  setFmtButton('#plan-text-underline', r.underline);
 }
 
 /** Liste « Non placés » : éléments posables pas encore placés, triés de façon stable. */
@@ -431,7 +471,7 @@ function hintText(lv) {
   if (ui.tool === 'door' || ui.tool === 'window') {
     return ui.tool === 'door' ? 'Porte : cliquez près d’un mur pour la poser.' : 'Fenêtre : cliquez près d’un mur pour la poser.';
   }
-  if (ui.tool === 'room') return 'Texte : cliquez pour poser un texte, puis saisissez-le.';
+  if (ui.tool === 'room') return 'Texte : cliquez pour poser un texte ; saisissez son contenu dans la boîte.';
   if (ui.placeArmed != null) return 'Cliquez sur le plan pour poser. Échap pour annuler.';
   if (lv.bg && !lv.bg.locked) return 'Fond déverrouillé : glissez-le ou changez sa taille. Les autres éléments restent modifiables.';
   return 'Clic sur un mur ou un symbole : sélection. R : rotation. Suppr : retirer. Molette : zoom · Espace ou bouton milieu : déplacer la vue.';
@@ -563,11 +603,13 @@ function onPointerDown(e) {
 
   if (ui.tool === 'room') {
     const pt = toWorld(e);
-    const r = addRoom(plan(), lv, { x: snap(pt.x), y: snap(pt.y) });
-    ui.selRoom = r.id; ui.selOpening = null; ui.selWall = null; ui.selPlace = null;
-    deps.markDirty(); refreshPlan();
-    setTool('select');
-    if ($('#plan-room-name')) $('#plan-room-name').focus();
+    setTool('select');                              // outil à usage unique
+    askValue('Texte', 'Contenu', '').then((txt) => {
+      if (txt == null) return;                      // saisie annulée : rien n'est posé
+      const r = addRoom(plan(), lv, { x: snap(pt.x), y: snap(pt.y), name: txt });
+      ui.selRoom = r.id; ui.selOpening = null; ui.selWall = null; ui.selPlace = null;
+      deps.markDirty(); refreshPlan();
+    });
     return;
   }
 
@@ -752,6 +794,17 @@ function deleteSelectedOpening() {
   removeOpening(lv, ui.selOpening);
   ui.selOpening = null;
   deps.markDirty(); refreshPlan();
+}
+
+/** Dialogue de saisie du contenu d'un texte (double-clic sur le texte pour le modifier). */
+function editRoom(id) {
+  const r = currentLevel().rooms.find((x) => x.id === id);
+  if (!r) return;
+  askValue('Texte', 'Contenu', r.name || '').then((txt) => {
+    if (txt == null) return;
+    r.name = txt;
+    deps.markDirty(); refreshPlan();
+  });
 }
 
 function deleteSelectedRoom() {

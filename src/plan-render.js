@@ -138,15 +138,18 @@ function drawOpenings(parent, level, selOpening) {
   }
 }
 
-/** Libellés de pièces : texte libre, taille constante sur papier (comme les repères). */
+/** Textes libres : taille (multiple de la taille de base) et style (gras/italique/souligne). */
 function drawRooms(parent, level, n, selRoom) {
-  const fs = symbolSideCm(n) * 0.5;
+  const base = symbolSideCm(n) * 0.5;
   for (const r of level.rooms) {
     const t = el('text', {
-      x: r.x, y: r.y, 'font-size': fs,
+      x: r.x, y: r.y, 'font-size': base * (r.size > 0 ? r.size : 1),
       class: 'plan-room' + (r.id === selRoom ? ' selected' : ''),
       'data-room': r.id,
     }, parent);
+    if (r.bold) t.setAttribute('font-weight', 'bold');
+    if (r.italic) t.setAttribute('font-style', 'italic');
+    if (r.underline) t.setAttribute('text-decoration', 'underline');
     t.textContent = r.name || 'Texte';
   }
 }

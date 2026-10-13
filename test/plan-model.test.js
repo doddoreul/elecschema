@@ -174,16 +174,41 @@ test('ouvertures : largeur par défaut, bornage, suppression, suppression avec l
   assert.equal(lv.openings.length, 0, 'le mur emporte ses ouvertures');
 });
 
-test('pièces : libellé ajouté, déplaçable, supprimable', () => {
+test('textes : contenu, position, mise en forme et suppression', () => {
   const plan = emptyPlan();
   const lv = plan.levels[0];
   const r = addRoom(plan, lv, { x: 100, y: 200, name: 'Salon' });
   assert.equal(r.name, 'Salon');
   assert.deepEqual([r.x, r.y], [100, 200]);
-  r.x = 150;
+  assert.equal(r.size, 1, 'taille par défaut');
+  assert.equal(r.bold, false);
+  assert.equal(r.italic, false);
+  assert.equal(r.underline, false);
+  r.x = 150; r.size = 2; r.bold = true;
   assert.equal(lv.rooms[0].x, 150, 'position modifiable en place');
+  assert.equal(lv.rooms[0].size, 2, 'mise en forme modifiable en place');
   removeRoom(lv, r.id);
   assert.equal(lv.rooms.length, 0);
+});
+
+test('normalizePlan : textes — mise en forme par défaut, conservée et idempotente', () => {
+  const p = emptyProject();
+  p.plan = { seq: 0, levels: [{ id: 'p1', name: 'RDC', walls: [], openings: [], placements: [], rooms: [
+    { id: 'r1', name: 'A', x: 1, y: 2 },
+    { id: 'r2', name: 'B', x: 3, y: 4, size: 1.5, bold: true, italic: true, underline: true },
+  ] }] };
+  const rooms = normalizePlan(p).levels[0].rooms;
+  assert.equal(rooms.length, 2);
+  assert.equal(rooms[0].size, 1, 'taille par défaut');
+  assert.equal(rooms[0].bold, false);
+  assert.equal(rooms[0].italic, false);
+  assert.equal(rooms[0].underline, false);
+  assert.equal(rooms[1].size, 1.5);
+  assert.equal(rooms[1].bold, true);
+  assert.equal(rooms[1].italic, true);
+  assert.equal(rooms[1].underline, true);
+  p.plan = normalizePlan(p);                       // renormer ne change rien
+  assert.deepEqual(normalizePlan(p).levels[0].rooms, rooms);
 });
 
 test('pages de plan : une seule par étage non vide', () => {

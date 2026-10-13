@@ -101,7 +101,11 @@ export function normalizePlan(project) {
     for (const r of Array.isArray(raw.rooms) ? raw.rooms : []) {
       if (!isObj(r) || !isNum(r.x) || !isNum(r.y)) continue;
       const rid = fresh(r.id); seenIds.add(rid);
-      lv.rooms.push({ id: rid, name: typeof r.name === 'string' ? r.name : '', x: r.x, y: r.y });
+      lv.rooms.push({
+        id: rid, name: typeof r.name === 'string' ? r.name : '', x: r.x, y: r.y,
+        size: isNum(r.size) && r.size > 0 ? r.size : 1,   // multiple de la taille de base
+        bold: !!r.bold, italic: !!r.italic, underline: !!r.underline,
+      });
     }
     for (const p of Array.isArray(raw.placements) ? raw.placements : []) {
       if (!isObj(p) || !isNum(p.x) || !isNum(p.y)) continue;
@@ -196,8 +200,8 @@ export function addOpening(plan, level, { kind, wall, pos, w, hinge, open }) {
   return o;
 }
 
-export function addRoom(plan, level, { x, y, name = '' }) {
-  const r = { id: nextPlanId(plan, 'r'), name, x, y };
+export function addRoom(plan, level, { x, y, name = '', size = 1, bold = false, italic = false, underline = false }) {
+  const r = { id: nextPlanId(plan, 'r'), name, x, y, size, bold, italic, underline };
   level.rooms.push(r);
   return r;
 }
