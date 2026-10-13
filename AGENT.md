@@ -224,8 +224,14 @@ Onglet **Schéma d'implantation** : dessin par **etage**, coordonnees en **cm** 
 
 Modele (`plan-model.js`, pur) : `plan { seq, levels[] }` ;
 `level { id, name, bg, walls[], openings[], rooms[], placements[], printScale }`.
-- `wall { id, x1, y1, x2, y2, t }` ; `opening { id, kind:'door'|'window', wall, pos(0..1), w }` ;
+- `wall { id, x1, y1, x2, y2, t }` ;
+  `opening { id, kind:'door'|'window', wall, pos(0..1), w, hinge, open }` ;
   `room { id, name, x, y }` ; `placement { elementId, x, y, rot }`.
+- **Porte** : `hinge` (-1 bord gauche / +1 bord droit de l'ouverture) et `open` (-1 / +1 cote du
+  mur) orientent le battant et l'arc. Defauts `DEFAULT_DOOR = { hinge:-1, open:1 }` (migration
+  idempotente dans `normalizePlan`). L'arc est **centre sur la charniere** et rejoint l'autre
+  bord de l'ouverture (drapeau `sweep = hinge*open > 0 ? 1 : 0`). Reglable dans le panneau
+  « Ouverture selectionnee » (boutons visibles pour une porte uniquement).
 - Un placement est une **instance d'un element du schema** (`elementId`) : aucun nouvel
   equipement. Un `elementId` n'est pose qu'**une fois**, tous niveaux confondus.
 - **Non placeables** : `PLAN_EXCLUDED` (`node`, `fil`, `breaker`, `rcd`, `fuse`, `sectionneur`).

@@ -119,9 +119,16 @@ function drawOpenings(parent, level, selOpening) {
     // interruption du mur (fond opaque par-dessus le trait)
     el('rect', { x: -o.w / 2, y: -(w.t + 4) / 2, width: o.w, height: w.t + 4, fill: '#fff', stroke: 'none' }, og);
     if (o.kind === 'door') {
-      // battant + arc d'ouverture (quart de cercle)
-      el('line', { x1: 0, y1: 0, x2: 0, y2: o.w, 'stroke-width': 2 }, og);
-      el('path', { d: `M 0 ${o.w} A ${o.w} ${o.w} 0 0 1 ${o.w} 0`, 'stroke-width': 1.5 }, og);
+      // Battant + arc d'ouverture (quart de cercle). La charnière est sur un bord de
+      // l'ouverture (`hinge` : -1 gauche, +1 droite) et la porte s'ouvre d'un côté du mur
+      // (`open` : -1 / +1). L'arc est centré sur la charnière et rejoint l'autre bord.
+      const hinge = o.hinge === 1 ? 1 : -1;
+      const open = o.open === -1 ? -1 : 1;
+      const hx = hinge * (o.w / 2);
+      const ey = open * o.w;
+      const sweep = hinge * open > 0 ? 1 : 0;
+      el('line', { x1: hx, y1: 0, x2: hx, y2: ey, 'stroke-width': 2 }, og);
+      el('path', { d: `M ${hx} ${ey} A ${o.w} ${o.w} 0 0 ${sweep} ${-hx} 0`, 'stroke-width': 1.5 }, og);
     } else {
       // fenêtre : double trait
       const off = Math.max(2, w.t / 4);

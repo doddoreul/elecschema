@@ -109,7 +109,7 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T10.1 | Onglet « Implantation » | Un niveau « Rez-de-chaussée », grille 5 cm, plan vide |
 | T10.2 | Outil **Mur**, clics successifs | Polyligne orthogonale ; `Alt` = angle libre ; `Entrée`/`Échap`/double-clic terminent |
 | T10.3 | Sélectionner un mur | Longueur en cm + équivalent papier à l'échelle ; épaisseur réglable |
-| T10.4 | Outil **Porte** puis clic près d'un mur | Porte posée (arc), mur interrompu ; glisser = déplacement le long des murs |
+| T10.4 | Outil **Porte** puis clic près d'un mur | Porte posée (battant + arc d'ouverture), mur interrompu ; glisser = déplacement le long des murs |
 | T10.5 | Outil **Fenêtre** | Double trait ; largeur réglable dans le panneau |
 | T10.6 | Outil **Pièce**, clic | Libellé « Pièce » ; renommable, déplaçable (flèches) |
 | T10.7 | Panneau « Non placés » : glisser un élément sur le plan | Symbole posé ; l'élément disparaît de la liste |
@@ -126,3 +126,6 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T10.18 | Bouton « Afficher / masquer le dessin » (actif) | **Tout** disparaît sauf l'arrière-plan (murs, ouvertures, pièces, symboles, grille) ; second clic : tout revient |
 | T10.19 | Importer un fond, puis **actualiser la page** (voire fermer/rouvrir, ou actualiser aussitôt après l'import) et reprendre | Le fond est toujours là (miroir disque **et** IndexedDB ; écriture immédiate à l'import) |
 | T10.20 | Curseur « Opacité des éléments » | Murs, ouvertures, pièces et symboles deviennent plus / moins transparents (l'arrière-plan n'est pas touché) |
+| T10.21 | Sélectionner une porte : « Inverser la charnière » | L'arc d'ouverture est centré sur l'autre bord de l'ouverture (battant de l'autre côté) |
+| T10.22 | Sélectionner une porte : « Changer le côté d'ouverture » | Le battant et l'arc basculent de l'autre côté du mur |
+| T10.23 | Sélectionner une fenêtre | Pas de réglages de porte (charnière / côté) : le bloc « Porte » reste masqué |

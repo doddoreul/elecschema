@@ -130,6 +130,20 @@ export function initPlan(d) {
   });
   $('#plan-opening-del').addEventListener('click', deleteSelectedOpening);
 
+  // Porte : inverser la charnière (bord gauche/droit) et le côté d'ouverture (côté du mur).
+  $('#plan-opening-hinge').addEventListener('click', () => {
+    const o = currentLevel().openings.find((x) => x.id === ui.selOpening);
+    if (!o || o.kind !== 'door') return;
+    o.hinge = (o.hinge === 1 ? -1 : 1);
+    deps.markDirty(); refreshPlan();
+  });
+  $('#plan-opening-swing').addEventListener('click', () => {
+    const o = currentLevel().openings.find((x) => x.id === ui.selOpening);
+    if (!o || o.kind !== 'door') return;
+    o.open = (o.open === -1 ? 1 : -1);
+    deps.markDirty(); refreshPlan();
+  });
+
   $('#plan-room-name').addEventListener('change', (e) => {
     const r = currentLevel().rooms.find((x) => x.id === ui.selRoom);
     if (r) { r.name = e.target.value; deps.markDirty(); }
@@ -353,6 +367,7 @@ function renderOpeningPanel(lv) {
   const w = lv.walls.find((x) => x.id === o.wall);
   $('#plan-opening-info').textContent = `${nom} sur ${w ? 'mur ' + w.id : 'mur supprimé'}`;
   $('#plan-opening-w').value = String(o.w);
+  $('#plan-door-panel').hidden = o.kind !== 'door';
 }
 
 function renderRoomPanel(lv) {

@@ -7,7 +7,7 @@ import {
   emptyPlan, normalizePlan, ensurePlan, addLevel, removeLevel, renameLevel, moveLevel,
   addWall, removeWall, placeElement, unplaceElement, placedIds, unplacedElements, levelBounds,
   nearestWall, orthoTarget, snap, pxPerCm, paperMm, chooseScale, effectiveScale, addRoom, symbolSideCm,
-  addOpening, removeOpening, removeRoom, pointOnWall,
+  addOpening, removeOpening, removeRoom, pointOnWall, DEFAULT_DOOR,
 } from '../src/plan-model.js';
 import { encodeElx, decodeElx, referencedAssets } from '../src/format.js';
 import { planFillCount } from '../src/plan-print.js';
@@ -63,6 +63,8 @@ test('normalizePlan : ouvertures sans mur supprimées, position bornée', () => 
   ensurePlan(p);
   assert.equal(p.plan.levels[0].openings.length, 1);
   assert.equal(p.plan.levels[0].openings[0].pos, 1);
+  assert.equal(p.plan.levels[0].openings[0].hinge, DEFAULT_DOOR.hinge, 'charnière migrée par défaut');
+  assert.equal(p.plan.levels[0].openings[0].open, DEFAULT_DOOR.open, 'côté migré par défaut');
 });
 
 test('niveaux : au moins un, ajout, renommage, déplacement', () => {
@@ -156,6 +158,11 @@ test('ouvertures : largeur par défaut, bornage, suppression, suppression avec l
   const w = addWall(plan, lv, { x1: 0, y1: 0, x2: 400, y2: 0 });
   const door = addOpening(plan, lv, { kind: 'door', wall: w.id, pos: 0.5 });
   assert.equal(door.w, 90, 'largeur de porte par défaut');
+  assert.equal(door.hinge, DEFAULT_DOOR.hinge, 'charnière par défaut (bord gauche)');
+  assert.equal(door.open, DEFAULT_DOOR.open, 'côté d’ouverture par défaut');
+  const door2 = addOpening(plan, lv, { kind: 'door', wall: w.id, pos: 0.2, hinge: 1, open: -1 });
+  assert.equal(door2.hinge, 1, 'charnière à droite demandée');
+  assert.equal(door2.open, -1, 'côté d’ouverture demandé');
   const win = addOpening(plan, lv, { kind: 'window', wall: w.id, pos: 1.4, w: 0 });
   assert.equal(win.kind, 'window');
   assert.equal(win.w, 120, 'largeur de fenêtre par défaut');

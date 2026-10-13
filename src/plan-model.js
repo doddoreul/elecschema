@@ -9,6 +9,10 @@ import { PLAN_EXCLUDED, PLAN_SCALES, PLAN_SYMBOL_MM } from './standards.js';
 export const PLAN_STEP_CM = 5;                    // pas d'accrochage à la grille
 export const DEFAULT_WALL_CM = 20;                // épaisseur de mur par défaut
 export const DEFAULT_OPENING_CM = { door: 90, window: 120 };
+/** Sens par défaut d'une porte, dans le repère local du mur (x le long du mur, y vers le
+ *  bas). `hinge` : côté de la charnière sur l'ouverture (-1 = bord gauche, +1 = bord droit).
+ *  `open` : côté du mur où la porte s'ouvre (-1 / +1). Modifiables (voir plan-ui.js). */
+export const DEFAULT_DOOR = { hinge: -1, open: 1 };
 /** Zone utile d'une page A4 paysage du plan (594 x 420 px à 2 px/mm), hors marges,
  *  titre et cartouche (62 px en bas à droite). */
 export const PAGE_USABLE_PX = { w: 554, h: 298 };
@@ -90,6 +94,8 @@ export function normalizePlan(project) {
         id: oid, kind: o.kind, wall: o.wall,
         pos: isNum(o.pos) ? Math.min(1, Math.max(0, o.pos)) : 0.5,
         w: o.w > 0 ? o.w : DEFAULT_OPENING_CM[o.kind],
+        hinge: o.hinge === 1 ? 1 : DEFAULT_DOOR.hinge,
+        open: o.open === -1 ? -1 : DEFAULT_DOOR.open,
       });
     }
     for (const r of Array.isArray(raw.rooms) ? raw.rooms : []) {
@@ -178,8 +184,14 @@ export function removeWall(level, wallId) {
   level.openings = level.openings.filter((o) => o.wall !== wallId);
 }
 
-export function addOpening(plan, level, { kind, wall, pos, w }) {
-  const o = { id: nextPlanId(plan, 'o'), kind, wall, pos: Math.min(1, Math.max(0, pos)), w: w || DEFAULT_OPENING_CM[kind] };
+export function addOpening(plan, level, { kind, wall, pos, w, hinge, open }) {
+  const o = {
+    id: nextPlanId(plan, 'o'), kind, wall,
+    pos: Math.min(1, Math.max(0, pos)),
+    w: w || DEFAULT_OPENING_CM[kind],
+    hinge: hinge === 1 ? 1 : DEFAULT_DOOR.hinge,
+    open: open === -1 ? -1 : DEFAULT_DOOR.open,
+  };
   level.openings.push(o);
   return o;
 }
