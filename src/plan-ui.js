@@ -299,8 +299,11 @@ function renderToolButtons() {
   }
   const btn = $('#plan-toggle-elements');
   if (btn) {
-    btn.textContent = ui.hideElements ? 'Afficher les éléments' : 'Masquer les éléments';
+    // Libellé fixe « Afficher / masquer le dessin » ; l'état est visible (aria-pressed + style).
     btn.setAttribute('aria-pressed', String(ui.hideElements));
+    btn.title = ui.hideElements
+      ? 'Réafficher le dessin (murs, ouvertures, pièces, symboles)'
+      : 'Masquer le dessin pour ne garder que l’arrière-plan';
   }
   svgEl().classList.toggle('hide-elements', ui.hideElements);
 }
