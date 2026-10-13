@@ -249,21 +249,25 @@ placements (repère non tourne + image pivitee), ouvertures (arc porte / double 
 mur interrompu), pieces. `opts.print` : fond blanc opaque, pas de grille, pas d'overlay
 (pour le PDF). `planLabel` = repère de l'element, sinon repère du debut de circuit.
 
-Interactions (`plan-ui.js`) : outils **Selection / Mur / Porte / Fenetre / Piece** ;
-zoom molette, pan milieu ou espace ; panneau **« Non places »** (glisser-deposer ou clic-armer) ;
-deplacement (grille 5 cm), rotation (champ + `R`), retrait (`Suppr`/bouton ; element schema
-conserve) ; selection partagee (clic symbole plan -> `selectElement` schema). Etages :
-ajout / renommage (double-clic) / monter / descendre / suppression.
-Vue : bouton **Afficher / masquer le dessin** (ne garde que l'arriere-plan ; murs,
-ouvertures, pieces, symboles et grille disparaissent ; etat visible via `aria-pressed`),
-bouton **Recentrer** (`fitLevel()`, réajuste le dessin à la fenêtre : ajuste le zoom et
-recadre) et
-curseur **opacite des elements** place dans la **barre d'outils du haut** (groupe
-`.plan-elements` en SVG ; vue seule, non enregistree). Le fond a son propre curseur
-« opacite de l'arriere-plan » (`bg.opacity`, enregistre dans le projet) et des boutons
-**« − » / « + »** dans le panneau de droite (« Taille de l'arriere-plan ») qui
-l'agrandissent / le retrecissent autour de son centre (`scaleBg()`) ; ces boutons ne sont
-actifs que fond **deverrouille**.
+Interactions (`plan-ui.js`) : outils **Selection / Mur / Porte / Fenetre / Texte** (l'outil
+« Texte » reutilise l'entite `rooms` : un libelle positionnable et renommable, rendu
+`.plan-room`) ; zoom molette, pan milieu ou espace ; volet **gauche** **« Non places »**
+(glisser-deposer ou clic-armer) ; deplacement (grille 5 cm), rotation (champ + `R`), retrait
+(`Suppr`/bouton ; element schema conserve) ; selection partagee (clic symbole plan ->
+`selectElement` schema). Etages : ajout / renommage (double-clic) / monter / descendre /
+suppression.
+
+Barre d'outils du plan sur **trois lignes** (`.plan-bar-row`) : (1) etages + echelle
+d'impression ; (2) outils (Selection, Mur, Porte, Fenetre, Texte) + reglages d'ouverture
+(largeur, miroirs) ; (3) bouton **Afficher / masquer le dessin** (ne garde que
+l'arriere-plan ; murs, ouvertures, textes, symboles et grille disparaissent ; etat visible
+via `aria-pressed`), bouton **Recentrer** (`fitLevel()`, réajuste le dessin à la fenêtre :
+ajuste le zoom et recadre), boutons **zoom − / +** (`zoomCenter()`, autour du centre de la
+zone de travail) et curseur **opacite des elements** (groupe `.plan-elements` en SVG ; vue
+seule, non enregistree). Le fond a son propre curseur « opacite de l'arriere-plan »
+(`bg.opacity`, enregistre dans le projet) et des boutons **« − » / « + »** dans le panneau de
+droite (« Taille de l'arriere-plan ») qui l'agrandissent / le retrecissent autour de son
+centre (`scaleBg()`) ; ces boutons ne sont actifs que fond **deverrouille**.
 
 Panneau de droite « Ouverture selectionnee » : info + suppression. Le champ
 **Largeur (cm)** et les deux boutons **Miroir horizontal / Miroir vertical** sont dans la

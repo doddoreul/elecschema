@@ -112,7 +112,7 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T10.3 | Sélectionner un mur | Longueur en cm + équivalent papier à l'échelle ; épaisseur réglable |
 | T10.4 | Outil **Porte** puis clic près d'un mur | Porte posée (battant + arc d'ouverture), mur interrompu ; glisser = déplacement le long des murs |
 | T10.5 | Outil **Fenêtre** | Double trait ; largeur réglable dans le panneau |
-| T10.6 | Outil **Pièce**, clic | Libellé « Pièce » ; renommable, déplaçable (flèches) |
+| T10.6 | Outil **Texte**, clic | Libellé « Texte » ; renommable, déplaçable (flèches) |
 | T10.7 | Panneau « Non placés » : glisser un élément sur le plan | Symbole posé ; l'élément disparaît de la liste |
 | T10.8 | Clic simple sur un élément de la liste puis clic sur le plan | Symbole posé (mode clic-armer) |
 | T10.9 | Cliquer un symbole posé | Sélection sur le plan **et** dans le schéma ; anneau de sélection |
@@ -124,7 +124,7 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T10.15 | Étages sans tracé | Aucune page de plan générée pour eux |
 | T10.16 | Plan vide | Aucune page de plan ; PDF sinon inchangé |
 | T10.17 | Élément du schéma non posé (plan non vide) | Alerte **BE-09** ; clic → onglet Implantation |
-| T10.18 | Bouton « Afficher / masquer le dessin » (actif) | **Tout** disparaît sauf l'arrière-plan (murs, ouvertures, pièces, symboles, grille) ; second clic : tout revient |
+| T10.18 | Bouton « Afficher / masquer le dessin » (actif) | **Tout** disparaît sauf l'arrière-plan (murs, ouvertures, textes, symboles, grille) ; second clic : tout revient |
 | T10.19 | Importer un fond, puis **actualiser la page** (voire fermer/rouvrir, ou actualiser aussitôt après l'import) et reprendre | Le fond est toujours là (miroir disque **et** IndexedDB ; écriture immédiate à l'import) |
 | T10.20 | Curseur « Opacité des éléments » (barre d'outils du haut) | Murs, ouvertures, pièces et symboles deviennent plus / moins transparents (l'arrière-plan n'est pas touché) ; le curseur n'est plus dans le panneau de droite |
 | T10.21 | Sélectionner une porte : « Miroir horizontal » (barre d'outils) | La porte se reflète le long du mur (arc centré sur l'autre bord de l'ouverture) |
@@ -134,3 +134,6 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T10.25 | Bouton « Recentrer » (barre d'outils) | Le dessin est **réajusté à la fenêtre** : le zoom est recalculé pour que l'étage tienne entièrement et il est recentré |
 | T10.26 | Cliquer un symbole posé (fond présent, verrouillé **ou** déverrouillé) | Sélection + anneau de sélection, **sans erreur console** ; les autres éléments restent sélectionnables même fond déverrouillé |
 | T10.27 | Fond **déverrouillé** : boutons « − » / « + » (panneau « Fond de plan ») | L'arrière-plan rétrécit / s'agrandit autour de son centre (définir la taille) ; boutons **désactivés** quand le fond est verrouillé |
+| T10.28 | Volet « Non placés » | La liste est dans un **volet à gauche** de la zone de travail (elle n'est plus dans le panneau de droite) ; glisser-déposer / clic-armer inchangés |
+| T10.29 | Barre d'outils du plan | **Trois lignes** : (1) étages + échelle d'impression ; (2) outils Sélection / Mur / Porte / Fenêtre / **Texte** ; (3) Afficher-masquer / Recentrer / **zoom − +** / opacité des éléments |
+| T10.30 | Boutons **zoom − / +** (barre d'outils) | Le dessin se dézoome / zoome autour du **centre de la zone de travail** (le curseur d'opacité et « Recentrer » restent inchangés) |
