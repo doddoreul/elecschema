@@ -7,7 +7,7 @@ import {
   emptyPlan, normalizePlan, ensurePlan, addLevel, removeLevel, renameLevel, moveLevel,
   addWall, removeWall, placeElement, unplaceElement, placedIds, unplacedElements, levelBounds, fitBounds,
   nearestWall, orthoTarget, snap, cmToPaperMm, paperMmToCm, fitScale, effectiveScale, addRoom, symbolSideCm,
-  addOpening, removeOpening, removeRoom, pointOnWall, DEFAULT_DOOR, planFrame,
+  addOpening, removeOpening, removeRoom, pointOnWall, DEFAULT_DOOR, planFrame, scaleBar,
 } from '../src/plan-model.js';
 import { encodeElx, decodeElx, referencedAssets } from '../src/format.js';
 import { planFillCount } from '../src/plan-print.js';
@@ -119,6 +119,8 @@ test('échelle : distance exacte sur le papier (cm -> mm et retour)', () => {
   assert.equal(cmToPaperMm(500, 50), 100);
   assert.equal(paperMmToCm(100, 100), 1000);
   assert.equal(paperMmToCm(10, 50), 50);
+  // barre d'échelle : à 1:100, la longueur ronde est 1 m et mesure 10 mm sur papier
+  assert.deepEqual(scaleBar(100), { cm: 100, mm: 10, label: '1 m' });
 });
 
 test('échelle automatique : plus grande échelle normalisée qui tient', () => {

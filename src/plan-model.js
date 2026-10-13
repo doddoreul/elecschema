@@ -379,9 +379,9 @@ export function fitScale(bounds, plot = PLAN_PLOT_MM) {
   return { n: PLAN_SCALES[PLAN_SCALES.length - 1], fits: false };
 }
 
-/** Longueur « ronde » (1, 2 ou 5 × 10^k cm) pour la barre d'échelle, ~35 mm sur papier. */
+/** Longueur « ronde » (1, 2 ou 5 × 10^k cm) pour la barre d'échelle, ~15 mm sur papier. */
 export function niceBarCm(n) {
-  const cm = (35 * n) / 10;
+  const cm = (15 * n) / 10;
   const pow = 10 ** Math.floor(Math.log10(cm));
   const f = cm / pow;
   return (f >= 5 ? 5 : f >= 2 ? 2 : 1) * pow;

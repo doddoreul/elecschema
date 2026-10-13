@@ -52,7 +52,8 @@ function drawPlacements(parent, project, level, n, selPlace) {
  *  opts : { project, n (échelle effective), selWall, selPlace }. */
 export function renderPlanLevel(svg, level, view, opts = {}) {
   svg.replaceChildren();
-  svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.h}`);
+  // Le viewBox n'a de sens que sur un vrai <svg> (le PDF dessine dans un <g> transformé).
+  if (svg.tagName.toLowerCase() === 'svg') svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.h}`);
 
   // « Masquer les éléments » : on ne garde que l'arrière-plan (pour l'avant / après).
   const hide = !!opts.hideElements;

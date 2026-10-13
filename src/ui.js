@@ -6,7 +6,7 @@ import { encodeElx, decodeElx, checkCompatibility, FILE_EXT, APP_VERSION, refere
 import { initPlan, refreshPlan, resetPlanView } from './plan-ui.js';
 import { assetsObject, assetsReplace, saveAssetsIdb, loadAssetsIdb } from './plan-assets.js';
 import { renderSchema, sheetSize, deviceDetail, PAGE, layoutForced, drawCartouche } from './render.js';
-import { buildPlanPages } from './plan-print.js';
+import { buildPlanPages, planOverflowLevels } from './plan-print.js';
 import { SYMBOLS, SYMBOL_CATEGORIES, symbolName, symbolUrl, SOCKET_TYPES, SWITCH_TYPES, DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
 import { validate, RULES_BE, RULE_SEVERITY } from './rules-be.js';
 import { DEFAULT_SCHEMA } from './default-schema.js';
@@ -986,6 +986,11 @@ $('#btn-pdf').addEventListener('click', async () => {
     return;
   }
   if (drawingOverflowsPages() && !confirm('Le schéma déborde des pages de la mise en page : la partie hors pages ne sera pas imprimée. Continuer ?')) return;
+  const overPlan = planOverflowLevels(project);
+  if (overPlan.length > 0) {
+    const noms = overPlan.map((x) => `« ${x} »`).join(', ');
+    if (!confirm(`Le plan de l’étage ${noms} déborde de la page : la partie hors cadre ne sera pas imprimée. Continuer ?`)) return;
+  }
   const html = buildPrintHtml();
   if (typeof window.elexio !== 'object') {
     const w = window.open('', '_blank');
