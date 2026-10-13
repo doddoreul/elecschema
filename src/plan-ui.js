@@ -97,7 +97,7 @@ export function initPlan(d) {
   $('#plan-tool-window').addEventListener('click', () => setTool(ui.tool === 'window' ? 'select' : 'window'));
   $('#plan-tool-room').addEventListener('click', () => setTool(ui.tool === 'room' ? 'select' : 'room'));
   $('#plan-toggle-elements').addEventListener('click', toggleElements);
-  $('#plan-recenter').addEventListener('click', () => centerLevel(currentLevel()));
+  $('#plan-recenter').addEventListener('click', () => { fitLevel(currentLevel()); refreshPlan(); });
 
   $('#plan-bg-import').addEventListener('click', importBg);
   $('#plan-bg-calib').addEventListener('click', () => setTool(ui.tool === 'calib' ? 'select' : 'calib'));
@@ -456,16 +456,6 @@ function fitLevel(lv) {
   const w = Math.max(bw, bh / aspect), h = w * aspect;
   const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
   ui.view = { x: cx - w / 2, y: cy - h / 2, w, h };
-}
-
-/** Recentre le dessin dans la fenêtre en conservant le zoom courant. */
-function centerLevel(lv) {
-  const b = levelBounds(lv);
-  if (!b) { ui.view = { ...DEFAULT_VIEW }; refreshPlan(); return; }
-  const v = ui.view;
-  const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
-  ui.view = { x: cx - v.w / 2, y: cy - v.h / 2, w: v.w, h: v.h };
-  refreshPlan();
 }
 
 function zoomAt(e, k) {
