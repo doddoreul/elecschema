@@ -34,7 +34,8 @@ const ui = {
   selOpening: null,     // id de l'ouverture (porte/fenêtre) sélectionnée
   selRoom: null,        // id du libellé de pièce sélectionné
   placeArmed: null,     // elementId armé depuis la liste « Non placés »
-  hideElements: false,  // masquer les symboles posés (avant / après)
+  hideElements: false,  // masquer tous les éléments (ne garder que l'arrière-plan)
+  elementOpacity: 1,    // opacité des éléments du plan (murs, ouvertures, pièces, symboles)
   n: 100,               // échelle effective courante (pour la taille des symboles)
 };
 
@@ -103,6 +104,12 @@ export function initPlan(d) {
     bg.opacity = Number(e.target.value) / 100; refreshPlan();
   });
   $('#plan-bg-opacity').addEventListener('change', () => deps.markDirty());
+  // Opacité des éléments (vue seule, non enregistrée) : mise à jour directe du groupe.
+  $('#plan-elements-opacity').addEventListener('input', (e) => {
+    ui.elementOpacity = Number(e.target.value) / 100;
+    const g = svgEl().querySelector('.plan-elements');
+    if (g) g.setAttribute('opacity', String(ui.elementOpacity));
+  });
   $('#plan-bg-visible').addEventListener('change', (e) => setBg({ visible: e.target.checked }));
   $('#plan-bg-lock').addEventListener('change', (e) => setBg({ locked: e.target.checked }));
   $('#plan-bg-del').addEventListener('click', removeBg);
@@ -238,7 +245,7 @@ export function refreshPlan() {
   renderToolButtons();
   renderUnplaced(project());
   renderPlacePanel();
-  renderPlanLevel(svgEl(), lv, ui.view, { project: project(), n: ui.n, hideElements: ui.hideElements, selWall: ui.selWall, selPlace: ui.selPlace, selOpening: ui.selOpening, selRoom: ui.selRoom });
+  renderPlanLevel(svgEl(), lv, ui.view, { project: project(), n: ui.n, hideElements: ui.hideElements, elementOpacity: ui.elementOpacity, selWall: ui.selWall, selPlace: ui.selPlace, selOpening: ui.selOpening, selRoom: ui.selRoom });
   drawOverlay();
   svgEl().classList.toggle('place-armed', ui.placeArmed != null);
   $('#plan-hint').textContent = hintText(lv);
@@ -250,6 +257,7 @@ function drawOverlay() {
   const g = svgEl().querySelector('#plan-overlay');
   if (!g) return;
   g.replaceChildren();
+  if (ui.hideElements) return;   // vue « arrière-plan seul » : aucun calque d'aperçu
   const lv = currentLevel();
   if (ui.tool === 'wall' && ui.draft && ui.cursor) {
     const t = ui.altKey ? ui.cursor : orthoTarget(ui.draft.x, ui.draft.y, ui.cursor.x, ui.cursor.y);
@@ -297,7 +305,8 @@ function renderToolButtons() {
   svgEl().classList.toggle('hide-elements', ui.hideElements);
 }
 
-/** Masque / affiche les symboles posés (comparaison avant / après). */
+/** Masque / affiche tous les éléments (murs, ouvertures, pièces, symboles) : ne
+ *  laisse que l'arrière-plan, pour comparer avant / après. */
 function toggleElements() {
   ui.hideElements = !ui.hideElements;
   refreshPlan();

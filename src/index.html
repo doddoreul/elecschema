@@ -240,7 +240,7 @@
           <button id="plan-tool-window" title="Poser une fenêtre sur un mur">Fenêtre</button>
           <button id="plan-tool-room" title="Poser un libellé de pièce">Pièce</button>
           <span class="plan-sep"></span>
-          <button id="plan-toggle-elements" title="Masquer ou afficher les éléments posés (avant / après)">Masquer les éléments</button>
+          <button id="plan-toggle-elements" title="Tout masquer pour ne garder que l'arrière-plan, ou tout réafficher">Masquer les éléments</button>
           <span class="spacer"></span>
           <label class="plan-scale-label">Échelle d'impression
             <select id="plan-scale"></select>
@@ -252,13 +252,15 @@
             <svg id="plan-canvas" xmlns="http://www.w3.org/2000/svg"></svg>
           </div>
           <aside class="plan-side">
+            <h3>Affichage</h3>
+            <label class="plan-field">Opacité des éléments <input id="plan-elements-opacity" type="range" min="0" max="100" value="100"></label>
             <h3>Fond de plan</h3>
             <p class="count">Image temporaire : tracez par-dessus, puis supprimez-la.</p>
             <button id="plan-bg-import">Importer un fond…</button>
             <div id="plan-bg-panel" class="plan-bg-panel" hidden>
               <p id="plan-bg-state" class="count"></p>
               <button id="plan-bg-calib">Calibrer…</button>
-              <label class="plan-field">Opacité <input id="plan-bg-opacity" type="range" min="0" max="100" value="50"></label>
+              <label class="plan-field">Opacité de l'arrière-plan <input id="plan-bg-opacity" type="range" min="0" max="100" value="50"></label>
               <label class="plan-field"><input id="plan-bg-visible" type="checkbox" checked> Afficher le fond</label>
               <label class="plan-field"><input id="plan-bg-lock" type="checkbox" checked> Verrouillé</label>
               <button id="plan-bg-del">Supprimer le fond</button>

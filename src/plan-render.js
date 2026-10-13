@@ -25,7 +25,7 @@ export function planLabel(project, node) {
 }
 
 /** Symboles posés : groupe extérieur translaté (repère non tourné), groupe intérieur pivoté. */
-function drawPlacements(svg, project, level, n, selPlace) {
+function drawPlacements(parent, project, level, n, selPlace) {
   const side = symbolSideCm(n);
   const fs = side * 0.5;
   for (const pl of level.placements) {
@@ -39,7 +39,7 @@ function drawPlacements(svg, project, level, n, selPlace) {
       transform: `translate(${pl.x},${pl.y})`,
       class: 'plan-sym' + (pl.elementId === selPlace ? ' selected' : ''),
       'data-placement': pl.elementId,
-    }, svg);
+    }, parent);
     const rot = el('g', { transform: `rotate(${pl.rot || 0})` }, g);
     el('rect', { x: -side / 2 - 2, y: -h / 2 - 2, width: side + 4, height: h + 4, class: 'plan-sym-hit' }, rot);
     el('image', { href, x: -side / 2, y: -h / 2, width: side, height: h, preserveAspectRatio: 'xMidYMid meet' }, rot);
@@ -54,10 +54,13 @@ export function renderPlanLevel(svg, level, view, opts = {}) {
   svg.replaceChildren();
   svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.h}`);
 
+  // « Masquer les éléments » : on ne garde que l'arrière-plan (pour l'avant / après).
+  const hide = !!opts.hideElements;
+
   if (opts.print) {
     // fond blanc opaque (plan lisible en N&B), pas de grille
     el('rect', { x: view.x, y: view.y, width: view.w, height: view.h, fill: '#fff' }, svg);
-  } else {
+  } else if (!hide) {
     const defs = el('defs', {}, svg);
     const pat = el('pattern', { id: 'plan-grid', width: 100, height: 100, patternUnits: 'userSpaceOnUse' }, defs);
     el('path', { d: 'M 100 0 L 0 0 0 100', fill: 'none', stroke: '#e5e7eb', 'stroke-width': 1 }, pat);
@@ -76,27 +79,30 @@ export function renderPlanLevel(svg, level, view, opts = {}) {
     }
   }
 
-  const walls = el('g', { class: 'plan-walls' }, svg);
-  for (const w of level.walls) {
-    el('line', {
-      x1: w.x1, y1: w.y1, x2: w.x2, y2: w.y2, 'stroke-width': w.t,
-      class: 'plan-wall' + (w.id === opts.selWall ? ' selected' : ''), 'data-wall': w.id,
-    }, walls);
-  }
+  if (!hide) {
+    // Groupe unique pour l'opacité des éléments (murs, ouvertures, pièces, symboles).
+    const elements = el('g', { class: 'plan-elements', opacity: opts.elementOpacity ?? 1 }, svg);
 
-  // Les symboles posés peuvent être masqués (bouton « afficher / masquer ») pour
-  // comparer avant / après sans toucher aux murs, ouvertures, pièces ni au fond.
-  if (opts.project && !opts.hideElements) drawPlacements(svg, opts.project, level, opts.n || 100, opts.selPlace);
-  drawOpenings(svg, level, opts.selOpening);
-  drawRooms(svg, level, opts.n || 100, opts.selRoom);
+    const walls = el('g', { class: 'plan-walls' }, elements);
+    for (const w of level.walls) {
+      el('line', {
+        x1: w.x1, y1: w.y1, x2: w.x2, y2: w.y2, 'stroke-width': w.t,
+        class: 'plan-wall' + (w.id === opts.selWall ? ' selected' : ''), 'data-wall': w.id,
+      }, walls);
+    }
+
+    if (opts.project) drawPlacements(elements, opts.project, level, opts.n || 100, opts.selPlace);
+    drawOpenings(elements, level, opts.selOpening);
+    drawRooms(elements, level, opts.n || 100, opts.selRoom);
+  }
 
   el('g', { id: 'plan-overlay' }, svg);
 }
 
 /** Ouvertures (portes, fenêtres) posées sur un mur : le mur est interrompu visuellement.
  *  Rendu dans le repère local du mur (origine sur le mur, x le long du mur). */
-function drawOpenings(svg, level, selOpening) {
-  const g = el('g', { class: 'plan-openings' }, svg);
+function drawOpenings(parent, level, selOpening) {
+  const g = el('g', { class: 'plan-openings' }, parent);
   for (const o of level.openings) {
     const w = level.walls.find((x) => x.id === o.wall);
     if (!w) continue;
@@ -126,14 +132,14 @@ function drawOpenings(svg, level, selOpening) {
 }
 
 /** Libellés de pièces : texte libre, taille constante sur papier (comme les repères). */
-function drawRooms(svg, level, n, selRoom) {
+function drawRooms(parent, level, n, selRoom) {
   const fs = symbolSideCm(n) * 0.5;
   for (const r of level.rooms) {
     const t = el('text', {
       x: r.x, y: r.y, 'font-size': fs,
       class: 'plan-room' + (r.id === selRoom ? ' selected' : ''),
       'data-room': r.id,
-    }, svg);
+    }, parent);
     t.textContent = r.name || 'Pièce';
   }
 }

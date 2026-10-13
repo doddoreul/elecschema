@@ -248,6 +248,10 @@ zoom molette, pan milieu ou espace ; panneau **« Non places »** (glisser-depos
 deplacement (grille 5 cm), rotation (champ + `R`), retrait (`Suppr`/bouton ; element schema
 conserve) ; selection partagee (clic symbole plan -> `selectElement` schema). Etages :
 ajout / renommage (double-clic) / monter / descendre / suppression.
+Vue : bouton **Masquer / Afficher les elements** (ne garde que l'arriere-plan ; murs,
+ouvertures, pieces, symboles et grille disparaissent) et curseur **opacite des elements**
+(groupe `.plan-elements` en SVG ; vue seule, non enregistree). Le fond a son propre
+curseur « opacite de l'arriere-plan » (`bg.opacity`, enregistre dans le projet).
 
 Fond de plan (`plan-assets.js`) : image **hors du projet** (le projet ne garde que la cle
 `bg.asset`). Reduite (<= 2400 px, JPEG 0,85), refus > 20 Mo. Calibrable (2 points + distance
