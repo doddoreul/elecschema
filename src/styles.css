@@ -292,3 +292,30 @@ tbody tr:hover { background: #f9fafb; }
   background: #f9fafb; color: #111827; resize: vertical; box-sizing: border-box;
 }
 #schema-json:focus { outline: none; border-color: var(--accent); }
+
+/* ---------- Écran d'accueil (au démarrage) ---------- */
+.welcome {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: rgba(17, 24, 39, .55);
+}
+.welcome[hidden] { display: none; }
+.welcome-card {
+  background: #fff; border-radius: 12px; padding: 28px 30px;
+  width: 100%; max-width: 460px; text-align: center;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, .35);
+}
+.welcome-card h1 { margin: 0; font-size: 26px; color: #16324f; }
+.welcome-sub { margin: 6px 0 18px; color: var(--muted); font-size: 13px; }
+.welcome-hint { margin: 0 0 14px; font-size: 14px; }
+.welcome-actions { display: flex; flex-direction: column; gap: 8px; }
+.welcome-actions button { padding: 10px 14px; font-size: 14px; }
+.welcome-recents-wrap { margin-top: 20px; text-align: left; }
+.welcome-recents-title { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; color: var(--muted); }
+.welcome-recents { display: flex; flex-direction: column; gap: 4px; }
+.welcome-recent {
+  width: 100%; text-align: left; padding: 8px 10px; font-size: 13px;
+  border: 1px solid var(--line); border-radius: 6px; background: #f9fafb;
+}
+.welcome-recent:hover { background: #eef2f7; border-color: #cbd5e1; }
+.welcome-recent .welcome-recent-path { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }

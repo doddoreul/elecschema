@@ -122,46 +122,121 @@ function persistSnapshot() {
   }
 }
 
-/** Recharge le dernier état enregistré dans le localStorage.
- *  Première ouverture (ou sauvegarde illisible) : le schéma par défaut est chargé. */
-function restoreAutosave() {
+function getLocalAutosave() {
   let raw;
   try { raw = localStorage.getItem(AUTOSAVE_KEY); } catch (err) { raw = null; }
-  if (raw) {
-    try {
-      const rec = JSON.parse(raw);
-      if (rec && rec.project && rec.project.supply && Array.isArray(rec.project.elements)) {
-        loadProject(rec.project, rec.file || null);
-        status('Restauration du dernier état (sauvegarde locale).');
-        return;
-      }
-    } catch (err) {
-      console.warn('Autosave illisible, ignoré :', err);
+  if (!raw) return null;
+  try {
+    const rec = JSON.parse(raw);
+    if (rec && rec.project && rec.project.supply && Array.isArray(rec.project.elements)) {
+      return { project: rec.project, file: rec.file || null };
     }
+  } catch (err) {
+    console.warn('Autosave local illisible, ignoré :', err);
   }
-  // première ouverture : schéma par défaut
-  const seed = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
-  const today = new Date().toISOString().slice(0, 10);
-  seed.info.projet.dateCreation = today;
-  seed.info.projet.dateModification = today;
-  loadProject(seed, null);
-  status('Première ouverture : schéma par défaut chargé.');
-  // Repli : si le localStorage est vide mais qu'un autosave disque existe (profil
-  // effacé), on restaure l'état fichier — plus récent que le schéma par défaut.
-  if (typeof window.elexio?.autosaveRead === 'function') {
-    window.elexio.autosaveRead().then((rawFile) => {
-      if (!rawFile) return;
+  return null;
+}
+
+async function getDiskAutosave() {
+  if (typeof window.elexio?.autosaveRead !== 'function') return null;
+  try {
+    const rawFile = await window.elexio.autosaveRead();
+    if (!rawFile) return null;
+    const rec = JSON.parse(rawFile);
+    if (rec && rec.project && rec.project.supply && Array.isArray(rec.project.elements)) {
+      return { project: rec.project, file: rec.file || null };
+    }
+  } catch (err) {
+    console.warn('Autosave disque illisible, ignoré :', err);
+  }
+  return null;
+}
+
+async function renderWelcomeRecents() {
+  const wrap = $('#welcome-recents-wrap');
+  const listEl = $('#welcome-recents');
+  if (!wrap || !listEl) return;
+  if (typeof window.elexio !== 'object') {
+    wrap.hidden = false;
+    listEl.innerHTML = '<div style="color:var(--muted);font-size:12px;">Version navigateur : récents non disponibles.</div>';
+    return;
+  }
+  const list = await window.elexio.recents();
+  if (!list || list.length === 0) {
+    wrap.hidden = true;
+    listEl.innerHTML = '';
+    return;
+  }
+  wrap.hidden = false;
+  listEl.innerHTML = list.slice(0, 6).map((r) => {
+    const name = escHtml(r.name);
+    const path = escHtml(r.path);
+    return `<button class="welcome-recent" data-path="${path}"><span class="welcome-recent-name">${name}</span><span class="welcome-recent-path">${path}</span></button>`;
+  }).join('');
+  listEl.querySelectorAll('.welcome-recent').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const p = btn.getAttribute('data-path');
+      if (!p) return;
+      if (typeof window.elexio !== 'object') return;
+      if (dirty && !confirm('Des modifications ne sont pas enregistrées. Ouvrir un autre projet ?')) return;
       try {
-        const rec = JSON.parse(rawFile);
-        if (rec && rec.project && rec.project.supply && Array.isArray(rec.project.elements)) {
-          loadProject(rec.project, rec.file || null);
-          status('Restauration du dernier état (sauvegarde disque).');
+        const res = await window.elexio.openPath(p);
+        if (importProjectText(res.text, res.filePath)) {
+          await loadRecents();
         }
       } catch (err) {
-        console.warn('Autosave disque illisible, ignoré :', err);
+        alert(`Ouverture impossible.\n\n${p}\n\n${err.message}`);
       }
-    }).catch((err) => console.warn('Lecture autosave disque impossible :', err));
+    });
+  });
+}
+
+async function showWelcome() {
+  const resumeBtn = $('#welcome-resume');
+  const welcomeEl = $('#welcome');
+  if (!welcomeEl) return;
+
+  // Détermine s'il y a un autosave à proposer
+  let pending = getLocalAutosave();
+  if (!pending) {
+    pending = await getDiskAutosave();
   }
+  if (resumeBtn) {
+    if (pending) {
+      const name = pending.file ? pending.file.split(/[\\/]/).pop() : 'sans titre';
+      resumeBtn.textContent = `Reprendre « ${name} »`;
+      resumeBtn.hidden = false;
+      resumeBtn.onclick = () => {
+        loadProject(pending.project, pending.file);
+        status('Restauration du dernier état (sauvegarde locale/stockage).');
+      };
+    } else {
+      resumeBtn.hidden = true;
+      resumeBtn.onclick = null;
+    }
+  }
+
+  const newBtn = $('#welcome-new');
+  if (newBtn) {
+    newBtn.onclick = () => {
+      const seed = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
+      const today = new Date().toISOString().slice(0, 10);
+      seed.info.projet.dateCreation = today;
+      seed.info.projet.dateModification = today;
+      loadProject(seed, null);
+      status('Nouveau projet pré-rempli. Remplissez les informations d’installation.');
+    };
+  }
+
+  const openBtn = $('#welcome-open');
+  if (openBtn) {
+    openBtn.onclick = () => {
+      $('#btn-open').click();
+    };
+  }
+
+  await renderWelcomeRecents();
+  welcomeEl.hidden = false;
 }
 
 /* ------------------------------------------------------------------ onglets */
@@ -734,7 +809,11 @@ function clearDirty(file) {
 
 $('#btn-new').addEventListener('click', async () => {
   if (dirty && !confirm('Des modifications ne sont pas enregistrées. Créer un nouveau projet ?')) return;
-  loadProject(JSON.parse(JSON.stringify(DEFAULT_SCHEMA)), null);
+  const seed = JSON.parse(JSON.stringify(DEFAULT_SCHEMA));
+  const today = new Date().toISOString().slice(0, 10);
+  seed.info.projet.dateCreation = today;
+  seed.info.projet.dateModification = today;
+  loadProject(seed, null);
   status('Nouveau projet pré-rempli. Remplissez les informations d’installation.');
 });
 
@@ -774,19 +853,27 @@ async function loadRecents() {
     : '<option value="">(aucun projet récent)</option>';
 }
 
+async function openRecentPath(p) {
+  if (typeof window.elexio !== 'object') return;
+  if (dirty && !confirm('Des modifications ne sont pas enregistrées. Ouvrir un autre projet ?')) { $('#recent-select').value = ''; return; }
+  try {
+    const res = await window.elexio.openPath(p);
+    if (importProjectText(res.text, res.filePath)) {
+      status(`Projet ouvert : ${res.filePath}`);
+      await loadRecents();
+    } else {
+      $('#recent-select').value = '';
+    }
+  } catch (err) {
+    alert(`Ouverture impossible.\n\n${p}\n\n${err.message}`);
+    $('#recent-select').value = '';
+  }
+}
+
 $('#recent-select').addEventListener('change', async (e) => {
   const p = e.target.value;
   if (!p) return;
-  if (typeof window.elexio !== 'object') return;
-  if (dirty && !confirm('Des modifications ne sont pas enregistrées. Ouvrir un autre projet ?')) { e.target.value = ''; return; }
-  try {
-    const res = await window.elexio.openPath(p);
-    if (importProjectText(res.text, res.filePath)) status(`Projet ouvert : ${res.filePath}`);
-    else e.target.value = '';
-  } catch (err) {
-    alert(`Ouverture impossible.\n\n${p}\n\n${err.message}`);
-    e.target.value = '';
-  }
+  await openRecentPath(p);
 });
 
 function loadProject(data, filePath) {
@@ -815,6 +902,9 @@ function loadProject(data, filePath) {
   refreshAll();
   switchTab('info');
   fitView();
+  // Ferme l'écran d'accueil au cas où un projet est chargé
+  const welcomeEl = $('#welcome');
+  if (welcomeEl) welcomeEl.hidden = true;
 }
 
 /** Décode un fichier (.elx base64 ou JSON legacy) et charge le projet.
@@ -851,7 +941,9 @@ $('#btn-open').addEventListener('click', async () => {
     input.onchange = async () => {
       const file = input.files && input.files[0];
       if (!file) return;
-      if (importProjectText(await file.text(), file.name)) status(`Projet ouvert : ${file.name}`);
+      if (importProjectText(await file.text(), file.name)) {
+        status(`Projet ouvert : ${file.name}`);
+      }
     };
     input.click();
     return;
@@ -860,7 +952,7 @@ $('#btn-open').addEventListener('click', async () => {
   const res = await window.elexio.open();
   if (!res) return;
   if (importProjectText(res.text, res.filePath)) {
-    loadRecents();
+    await loadRecents();
     status('Projet ouvert.');
   }
 });
@@ -1727,7 +1819,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let savedTab = null;
   try { savedTab = localStorage.getItem(TAB_KEY); } catch (err) { /* ignore */ }
-  restoreAutosave();
+
+  // Initialise avec un projet vide ; l'écran d'accueil invitera à en choisir un
+  project = emptyProject();
+  selectedIds = new Set();
+  selectedId = null;
+  pendingAnchor = null;
+  armedSymbol = null;
+  history.past.length = 0;
+  history.future.length = 0;
+  currentFile = null;
+  dirty = false;
+  try { lastSnap = JSON.stringify(project); } catch (err) { lastSnap = '{}'; }
+
   fitView();
   renderPalette();
   loadInfoForm();
@@ -1735,5 +1839,8 @@ document.addEventListener('DOMContentLoaded', () => {
   refreshAll();
   updateHistoryButtons();
   switchTab(['info', 'schema', 'bom'].includes(savedTab) ? savedTab : 'info');
-  status('Prêt. Onglet « Informations sur l’installation » pour commencer.');
+  status('Prêt. Sélectionnez un projet pour commencer.');
+
+  // Affiche l'écran d'accueil (reprendre, nouveau, ouvrir, récents)
+  showWelcome();
 });

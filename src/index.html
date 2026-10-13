@@ -272,6 +272,23 @@
     <span id="app-version" class="version"></span>
   </footer>
 
+  <div id="welcome" class="welcome" hidden>
+    <div class="welcome-card" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+      <h1 id="welcome-title">Elexio</h1>
+      <p class="welcome-sub">Éditeur de schémas unifilaires · Domestique (RGIE/AREI)</p>
+      <p class="welcome-hint">Sélectionnez un projet pour commencer.</p>
+      <div class="welcome-actions">
+        <button id="welcome-resume" class="primary" hidden>Reprendre la session précédente</button>
+        <button id="welcome-open">Ouvrir un projet…</button>
+        <button id="welcome-new">Nouveau projet</button>
+      </div>
+      <div id="welcome-recents-wrap" class="welcome-recents-wrap" hidden>
+        <p class="welcome-recents-title">Projets récents</p>
+        <div id="welcome-recents" class="welcome-recents"></div>
+      </div>
+    </div>
+  </div>
+
   <dialog id="prop-dialog" class="prop-dialog">
     <form method="dialog" id="prop-form">
       <h3 id="prop-title"></h3>
