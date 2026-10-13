@@ -270,7 +270,8 @@ Etages : ajout / renommage (double-clic) / monter / descendre / suppression.
 Barre d'outils du plan sur **trois lignes** (`.plan-bar-row`) : (1) etages + echelle
 d'impression ; (2) outils (Selection, Mur, Porte, Fenetre, Texte) + reglages d'ouverture
 (largeur, miroirs : boutons a icone `assets/flip.png`, `aria-label` Miroir horizontal /
-vertical) ; (3) bouton **Afficher / masquer le dessin** (ne garde que
+vertical ; l'icone du miroir horizontal est pivotee de 90° via `#plan-opening-hinge .plan-icon`) ;
+(3) bouton **Afficher / masquer le dessin** (ne garde que
 l'arriere-plan ; murs, ouvertures, textes, symboles et grille disparaissent ; etat visible
 via `aria-pressed`), bouton **Recentrer** (`fitLevel()`, réajuste le dessin à la fenêtre :
 ajuste le zoom et recadre), boutons **zoom − / +** (`zoomCenter()`, autour du centre de la
