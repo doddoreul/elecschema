@@ -331,6 +331,8 @@ tbody tr:hover { background: #f9fafb; }
 .plan-bar-field input[type=range] { width: 110px; }
 .plan-bar-group { display: flex; align-items: center; gap: 6px; }
 .plan-bar-group[hidden] { display: none; }
+.plan-icon-btn { padding: 4px 6px; display: inline-flex; align-items: center; }
+.plan-icon { width: 18px; height: 18px; display: block; }
 .plan-body { flex: 1; min-height: 0; display: flex; }
 .plan-host { flex: 1; min-width: 0; position: relative; overflow: hidden; background: #fafafa; }
 .plan-host.hand { cursor: grab; }
