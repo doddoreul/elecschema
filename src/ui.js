@@ -227,11 +227,15 @@ async function showWelcome() {
       resumeBtn.textContent = `Reprendre « ${name} »`;
       resumeBtn.hidden = false;
       resumeBtn.onclick = async () => {
+        // Onglet ouvert avant l'actualisation : `loadProject` repart sur
+        // « Informations », on le réapplique pour retomber sur l'onglet qui était ouvert.
+        const tab = savedTabName();
         // Images de fond : on réunit toutes les sources disponibles (IndexedDB, miroir
         // disque, autosave) pour ne jamais en perdre une seule.
         const idbAssets = (await loadAssetsIdb()) || {};
         const assets = { ...idbAssets, ...(disk?.assets || {}), ...(pending.assets || {}) };
         loadProject(pending.project, pending.file, assets);
+        switchTab(tab);
         status('Restauration du dernier état (sauvegarde locale/stockage).');
       };
     } else {
@@ -275,6 +279,13 @@ function switchTab(name) {
   $$('.pane').forEach((p) => p.classList.toggle('active', p.dataset.pane === name));
   try { localStorage.setItem(TAB_KEY, name); } catch (err) { /* ignore */ }
   refreshPlan();
+}
+
+/** Onglet mémorisé (survit à l'actualisation) : un onglet connu, sinon « Informations ». */
+function savedTabName() {
+  let name = null;
+  try { name = localStorage.getItem(TAB_KEY); } catch (err) { /* ignore */ }
+  return ['info', 'schema', 'plan', 'bom'].includes(name) ? name : 'info';
 }
 
 $$('.tab').forEach((btn) => {
@@ -1583,6 +1594,10 @@ document.addEventListener('keydown', (e) => {
   if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); saveLocal(); return; }
   if (mod && e.key.toLowerCase() === 'n') { e.preventDefault(); $('#btn-new').click(); return; }
 
+  // Ctrl/Cmd + A : ne plus sélectionner tout le texte de la page (le comportement
+  // natif reste actif dans les champs de saisie, où c'est utile).
+  if (mod && e.key.toLowerCase() === 'a' && !isTyping(e.target)) { e.preventDefault(); return; }
+
   if (activeTab !== 'schema' || printPreview || isTyping(e.target) || $('#prop-dialog').open) return;
   if (e.key === 'Escape' && !anchorMenu.hidden) { closeAnchorMenu(); return; }
   if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -1842,9 +1857,6 @@ $('#btn-apply-json').addEventListener('click', () => {
 document.addEventListener('DOMContentLoaded', () => {
   $('#app-version').textContent = 'v' + APP_VERSION;
 
-  let savedTab = null;
-  try { savedTab = localStorage.getItem(TAB_KEY); } catch (err) { /* ignore */ }
-
   // Initialise avec un projet vide ; l'écran d'accueil invitera à en choisir un
   project = emptyProject();
   selectedIds = new Set();
@@ -1863,7 +1875,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadRecents();
   refreshAll();
   updateHistoryButtons();
-  switchTab(['info', 'schema', 'bom'].includes(savedTab) ? savedTab : 'info');
+  switchTab(savedTabName());
   status('Prêt. Sélectionnez un projet pour commencer.');
 
   initPlan({ getProject: () => project, markDirty, status, activeTab: () => activeTab, selectElement, refreshAll });
