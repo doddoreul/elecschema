@@ -114,7 +114,7 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T10.3 | Sélectionner un mur | Longueur en cm + équivalent papier à l'échelle ; épaisseur réglable |
 | T10.4 | Outil **Porte** puis clic près d'un mur | Porte posée (battant + arc d'ouverture), mur interrompu ; glisser = déplacement le long des murs |
 | T10.5 | Outil **Fenêtre** | Double trait ; largeur réglable dans le panneau |
-| T10.6 | Outil **Texte**, clic | Libellé « Texte » ; renommable, déplaçable (flèches) |
+| T10.6 | Outil **Texte**, clic sur le plan | Une **boîte de saisie** s'ouvre ; le contenu saisi devient le texte posé (annuler ne pose rien). **Double-clic** sur un texte : rouvre la boîte pour le modifier |
 | T10.7 | Panneau « Non placés » : glisser un élément sur le plan | Symbole posé ; l'élément disparaît de la liste |
 | T10.8 | Clic simple sur un élément de la liste puis clic sur le plan | Symbole posé (mode clic-armer) |
 | T10.9 | Cliquer un symbole posé | Sélection sur le plan **et** dans le schéma ; anneau de sélection |
@@ -139,3 +139,5 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T10.28 | Volet « Non placés » | La liste est dans un **volet à gauche** de la zone de travail (elle n'est plus dans le panneau de droite) ; glisser-déposer / clic-armer inchangés |
 | T10.29 | Barre d'outils du plan | **Trois lignes** : (1) étages + échelle d'impression ; (2) outils Sélection / Mur / Porte / Fenêtre / **Texte** ; (3) Afficher-masquer / Recentrer / **zoom − +** / opacité des éléments |
 | T10.30 | Boutons **zoom − / +** (barre d'outils) | Le dessin se dézoome / zoome autour du **centre de la zone de travail** (le curseur d'opacité et « Recentrer » restent inchangés) |
+| T10.31 | Barre dédiée « Texte » (taille, **G**, *I*, <u>S</u>) | N'apparaît **que** quand un texte est sélectionné ; disparaît à la désélection |
+| T10.32 | Réglages de la barre « Texte » | « Taille » (Petite / Normale / Grande / Très grande) change la taille du texte ; G / I / S activent/désactivent gras / italique / souligné (bouton surligné si actif) |

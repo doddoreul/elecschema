@@ -255,13 +255,17 @@ placements (repère non tourne + image pivitee), ouvertures (arc porte / double 
 mur interrompu), pieces. `opts.print` : fond blanc opaque, pas de grille, pas d'overlay
 (pour le PDF). `planLabel` = repère de l'element, sinon repère du debut de circuit.
 
-Interactions (`plan-ui.js`) : outils **Selection / Mur / Porte / Fenetre / Texte** (l'outil
-« Texte » reutilise l'entite `rooms` : un libelle positionnable et renommable, rendu
-`.plan-room`) ; zoom molette, pan milieu ou espace ; volet **gauche** **« Non places »**
-(glisser-deposer ou clic-armer) ; deplacement (grille 5 cm), rotation (champ + `R`), retrait
-(`Suppr`/bouton ; element schema conserve) ; selection partagee (clic symbole plan ->
-`selectElement` schema). Etages : ajout / renommage (double-clic) / monter / descendre /
-suppression.
+Interactions (`plan-ui.js`) : outils **Selection / Mur / Porte / Fenetre / Texte**. L'outil
+« Texte » reutilise l'entite `rooms` (libelle positionnable, rendu `.plan-room`) ; le contenu
+se saisit par le dialogue commun (`askValue`, boite « Contenu ») a la pose et au **double-clic**
+pour modification ; la mise en forme (taille, gras, italique, souligne) se fait dans une barre
+**dediee** (`.plan-text-bar`, `#plan-text-bar`) qui n'apparait **que** lorsqu'un texte est
+selectionne ; champs `size` (multiple de la taille de base), `bold`, `italic`, `underline`.
+
+Zoom molette, pan milieu ou espace ; volet **gauche** **« Non places »** (glisser-deposer ou
+clic-armer) ; deplacement (grille 5 cm), rotation (champ + `R`), retrait (`Suppr`/bouton ;
+element schema conserve) ; selection partagee (clic symbole plan -> `selectElement` schema).
+Etages : ajout / renommage (double-clic) / monter / descendre / suppression.
 
 Barre d'outils du plan sur **trois lignes** (`.plan-bar-row`) : (1) etages + echelle
 d'impression ; (2) outils (Selection, Mur, Porte, Fenetre, Texte) + reglages d'ouverture
