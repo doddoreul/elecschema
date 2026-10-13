@@ -339,3 +339,11 @@ tbody tr:hover { background: #f9fafb; }
 .plan-bg-panel[hidden] { display: none; }
 .plan-field { display: block; margin: 6px 0; font-size: 12px; }
 #plan-dialog-input { width: 100%; box-sizing: border-box; margin-top: 4px; }
+.plan-sep { width: 1px; align-self: stretch; background: var(--line); margin: 0 4px; }
+.plan-wall { stroke: #111827; stroke-linecap: square; fill: none; }
+.plan-wall.selected { stroke: var(--accent); }
+.plan-wall-preview { stroke: var(--accent); stroke-width: 6; stroke-dasharray: 14 10; fill: none; opacity: .8; }
+.plan-handle { fill: #fff; stroke: var(--accent); stroke-width: 2; cursor: move; }
+.plan-calib { fill: #dc2626; }
+.plan-bg { cursor: default; }
+.plan-bg.locked { pointer-events: none; }

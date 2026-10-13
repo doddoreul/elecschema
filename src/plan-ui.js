@@ -3,25 +3,30 @@
 // de l'état interne de ui.js : tout passe par `initPlan(deps)`.
 import {
   levelById, addLevel, removeLevel, renameLevel, moveLevel, hasPlanContent, levelBounds,
-  effectiveScale, chooseScale, nextPlanId,
+  effectiveScale, chooseScale, nextPlanId, addWall, removeWall, wallLength, paperMm,
+  snap, orthoTarget,
 } from './plan-model.js';
 import { PLAN_SCALES } from './standards.js';
 import { prepareImage, assetSet } from './plan-assets.js';
-import { renderPlanLevel } from './plan-render.js';
+import { renderPlanLevel, el } from './plan-render.js';
 
 const $ = (sel) => document.querySelector(sel);
 const DEFAULT_VIEW = { x: -200, y: -200, w: 1600, h: 1000 };
 const MIN_VIEW_CM = 50, MAX_VIEW_CM = 200000;
+const MIN_WALL_CM = 1;
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 let deps = null;
 const ui = {
   levelId: null,
   view: { ...DEFAULT_VIEW },
-  tool: 'select',       // 'select' | 'calib'
+  tool: 'select',       // 'select' | 'wall' | 'calib'
   calibPts: [],
   spaceDown: false,
-  drag: null,           // { kind: 'pan'|'bg', ... } pendant un glissement
+  drag: null,           // glissement en cours : pan | bg | end | wall
+  draft: null,          // point de départ d'un mur en cours de tracé
+  cursor: null,         // point visé (aperçu du mur en cours)
+  selWall: null,        // id du mur sélectionné
 };
 
 function plan() { return deps.getProject().plan; }
@@ -31,6 +36,10 @@ function currentLevel() {
   let lv = levelById(p, ui.levelId);
   if (!lv) { lv = p.levels[0]; ui.levelId = lv.id; }
   return lv;
+}
+
+function selectedWall(lv) {
+  return ui.selWall == null ? null : lv.walls.find((w) => w.id === ui.selWall) || null;
 }
 
 const svgEl = () => $('#plan-canvas');
@@ -64,31 +73,37 @@ export function initPlan(d) {
     deps.markDirty(); refreshPlan();
   });
 
+  $('#plan-tool-select').addEventListener('click', () => setTool('select'));
+  $('#plan-tool-wall').addEventListener('click', () => setTool(ui.tool === 'wall' ? 'select' : 'wall'));
+
   $('#plan-bg-import').addEventListener('click', importBg);
-  $('#plan-bg-calib').addEventListener('click', () => {
-    ui.tool = ui.tool === 'calib' ? 'select' : 'calib'; ui.calibPts = []; refreshPlan();
-  });
+  $('#plan-bg-calib').addEventListener('click', () => setTool(ui.tool === 'calib' ? 'select' : 'calib'));
   $('#plan-bg-opacity').addEventListener('input', (e) => {
     const bg = currentLevel().bg; if (!bg) return;
     bg.opacity = Number(e.target.value) / 100; refreshPlan();
   });
   $('#plan-bg-opacity').addEventListener('change', () => deps.markDirty());
-  $('#plan-bg-visible').addEventListener('change', (e) => { setBg({ visible: e.target.checked }); });
-  $('#plan-bg-lock').addEventListener('change', (e) => { setBg({ locked: e.target.checked }); });
+  $('#plan-bg-visible').addEventListener('change', (e) => setBg({ visible: e.target.checked }));
+  $('#plan-bg-lock').addEventListener('change', (e) => setBg({ locked: e.target.checked }));
   $('#plan-bg-del').addEventListener('click', removeBg);
+
+  $('#plan-wall-t').addEventListener('change', (e) => {
+    const w = selectedWall(currentLevel()); if (!w) return;
+    const t = Number(e.target.value);
+    if (t >= MIN_WALL_CM) { w.t = t; deps.markDirty(); }
+    refreshPlan();
+  });
+  $('#plan-wall-del').addEventListener('click', deleteSelectedWall);
 
   svg.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e, e.deltaY > 0 ? 1.1 : 1 / 1.1); }, { passive: false });
   svg.addEventListener('pointerdown', onPointerDown);
   svg.addEventListener('pointermove', onPointerMove);
   svg.addEventListener('pointerup', onPointerUp);
   svg.addEventListener('pointercancel', onPointerUp);
+  svg.addEventListener('dblclick', () => { ui.draft = null; drawOverlay(); });
   svg.addEventListener('contextmenu', (e) => e.preventDefault());
 
-  document.addEventListener('keydown', (e) => {
-    if (deps.activeTab() !== 'plan' || isTyping(e.target)) return;
-    if (e.code === 'Space') { e.preventDefault(); ui.spaceDown = true; $('#plan-host').classList.add('hand'); }
-    if (e.key === 'Escape' && ui.tool === 'calib') { cancelCalib(); }
-  });
+  document.addEventListener('keydown', onKeyDown);
   document.addEventListener('keyup', (e) => {
     if (e.code === 'Space') { ui.spaceDown = false; $('#plan-host').classList.remove('hand'); }
   });
@@ -96,6 +111,30 @@ export function initPlan(d) {
 }
 
 function isTyping(t) { return /INPUT|TEXTAREA|SELECT/.test(t.tagName); }
+
+function onKeyDown(e) {
+  if (deps.activeTab() !== 'plan' || isTyping(e.target)) return;
+  if (e.code === 'Space') { e.preventDefault(); ui.spaceDown = true; $('#plan-host').classList.add('hand'); return; }
+  if (e.key === 'Escape') {
+    if (ui.tool === 'calib') { setTool('select'); return; }
+    if (ui.draft) { ui.draft = null; drawOverlay(); return; }
+    if (ui.tool === 'wall') { setTool('select'); return; }
+    ui.selWall = null; refreshPlan();
+    return;
+  }
+  if (e.key === 'Enter' && ui.draft) { ui.draft = null; drawOverlay(); return; }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && ui.selWall != null) {
+    e.preventDefault();
+    deleteSelectedWall();
+  }
+}
+
+/** Outil courant : 'select' | 'wall' | 'calib'. Réinitialise les brouillons. */
+function setTool(name) {
+  ui.tool = name;
+  ui.draft = null; ui.cursor = null; ui.calibPts = [];
+  refreshPlan();
+}
 
 /* ------------------------------------------------------------------- rendu */
 
@@ -107,9 +146,31 @@ export function refreshPlan() {
   renderLevelBar(p);
   renderScale(lv);
   renderBgPanel(lv);
-  renderPlanLevel(svgEl(), lv, ui.view);
-  drawCalibMarks();
+  renderWallPanel(lv);
+  renderToolButtons();
+  renderPlanLevel(svgEl(), lv, ui.view, ui.selWall);
+  drawOverlay();
   $('#plan-hint').textContent = hintText(lv);
+}
+
+/** Calque d'aperçu : brouillon de mur, poignées du mur sélectionné, points de calibration.
+ *  Redessiné seul pendant les mouvements (le fond n'est pas recréé). */
+function drawOverlay() {
+  const g = svgEl().querySelector('#plan-overlay');
+  if (!g) return;
+  g.replaceChildren();
+  const lv = currentLevel();
+  if (ui.tool === 'wall' && ui.draft && ui.cursor) {
+    const t = ui.altKey ? ui.cursor : orthoTarget(ui.draft.x, ui.draft.y, ui.cursor.x, ui.cursor.y);
+    el('line', { x1: ui.draft.x, y1: ui.draft.y, x2: t.x, y2: t.y, class: 'plan-wall-preview' }, g);
+  }
+  const w = selectedWall(lv);
+  if (w && ui.tool === 'select') {
+    for (const [x, y, end] of [[w.x1, w.y1, '1'], [w.x2, w.y2, '2']]) {
+      el('circle', { cx: x, cy: y, r: ui.view.w / 120, class: 'plan-handle', 'data-end': end }, g);
+    }
+  }
+  for (const pt of ui.calibPts) el('circle', { cx: pt.x, cy: pt.y, r: ui.view.w / 150, class: 'plan-calib' }, g);
 }
 
 function renderLevelBar(p) {
@@ -121,6 +182,11 @@ function renderLevelBar(p) {
   $('#plan-level-del').disabled = p.levels.length <= 1;
   $('#plan-level-up').disabled = i <= 0;
   $('#plan-level-down').disabled = i < 0 || i >= p.levels.length - 1;
+}
+
+function renderToolButtons() {
+  $('#plan-tool-select').classList.toggle('active', ui.tool === 'select');
+  $('#plan-tool-wall').classList.toggle('active', ui.tool === 'wall');
 }
 
 function renderScale(lv) {
@@ -143,24 +209,27 @@ function renderBgPanel(lv) {
   $('#plan-bg-lock').checked = bg.locked;
 }
 
+function renderWallPanel(lv) {
+  const w = selectedWall(lv);
+  $('#plan-wall-panel').hidden = !w;
+  if (!w) return;
+  $('#plan-wall-t').value = String(w.t);
+  const len = wallLength(w);
+  const scale = effectiveScale(lv);
+  $('#plan-wall-info').textContent = `Longueur ${Math.round(len)} cm — sur papier à 1:${scale} : ${paperMm(len, scale).toFixed(1)} mm`;
+}
+
 function hintText(lv) {
   if (ui.tool === 'calib') {
     return ui.calibPts.length === 0
       ? 'Calibration : cliquez le 1er point (distance connue). Échap pour annuler.'
       : 'Calibration : cliquez le 2e point.';
   }
-  if (lv.bg && !lv.bg.locked) return 'Fond déverrouillé : glissez-le. Verrouillez-le avant de tracer.';
-  return 'Molette : zoom · bouton milieu ou Espace + glisser : déplacer la vue.';
-}
-
-function drawCalibMarks() {
-  const svg = svgEl();
-  for (const pt of ui.calibPts) {
-    const c = document.createElementNS(svg.namespaceURI, 'circle');
-    c.setAttribute('cx', pt.x); c.setAttribute('cy', pt.y);
-    c.setAttribute('r', ui.view.w / 150); c.setAttribute('fill', '#dc2626');
-    svg.appendChild(c);
+  if (ui.tool === 'wall') {
+    return 'Mur : clic pour commencer, clic pour poursuivre. Entrée, Échap ou double-clic pour finir. Alt : angle libre.';
   }
+  if (lv.bg && !lv.bg.locked) return 'Fond déverrouillé : glissez-le. Verrouillez-le avant de tracer.';
+  return 'Clic sur un mur : sélection (poignées pour l’étirer). Molette : zoom · Espace ou bouton milieu : déplacer la vue.';
 }
 
 /* ----------------------------------------------------------------- vue (zoom) */
@@ -198,6 +267,7 @@ function zoomAt(e, k) {
   const fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
   ui.view = { x: anchor.x - nw * fx, y: anchor.y - nh * fy, w: nw, h: nh };
   applyView();
+  drawOverlay();
 }
 
 /** Coordonnées monde (cm) d'un événement souris. */
@@ -211,7 +281,25 @@ function toWorld(e) {
   return { x: p.x, y: p.y };
 }
 
-/* ------------------------------------------------------------ souris (fond, vue) */
+/** Point visé : extrémité de mur proche (accrochage prioritaire), sinon grille 5 cm.
+ *  En cours de tracé, orthogonal sauf Alt. */
+function targetPoint(e) {
+  const lv = currentLevel();
+  const raw = toWorld(e);
+  const tol = ui.view.w * 0.012;
+  let best = null;
+  for (const w of lv.walls) {
+    for (const [x, y] of [[w.x1, w.y1], [w.x2, w.y2]]) {
+      const d = Math.hypot(raw.x - x, raw.y - y);
+      if (d <= tol && (!best || d < best.d)) best = { x, y, d };
+    }
+  }
+  let p = best ? { x: best.x, y: best.y } : { x: snap(raw.x), y: snap(raw.y) };
+  if (ui.tool === 'wall' && ui.draft && !e.altKey) p = orthoTarget(ui.draft.x, ui.draft.y, p.x, p.y);
+  return p;
+}
+
+/* ------------------------------------------------------------ souris */
 
 function onPointerDown(e) {
   if (e.button === 1 || (e.button === 0 && ui.spaceDown)) {
@@ -221,16 +309,60 @@ function onPointerDown(e) {
     return;
   }
   if (e.button !== 0) return;
-  const pt = toWorld(e);
-  if (ui.tool === 'calib') { addCalibPoint(pt); return; }
   const lv = currentLevel();
-  if (lv.bg && !lv.bg.locked && e.target.closest?.('[data-bg]')) {
-    ui.drag = { kind: 'bg', start: pt, bx: lv.bg.x, by: lv.bg.y, moved: false };
-    svgEl().setPointerCapture(e.pointerId);
+
+  if (ui.tool === 'calib') { addCalibPoint(toWorld(e)); return; }
+
+  if (ui.tool === 'wall') {
+    const p = targetPoint(e);
+    ui.altKey = e.altKey;
+    if (!ui.draft) { ui.draft = p; drawOverlay(); return; }
+    if (p.x !== ui.draft.x || p.y !== ui.draft.y) {
+      addWall(plan(), lv, { x1: ui.draft.x, y1: ui.draft.y, x2: p.x, y2: p.y });
+      deps.markDirty();
+      ui.draft = p;
+      refreshPlan();
+    }
+    return;
   }
+
+  // outil Sélection : poignée > mur > fond
+  const handle = e.target.closest?.('[data-end]');
+  const wallEl = e.target.closest?.('[data-wall]');
+  if (handle) {
+    const w = selectedWall(lv);
+    if (w) {
+      ui.drag = { kind: 'end', wall: w.id, which: handle.dataset.end };
+      svgEl().setPointerCapture(e.pointerId);
+    }
+    return;
+  }
+  if (wallEl) {
+    ui.selWall = wallEl.dataset.wall;
+    const w = selectedWall(lv);
+    const start = toWorld(e);
+    ui.drag = { kind: 'wall', wall: w.id, start, orig: { x1: w.x1, y1: w.y1, x2: w.x2, y2: w.y2 }, moved: false };
+    svgEl().setPointerCapture(e.pointerId);
+    refreshPlan();
+    return;
+  }
+  if (lv.bg && !lv.bg.locked && e.target.closest?.('[data-bg]')) {
+    ui.drag = { kind: 'bg', start: toWorld(e), bx: lv.bg.x, by: lv.bg.y, moved: false };
+    ui.selWall = null;
+    svgEl().setPointerCapture(e.pointerId);
+    return;
+  }
+  if (ui.selWall != null) { ui.selWall = null; refreshPlan(); }
 }
 
 function onPointerMove(e) {
+  const lv = currentLevel();
+  if (ui.tool === 'wall' && ui.draft) {
+    ui.cursor = targetPoint(e);
+    ui.altKey = e.altKey;
+    drawOverlay();
+    return;
+  }
   const d = ui.drag;
   if (!d) return;
   if (d.kind === 'pan') {
@@ -239,14 +371,33 @@ function onPointerMove(e) {
     ui.view.x = d.vx - (e.clientX - d.sx) / s;
     ui.view.y = d.vy - (e.clientY - d.sy) / s;
     applyView();
+    drawOverlay();
   } else if (d.kind === 'bg') {
     const pt = toWorld(e);
-    const bg = currentLevel().bg;
+    const bg = lv.bg;
     if (!bg) return;
     bg.x = d.bx + (pt.x - d.start.x);
     bg.y = d.by + (pt.y - d.start.y);
     d.moved = true;
     refreshPlan();
+  } else if (d.kind === 'end') {
+    const w = selectedWall(lv);
+    if (!w) return;
+    const p = targetPoint(e);
+    if (d.which === '1') { w.x1 = p.x; w.y1 = p.y; } else { w.x2 = p.x; w.y2 = p.y; }
+    d.moved = true;
+    updateWallEl(w);
+    drawOverlay();
+  } else if (d.kind === 'wall') {
+    const w = selectedWall(lv);
+    if (!w) return;
+    const pt = toWorld(e);
+    const dx = snap(pt.x - d.start.x), dy = snap(pt.y - d.start.y);
+    w.x1 = d.orig.x1 + dx; w.y1 = d.orig.y1 + dy;
+    w.x2 = d.orig.x2 + dx; w.y2 = d.orig.y2 + dy;
+    d.moved = true;
+    updateWallEl(w);
+    drawOverlay();
   }
 }
 
@@ -254,7 +405,25 @@ function onPointerUp(e) {
   const d = ui.drag;
   ui.drag = null;
   try { svgEl().releasePointerCapture(e.pointerId); } catch { /* déjà relâché */ }
-  if (d && d.kind === 'bg' && d.moved) deps.markDirty();
+  if (d && d.moved) { deps.markDirty(); refreshPlan(); }
+}
+
+/** Met à jour seulement la ligne d'un mur pendant un glissement (pas de re-rendu complet). */
+function updateWallEl(w) {
+  const line = svgEl().querySelector(`[data-wall="${w.id}"]`);
+  if (!line) return;
+  line.setAttribute('x1', w.x1); line.setAttribute('y1', w.y1);
+  line.setAttribute('x2', w.x2); line.setAttribute('y2', w.y2);
+}
+
+/* ----------------------------------------------------------------- murs */
+
+function deleteSelectedWall() {
+  const lv = currentLevel();
+  if (ui.selWall == null) return;
+  removeWall(lv, ui.selWall);
+  ui.selWall = null;
+  deps.markDirty(); refreshPlan();
 }
 
 /* ------------------------------------------------------------------ niveaux */
@@ -262,7 +431,7 @@ function onPointerUp(e) {
 function selectLevel(id) {
   if (id === ui.levelId) return;
   ui.levelId = id;
-  ui.tool = 'select'; ui.calibPts = [];
+  ui.tool = 'select'; ui.calibPts = []; ui.draft = null; ui.selWall = null;
   fitLevel(currentLevel());
   refreshPlan();
 }
@@ -270,6 +439,7 @@ function selectLevel(id) {
 async function addLevelFlow() {
   const lv = addLevel(plan());
   ui.levelId = lv.id;
+  ui.selWall = null; ui.draft = null;
   fitLevel(lv);
   deps.markDirty(); refreshPlan();
 }
@@ -293,6 +463,7 @@ function removeFlow() {
   if (hasPlanContent(lv) && !confirm(`Supprimer l’étage « ${lv.name} » et son tracé ? Les éléments du schéma sont conservés.`)) return;
   removeLevel(p, lv.id);
   ui.levelId = p.levels[0].id;
+  ui.selWall = null; ui.draft = null;
   fitLevel(currentLevel());
   deps.markDirty(); refreshPlan();
 }
@@ -337,13 +508,8 @@ function removeBg() {
   const lv = currentLevel();
   if (!lv.bg || !confirm('Supprimer le fond de plan ? (Annuler restaure l’image.)')) return;
   lv.bg = null;
-  ui.tool = 'select'; ui.calibPts = [];
-  deps.markDirty(); refreshPlan();
-}
-
-function cancelCalib() {
-  ui.tool = 'select'; ui.calibPts = [];
-  refreshPlan();
+  setTool('select');
+  deps.markDirty();
 }
 
 async function addCalibPoint(pt) {
@@ -355,9 +521,8 @@ async function addCalibPoint(pt) {
   const m = await askValue('Calibration', 'Distance réelle entre les deux points (en mètres) :', '', 'number');
   const meters = m === null ? NaN : Number(String(m).replace(',', '.'));
   ui.tool = 'select'; ui.calibPts = [];
-  if (!(meters > 0)) { refreshPlan(); return; }
   const bg = currentLevel().bg;
-  if (!bg) { refreshPlan(); return; }
+  if (!(meters > 0) || !bg) { refreshPlan(); return; }
   const k = (meters * 100) / dist;   // cm réels par unité de plan
   bg.x *= k; bg.y *= k; bg.w *= k; bg.h *= k;
   bg.calibrated = true;
@@ -392,6 +557,7 @@ export function resetPlanView() {
   ui.tool = 'select';
   ui.calibPts = [];
   ui.drag = null;
-  const lv = currentLevel();
-  fitLevel(lv);
+  ui.draft = null;
+  ui.selWall = null;
+  fitLevel(currentLevel());
 }

@@ -233,6 +233,9 @@
           <button id="plan-level-up" title="Monter l'étage">◀</button>
           <button id="plan-level-down" title="Descendre l'étage">▶</button>
           <button id="plan-level-del" title="Supprimer l'étage (les éléments du schéma sont conservés)">Supprimer l'étage</button>
+          <span class="plan-sep"></span>
+          <button id="plan-tool-select" title="Sélectionner et déplacer">Sélection</button>
+          <button id="plan-tool-wall" title="Tracer des murs">Mur</button>
           <span class="spacer"></span>
           <label class="plan-scale-label">Échelle d'impression
             <select id="plan-scale"></select>
@@ -254,6 +257,12 @@
               <label class="plan-field"><input id="plan-bg-visible" type="checkbox" checked> Afficher</label>
               <label class="plan-field"><input id="plan-bg-lock" type="checkbox" checked> Verrouillé</label>
               <button id="plan-bg-del">Supprimer le fond</button>
+            </div>
+            <div id="plan-wall-panel" class="plan-bg-panel" hidden>
+              <h3>Mur sélectionné</h3>
+              <p id="plan-wall-info" class="count"></p>
+              <label class="plan-field">Épaisseur (cm) <input id="plan-wall-t" type="number" min="1" step="1" value="20"></label>
+              <button id="plan-wall-del">Supprimer le mur</button>
             </div>
             <p id="plan-hint" class="count"></p>
           </aside>
