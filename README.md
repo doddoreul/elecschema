@@ -178,3 +178,10 @@ réglementaire. Chacune porte `verified: false` : aucune n'a été confrontée a
 officiel du RGIE. Une validation par un professionnel est nécessaire avant tout usage réel.
 
 Projet indépendant, sans lien avec l'éditeur Trikker (Bluebits BV / Anchr).
+
+## Licence et ressources
+
+Le **code** du projet est sous licence MIT (voir `LICENSE`). Les **icônes** de
+`src/assets/` (outils du plan, `flip.png`) proviennent d'une **source libre** dont la
+référence exacte n'a pas été conservée : elles ne sont donc **pas** explicitement
+couvertes par la licence MIT. Voir `src/assets/README.md`.

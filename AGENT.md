@@ -312,7 +312,9 @@ constante au zoom) ; calque d'ecran marque `ui-only`. WYSIWYG avec le PDF (hors 
 a l'ecran, coupe dans le PDF).
 
 Origine/licence des icones `src/assets/*.png` (selection, firewall, opened-door-aperture,
-window, text, flip) **non documentee** — a confirmer par le proprietaire.
+window, text, flip) : **telechargees d'une source libre**, mais la **reference exacte
+n'a pas ete conservee** (voir `src/assets/README.md`) — a confirmer avant toute
+redistribution ; ne pas les considerer comme couvertes par la licence MIT du code.
 
 Panneau de droite « Ouverture selectionnee » : info + suppression. Le champ
 **Largeur (cm)** et les deux boutons **Miroir horizontal / Miroir vertical** sont dans la
