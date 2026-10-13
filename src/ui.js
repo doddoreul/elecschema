@@ -3,7 +3,7 @@
 
 import { emptyProject, createElement, syncIdCounter, nodeById, treeOrder, nextId, PREFIXES, migrateProject, normalizeTypes, isCircuitStart, renumberCircuits } from './model.js';
 import { encodeElx, decodeElx, checkCompatibility, FILE_EXT, APP_VERSION } from './format.js';
-import { renderSchema, sheetSize, deviceDetail, PAGE, layoutForced } from './render.js';
+import { renderSchema, sheetSize, deviceDetail, PAGE, layoutForced, drawCartouche } from './render.js';
 import { SYMBOLS, SYMBOL_CATEGORIES, symbolName, symbolUrl, SOCKET_TYPES, SWITCH_TYPES, DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
 import { validate, RULES_BE, RULE_SEVERITY } from './rules-be.js';
 import { DEFAULT_SCHEMA } from './default-schema.js';
@@ -1024,6 +1024,7 @@ ${box('Remarques', [row('Remarques', i.remarques)])}
   const schema = Array.from({ length: nPages }, (_, p) => {
     const clone = $('#canvas').cloneNode(true);
     clone.querySelectorAll('.ui-only').forEach((n) => n.remove());
+    drawCartouche(clone, project, p * PAGE.w);
     clone.removeAttribute('width');
     clone.removeAttribute('height');
     clone.setAttribute('viewBox', `${p * PAGE.w} 0 ${PAGE.w} ${PAGE.h}`);
@@ -1084,6 +1085,8 @@ ${mats.map((g) => `<tr><td>${escHtml(g.name)}</td><td>${escHtml(g.det)}</td><td>
   text { font-family: sans-serif; }
   .lbl { font-size:9px; fill:#374151; }
   .lbl-sm { font-size:8px; fill:#4b5563; white-space: pre-line; }
+  .cart-title { font-size:8px; font-weight:600; fill:#111827; }
+  .cart-line { font-size:6.5px; fill:#4b5563; }
 </style></head><body>
 ${cover}
 ${schema}

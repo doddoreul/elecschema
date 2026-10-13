@@ -348,8 +348,8 @@ function halfOf(project, id) {
   return { w: (def.w || 40) / 2, h: (def.h || 40) / 2 };
 }
 
-/** Mise en page : cadres A4 paysage (2 px/mm), alignés à droite, + cartouche sur la première page.
- *  Élément décoratif, retiré de l'impression. */
+/** Mise en page : cadres A4 paysage (2 px/mm), alignés à droite, + cartouche par page.
+ *  Élément décoratif, retiré de l'impression (le PDF redessine le cartouche). */
 function drawPrintPreview(svg, project, opts = {}) {
   const { w: A4W, h: A4H, gap } = PAGE;
   const nPages = Math.max(1, (project.pages || []).length);
@@ -357,8 +357,14 @@ function drawPrintPreview(svg, project, opts = {}) {
     const x = i * (A4W + gap);
     el('rect', { class: 'page-guide ui-only' + (i === (opts.currentPage || 0) ? ' current' : ''), x, y: 0, width: A4W, height: A4H }, svg);
     txt(svg, x + 6, 12, 'Page ' + (i + 1), 'lbl-sm').setAttribute('class', 'lbl-sm ui-only page-label');
+    drawCartouche(svg, project, x).setAttribute('class', 'cartouche ui-only');
   }
+}
 
+/** Cartouche de bas de page (chantier, occupant, installateur, projet), en coordonnées de page.
+ *  Dessiné dans l'aperçu et sur chaque page du PDF. */
+export function drawCartouche(parent, project, ox) {
+  const { w: A4W, h: A4H } = PAGE;
   const info = project.info;
   const ch = info.chantier || {}, occ = info.occupant || {};
   const inst = info.installateur || {}, pr = info.projet || {};
@@ -366,25 +372,23 @@ function drawPrintPreview(svg, project, opts = {}) {
   const place = [ch.codePostal && ch.localite].filter(Boolean).join(' ') || '';
   const occupant = [occ.nom, occ.prenom].filter(Boolean).join(' ');
 
-  for (let i = 0; i < nPages; i++) {
-    const ox = i * (A4W + gap);
-    const CW2 = 250, CH2 = 62, CX = ox + A4W - CW2, CY = A4H - CH2;
-    const g = el('g', { class: 'cartouche ui-only' }, svg);
-    el('rect', { x: CX, y: CY, width: CW2, height: CH2, fill: '#fff', stroke: '#9ca3af', 'stroke-width': 1 }, g);
-    el('line', { x1: CX, y1: CY + 13, x2: CX + CW2, y2: CY + 13, stroke: '#d1d5db', 'stroke-width': 1 }, g);
-    const lines = [
-      { t: ch.denomination || 'Installation domestique', cls: 'cart-title' },
-      { t: [ch.adresse, place].filter(Boolean).join(', '), cls: 'cart-line' },
-      { t: [occupant && 'Occupant : ' + occupant, occ.telephone].filter(Boolean).join(' · '), cls: 'cart-line' },
-      { t: [inst.societe && 'Installateur : ' + inst.societe, date, 'v' + (pr.version || '1')].filter(Boolean).join(' · '), cls: 'cart-line' },
-      { t: (pr.typeAlim === 'TRI' ? 'Triphasé' : 'Monophasé') + ' · RGIE/AREI · ' + (info.dessinateur?.nom || ''), cls: 'cart-line' },
-    ];
-    let y = CY + 9;
-    for (const l of lines) {
-      if (l.t) txt(g, CX + 5, y, l.t, l.cls);
-      y += 11;
-    }
+  const CW2 = 250, CH2 = 62, CX = ox + A4W - CW2, CY = A4H - CH2;
+  const g = el('g', { class: 'cartouche' }, parent);
+  el('rect', { x: CX, y: CY, width: CW2, height: CH2, fill: '#fff', stroke: '#9ca3af', 'stroke-width': 1 }, g);
+  el('line', { x1: CX, y1: CY + 13, x2: CX + CW2, y2: CY + 13, stroke: '#d1d5db', 'stroke-width': 1 }, g);
+  const lines = [
+    { t: ch.denomination || 'Installation domestique', cls: 'cart-title' },
+    { t: [ch.adresse, place].filter(Boolean).join(', '), cls: 'cart-line' },
+    { t: [occupant && 'Occupant : ' + occupant, occ.telephone].filter(Boolean).join(' · '), cls: 'cart-line' },
+    { t: [inst.societe && 'Installateur : ' + inst.societe, date, 'v' + (pr.version || '1')].filter(Boolean).join(' · '), cls: 'cart-line' },
+    { t: (pr.typeAlim === 'TRI' ? 'Triphasé' : 'Monophasé') + ' · RGIE/AREI · ' + (info.dessinateur?.nom || ''), cls: 'cart-line' },
+  ];
+  let y = CY + 9;
+  for (const l of lines) {
+    if (l.t) txt(g, CX + 5, y, l.t, l.cls);
+    y += 11;
   }
+  return g;
 }
 
 export function renderSchema(root, project, opts = {}) {
