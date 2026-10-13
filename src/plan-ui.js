@@ -8,7 +8,7 @@ import {
   symbolSideCm, addOpening, addRoom, removeOpening, removeRoom, nearestWall,
 } from './plan-model.js';
 import { PLAN_SCALES } from './standards.js';
-import { symbolName } from './symbols.js';
+import { symbolName, symbolOf } from './symbols.js';
 import { nodeById, circuitStartOf } from './model.js';
 import { prepareImage, assetSet } from './plan-assets.js';
 import { renderPlanLevel, el, planLabel } from './plan-render.js';
@@ -424,7 +424,7 @@ function hintText(lv) {
   }
   if (ui.tool === 'room') return 'Pièce : cliquez pour poser un libellé, puis saisissez son nom.';
   if (ui.placeArmed != null) return 'Cliquez sur le plan pour poser. Échap pour annuler.';
-  if (lv.bg && !lv.bg.locked) return 'Fond déverrouillé : glissez-le. Verrouillez-le avant de tracer.';
+  if (lv.bg && !lv.bg.locked) return 'Fond déverrouillé : glissez-le ou changez sa taille. Les autres éléments restent modifiables.';
   return 'Clic sur un mur ou un symbole : sélection. R : rotation. Suppr : retirer. Molette : zoom · Espace ou bouton milieu : déplacer la vue.';
 }
 
