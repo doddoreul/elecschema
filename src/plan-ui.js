@@ -17,6 +17,7 @@ const $ = (sel) => document.querySelector(sel);
 const DEFAULT_VIEW = { x: -200, y: -200, w: 1600, h: 1000 };
 const MIN_VIEW_CM = 50, MAX_VIEW_CM = 200000;
 const MIN_WALL_CM = 1;
+const BG_ZOOM_STEP = 1.15;   // pas d'agrandissement du fond par clic
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 let deps = null;
@@ -113,6 +114,8 @@ export function initPlan(d) {
   });
   $('#plan-bg-visible').addEventListener('change', (e) => setBg({ visible: e.target.checked }));
   $('#plan-bg-lock').addEventListener('change', (e) => setBg({ locked: e.target.checked }));
+  $('#plan-bg-smaller').addEventListener('click', () => scaleBg(1 / BG_ZOOM_STEP));
+  $('#plan-bg-bigger').addEventListener('click', () => scaleBg(BG_ZOOM_STEP));
   $('#plan-bg-del').addEventListener('click', removeBg);
 
   $('#plan-wall-t').addEventListener('change', (e) => {
@@ -348,6 +351,9 @@ function renderBgPanel(lv) {
   $('#plan-bg-opacity').value = String(Math.round(bg.opacity * 100));
   $('#plan-bg-visible').checked = bg.visible;
   $('#plan-bg-lock').checked = bg.locked;
+  // Agrandir / rétrécir : seulement quand le fond est déverrouillé.
+  $('#plan-bg-smaller').disabled = bg.locked;
+  $('#plan-bg-bigger').disabled = bg.locked;
 }
 
 function renderWallPanel(lv) {
@@ -858,6 +864,19 @@ function setBg(patch) {
   const bg = currentLevel().bg;
   if (!bg) return;
   Object.assign(bg, patch);
+  deps.markDirty(); refreshPlan();
+}
+
+/** Agrandit (k>1) ou rétrécit (k<1) l'arrière-plan autour de son centre, pour
+ *  l'ajuster au plan tracé. Sans effet tant que le fond est verrouillé. */
+function scaleBg(k) {
+  const bg = currentLevel().bg;
+  if (!bg || bg.locked) return;
+  const cx = bg.x + bg.w / 2, cy = bg.y + bg.h / 2;
+  bg.w = Math.max(1, bg.w * k);
+  bg.h = Math.max(1, bg.h * k);
+  bg.x = cx - bg.w / 2;
+  bg.y = cy - bg.h / 2;
   deps.markDirty(); refreshPlan();
 }
 

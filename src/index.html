@@ -243,6 +243,9 @@
           <span class="plan-sep"></span>
           <button id="plan-toggle-elements" title="Tout masquer pour ne garder que l'arrière-plan, ou tout réafficher">Afficher / masquer le dessin</button>
           <button id="plan-recenter" title="Recentrer le dessin dans la fenêtre">Recentrer</button>
+          <label class="plan-bar-field">Opacité des éléments
+            <input id="plan-elements-opacity" type="range" min="0" max="100" value="100">
+          </label>
           <span class="plan-sep"></span>
           <label id="plan-opening-w-wrap" class="plan-bar-field" hidden>Largeur (cm)
             <input id="plan-opening-w" type="number" min="1" step="1" value="90">
@@ -262,8 +265,6 @@
             <svg id="plan-canvas" xmlns="http://www.w3.org/2000/svg"></svg>
           </div>
           <aside class="plan-side">
-            <h3>Affichage</h3>
-            <label class="plan-field">Opacité des éléments <input id="plan-elements-opacity" type="range" min="0" max="100" value="100"></label>
             <h3>Fond de plan</h3>
             <p class="count">Image temporaire : tracez par-dessus, puis supprimez-la.</p>
             <button id="plan-bg-import">Importer un fond…</button>
@@ -274,6 +275,11 @@
               <div class="plan-checks">
                 <label><input id="plan-bg-visible" type="checkbox" checked> Afficher le fond</label>
                 <label><input id="plan-bg-lock" type="checkbox" checked> Verrouillé</label>
+              </div>
+              <div class="plan-bg-zoom">
+                <span>Taille de l'arrière-plan</span>
+                <button id="plan-bg-smaller" title="Rétrécir l'arrière-plan (fond déverrouillé)">−</button>
+                <button id="plan-bg-bigger" title="Agrandir l'arrière-plan (fond déverrouillé)">+</button>
               </div>
               <button id="plan-bg-del">Supprimer le fond</button>
             </div>
