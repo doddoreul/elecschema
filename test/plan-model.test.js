@@ -5,8 +5,9 @@ import assert from 'node:assert/strict';
 import { emptyProject, migrateProject, SCHEMA_VERSION } from '../src/model.js';
 import {
   emptyPlan, normalizePlan, ensurePlan, addLevel, removeLevel, renameLevel, moveLevel,
-  addWall, placeElement, unplaceElement, placedIds, unplacedElements, levelBounds,
+  addWall, removeWall, placeElement, unplaceElement, placedIds, unplacedElements, levelBounds,
   nearestWall, orthoTarget, snap, pxPerCm, paperMm, chooseScale, effectiveScale, addRoom, symbolSideCm,
+  addOpening, removeOpening, removeRoom, pointOnWall,
 } from '../src/plan-model.js';
 import { encodeElx, decodeElx, referencedAssets } from '../src/format.js';
 
@@ -146,6 +147,35 @@ test('géométrie : accrochage, orthogonal, mur le plus proche, emprise', () => 
   assert.equal(b.x1, 410);
   addRoom(plan, lv, { x: 50, y: 50, name: 'Salon' });
   assert.equal(levelBounds(lv).y1, 50);
+});
+
+test('ouvertures : largeur par défaut, bornage, suppression, suppression avec le mur', () => {
+  const plan = emptyPlan();
+  const lv = plan.levels[0];
+  const w = addWall(plan, lv, { x1: 0, y1: 0, x2: 400, y2: 0 });
+  const door = addOpening(plan, lv, { kind: 'door', wall: w.id, pos: 0.5 });
+  assert.equal(door.w, 90, 'largeur de porte par défaut');
+  const win = addOpening(plan, lv, { kind: 'window', wall: w.id, pos: 1.4, w: 0 });
+  assert.equal(win.kind, 'window');
+  assert.equal(win.w, 120, 'largeur de fenêtre par défaut');
+  assert.equal(win.pos, 1, 'position bornée à 1');
+  assert.deepEqual(pointOnWall(w, 0.5), { x: 200, y: 0 });
+  removeOpening(lv, door.id);
+  assert.equal(lv.openings.some((o) => o.id === door.id), false);
+  removeWall(lv, w.id);
+  assert.equal(lv.openings.length, 0, 'le mur emporte ses ouvertures');
+});
+
+test('pièces : libellé ajouté, déplaçable, supprimable', () => {
+  const plan = emptyPlan();
+  const lv = plan.levels[0];
+  const r = addRoom(plan, lv, { x: 100, y: 200, name: 'Salon' });
+  assert.equal(r.name, 'Salon');
+  assert.deepEqual([r.x, r.y], [100, 200]);
+  r.x = 150;
+  assert.equal(lv.rooms[0].x, 150, 'position modifiable en place');
+  removeRoom(lv, r.id);
+  assert.equal(lv.rooms.length, 0);
 });
 
 test('format .elx : images référencées uniquement, aller-retour, absence tolérée', () => {

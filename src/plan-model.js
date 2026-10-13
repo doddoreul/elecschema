@@ -190,6 +190,14 @@ export function addRoom(plan, level, { x, y, name = '' }) {
   return r;
 }
 
+export function removeOpening(level, openingId) {
+  level.openings = level.openings.filter((o) => o.id !== openingId);
+}
+
+export function removeRoom(level, roomId) {
+  level.rooms = level.rooms.filter((r) => r.id !== roomId);
+}
+
 /* ------------------------------------------------------------------- placements */
 
 /** Ids d'éléments déjà posés, tous niveaux confondus. */

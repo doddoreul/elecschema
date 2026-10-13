@@ -236,6 +236,9 @@
           <span class="plan-sep"></span>
           <button id="plan-tool-select" title="Sélectionner et déplacer">Sélection</button>
           <button id="plan-tool-wall" title="Tracer des murs">Mur</button>
+          <button id="plan-tool-door" title="Poser une porte sur un mur">Porte</button>
+          <button id="plan-tool-window" title="Poser une fenêtre sur un mur">Fenêtre</button>
+          <button id="plan-tool-room" title="Poser un libellé de pièce">Pièce</button>
           <span class="spacer"></span>
           <label class="plan-scale-label">Échelle d'impression
             <select id="plan-scale"></select>
@@ -257,6 +260,17 @@
               <label class="plan-field"><input id="plan-bg-visible" type="checkbox" checked> Afficher</label>
               <label class="plan-field"><input id="plan-bg-lock" type="checkbox" checked> Verrouillé</label>
               <button id="plan-bg-del">Supprimer le fond</button>
+            </div>
+            <div id="plan-opening-panel" class="plan-bg-panel" hidden>
+              <h3>Ouverture sélectionnée</h3>
+              <p id="plan-opening-info" class="count"></p>
+              <label class="plan-field">Largeur (cm) <input id="plan-opening-w" type="number" min="1" step="1" value="90"></label>
+              <button id="plan-opening-del">Supprimer l’ouverture</button>
+            </div>
+            <div id="plan-room-panel" class="plan-bg-panel" hidden>
+              <h3>Pièce sélectionnée</h3>
+              <label class="plan-field">Nom <input id="plan-room-name" type="text" placeholder="Salon, Cuisine…"></label>
+              <button id="plan-room-del">Supprimer le libellé</button>
             </div>
             <div id="plan-wall-panel" class="plan-bg-panel" hidden>
               <h3>Mur sélectionné</h3>

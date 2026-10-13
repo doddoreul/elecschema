@@ -5,7 +5,7 @@ import {
   levelById, addLevel, removeLevel, renameLevel, moveLevel, hasPlanContent, levelBounds,
   effectiveScale, chooseScale, nextPlanId, addWall, removeWall, wallLength, paperMm,
   snap, orthoTarget, placeElement, unplaceElement, findPlacement, unplacedElements,
-  symbolSideCm,
+  symbolSideCm, addOpening, addRoom, removeOpening, removeRoom, nearestWall,
 } from './plan-model.js';
 import { PLAN_SCALES } from './standards.js';
 import { symbolName } from './symbols.js';
@@ -31,6 +31,8 @@ const ui = {
   cursor: null,         // point visé (aperçu du mur en cours)
   selWall: null,        // id du mur sélectionné
   selPlace: null,       // elementId du symbole sélectionné sur le plan
+  selOpening: null,     // id de l'ouverture (porte/fenêtre) sélectionnée
+  selRoom: null,        // id du libellé de pièce sélectionné
   placeArmed: null,     // elementId armé depuis la liste « Non placés »
   n: 100,               // échelle effective courante (pour la taille des symboles)
 };
@@ -88,6 +90,9 @@ export function initPlan(d) {
 
   $('#plan-tool-select').addEventListener('click', () => setTool('select'));
   $('#plan-tool-wall').addEventListener('click', () => setTool(ui.tool === 'wall' ? 'select' : 'wall'));
+  $('#plan-tool-door').addEventListener('click', () => setTool(ui.tool === 'door' ? 'select' : 'door'));
+  $('#plan-tool-window').addEventListener('click', () => setTool(ui.tool === 'window' ? 'select' : 'window'));
+  $('#plan-tool-room').addEventListener('click', () => setTool(ui.tool === 'room' ? 'select' : 'room'));
 
   $('#plan-bg-import').addEventListener('click', importBg);
   $('#plan-bg-calib').addEventListener('click', () => setTool(ui.tool === 'calib' ? 'select' : 'calib'));
@@ -107,6 +112,21 @@ export function initPlan(d) {
     refreshPlan();
   });
   $('#plan-wall-del').addEventListener('click', deleteSelectedWall);
+
+  $('#plan-opening-w').addEventListener('change', (e) => {
+    const o = currentLevel().openings.find((x) => x.id === ui.selOpening);
+    const w = Number(e.target.value);
+    if (o && w >= 1) { o.w = w; deps.markDirty(); }
+    refreshPlan();
+  });
+  $('#plan-opening-del').addEventListener('click', deleteSelectedOpening);
+
+  $('#plan-room-name').addEventListener('change', (e) => {
+    const r = currentLevel().rooms.find((x) => x.id === ui.selRoom);
+    if (r) { r.name = e.target.value; deps.markDirty(); }
+    refreshPlan();
+  });
+  $('#plan-room-del').addEventListener('click', deleteSelectedRoom);
 
   $('#plan-place-rot').addEventListener('change', (e) => {
     const found = ui.selPlace != null ? findPlacement(plan(), ui.selPlace) : null;
@@ -140,15 +160,19 @@ function onKeyDown(e) {
   if (e.key === 'Escape') {
     if (ui.tool === 'calib') { setTool('select'); return; }
     if (ui.draft) { ui.draft = null; drawOverlay(); return; }
-    if (ui.tool === 'wall') { setTool('select'); return; }
+    if (ui.tool !== 'select') { setTool('select'); return; }
     if (ui.placeArmed != null) { ui.placeArmed = null; refreshPlan(); return; }
-    if (ui.selPlace != null || ui.selWall != null) { ui.selPlace = null; ui.selWall = null; refreshPlan(); }
+    if (ui.selPlace != null || ui.selWall != null || ui.selOpening != null || ui.selRoom != null) {
+      ui.selPlace = null; ui.selWall = null; ui.selOpening = null; ui.selRoom = null; refreshPlan();
+    }
     return;
   }
   if (e.key === 'Enter' && ui.draft) { ui.draft = null; drawOverlay(); return; }
   if ((e.key === 'Delete' || e.key === 'Backspace')) {
     if (ui.selPlace != null) { e.preventDefault(); removeSelectedPlace(); return; }
     if (ui.selWall != null) { e.preventDefault(); deleteSelectedWall(); return; }
+    if (ui.selOpening != null) { e.preventDefault(); deleteSelectedOpening(); return; }
+    if (ui.selRoom != null) { e.preventDefault(); deleteSelectedRoom(); return; }
   }
   if (e.key.toLowerCase() === 'r' && ui.selPlace != null) {
     e.preventDefault();
@@ -181,13 +205,17 @@ function nudge(dx, dy) {
       w.x2 = snap(w.x2 + dx); w.y2 = snap(w.y2 + dy);
       deps.markDirty(); refreshPlan();
     }
+  } else if (ui.selRoom != null) {
+    const r = lv.rooms.find((x) => x.id === ui.selRoom);
+    if (r) { r.x = snap(r.x + dx); r.y = snap(r.y + dy); deps.markDirty(); refreshPlan(); }
   }
 }
 
-/** Outil courant : 'select' | 'wall' | 'calib'. Réinitialise les brouillons. */
+/** Outil courant : 'select' | 'wall' | 'door' | 'window' | 'room' | 'calib'. */
 function setTool(name) {
   ui.tool = name;
   ui.draft = null; ui.cursor = null; ui.calibPts = [];
+  if (name !== 'select') { ui.selWall = null; ui.selPlace = null; ui.selOpening = null; ui.selRoom = null; }
   refreshPlan();
 }
 
@@ -203,10 +231,12 @@ export function refreshPlan() {
   renderScale(lv);
   renderBgPanel(lv);
   renderWallPanel(lv);
+  renderOpeningPanel(lv);
+  renderRoomPanel(lv);
   renderToolButtons();
   renderUnplaced(project());
   renderPlacePanel();
-  renderPlanLevel(svgEl(), lv, ui.view, { project: project(), n: ui.n, selWall: ui.selWall, selPlace: ui.selPlace });
+  renderPlanLevel(svgEl(), lv, ui.view, { project: project(), n: ui.n, selWall: ui.selWall, selPlace: ui.selPlace, selOpening: ui.selOpening, selRoom: ui.selRoom });
   drawOverlay();
   svgEl().classList.toggle('place-armed', ui.placeArmed != null);
   $('#plan-hint').textContent = hintText(lv);
@@ -254,8 +284,9 @@ function renderLevelBar(p) {
 }
 
 function renderToolButtons() {
-  $('#plan-tool-select').classList.toggle('active', ui.tool === 'select');
-  $('#plan-tool-wall').classList.toggle('active', ui.tool === 'wall');
+  for (const t of ['select', 'wall', 'door', 'window', 'room']) {
+    $(`#plan-tool-${t}`)?.classList.toggle('active', ui.tool === t);
+  }
 }
 
 function renderScale(lv) {
@@ -286,6 +317,23 @@ function renderWallPanel(lv) {
   const len = wallLength(w);
   const scale = effectiveScale(lv);
   $('#plan-wall-info').textContent = `Longueur ${Math.round(len)} cm — sur papier à 1:${scale} : ${paperMm(len, scale).toFixed(1)} mm`;
+}
+
+function renderOpeningPanel(lv) {
+  const o = ui.selOpening != null ? lv.openings.find((x) => x.id === ui.selOpening) : null;
+  $('#plan-opening-panel').hidden = !o;
+  if (!o) return;
+  const nom = o.kind === 'door' ? 'Porte' : 'Fenêtre';
+  const w = lv.walls.find((x) => x.id === o.wall);
+  $('#plan-opening-info').textContent = `${nom} sur ${w ? 'mur ' + w.id : 'mur supprimé'}`;
+  $('#plan-opening-w').value = String(o.w);
+}
+
+function renderRoomPanel(lv) {
+  const r = ui.selRoom != null ? lv.rooms.find((x) => x.id === ui.selRoom) : null;
+  $('#plan-room-panel').hidden = !r;
+  if (!r) return;
+  $('#plan-room-name').value = r.name || '';
 }
 
 /** Liste « Non placés » : éléments posables pas encore placés, triés de façon stable. */
@@ -327,6 +375,10 @@ function hintText(lv) {
   if (ui.tool === 'wall') {
     return 'Mur : clic pour commencer, clic pour poursuivre. Entrée, Échap ou double-clic pour finir. Alt : angle libre.';
   }
+  if (ui.tool === 'door' || ui.tool === 'window') {
+    return ui.tool === 'door' ? 'Porte : cliquez près d’un mur pour la poser.' : 'Fenêtre : cliquez près d’un mur pour la poser.';
+  }
+  if (ui.tool === 'room') return 'Pièce : cliquez pour poser un libellé, puis saisissez son nom.';
   if (ui.placeArmed != null) return 'Cliquez sur le plan pour poser. Échap pour annuler.';
   if (lv.bg && !lv.bg.locked) return 'Fond déverrouillé : glissez-le. Verrouillez-le avant de tracer.';
   return 'Clic sur un mur ou un symbole : sélection. R : rotation. Suppr : retirer. Molette : zoom · Espace ou bouton milieu : déplacer la vue.';
@@ -436,6 +488,30 @@ function onPointerDown(e) {
     return;
   }
 
+  if (ui.tool === 'door' || ui.tool === 'window') {
+    const pt = toWorld(e);
+    const tol = ui.view.w * 0.02;
+    const near = nearestWall(lv, pt.x, pt.y, tol);
+    if (near) {
+      const o = addOpening(plan(), lv, { kind: ui.tool, wall: near.wall.id, pos: near.pos });
+      ui.selOpening = o.id; ui.selRoom = null; ui.selWall = null; ui.selPlace = null;
+      deps.markDirty(); refreshPlan();
+    } else {
+      deps.status('Cliquez près d’un mur pour poser une porte ou une fenêtre.');
+    }
+    return;
+  }
+
+  if (ui.tool === 'room') {
+    const pt = toWorld(e);
+    const r = addRoom(plan(), lv, { x: snap(pt.x), y: snap(pt.y) });
+    ui.selRoom = r.id; ui.selOpening = null; ui.selWall = null; ui.selPlace = null;
+    deps.markDirty(); refreshPlan();
+    setTool('select');
+    if ($('#plan-room-name')) $('#plan-room-name').focus();
+    return;
+  }
+
   // Pose depuis la liste (clic après armement, ou glisser-déposer géré dans makeDraggable)
   if (ui.placeArmed != null) {
     const id = ui.placeArmed;
@@ -463,7 +539,7 @@ function onPointerDown(e) {
   }
   if (wallEl) {
     ui.selWall = wallEl.dataset.wall;
-    ui.selPlace = null;
+    ui.selPlace = null; ui.selOpening = null; ui.selRoom = null;
     const w = selectedWall(lv);
     const start = toWorld(e);
     ui.drag = { kind: 'wall', wall: w.id, start, orig: { x1: w.x1, y1: w.y1, x2: w.x2, y2: w.y2 }, moved: false };
@@ -483,13 +559,33 @@ function onPointerDown(e) {
     refreshPlan();
     return;
   }
+  const openEl = e.target.closest?.('[data-opening]');
+  if (openEl) {
+    ui.selOpening = openEl.dataset.opening;
+    ui.selRoom = null; ui.selWall = null; ui.selPlace = null;
+    svgEl().setPointerCapture(e.pointerId);
+    ui.drag = { kind: 'opening', id: ui.selOpening, moved: false };
+    refreshPlan();
+    return;
+  }
+  const roomEl = e.target.closest?.('[data-room]');
+  if (roomEl) {
+    ui.selRoom = roomEl.dataset.room;
+    ui.selOpening = null; ui.selWall = null; ui.selPlace = null;
+    const r = lv.rooms.find((x) => x.id === ui.selRoom);
+    const start = toWorld(e);
+    ui.drag = { kind: 'room', id: ui.selRoom, start, orig: r ? { x: r.x, y: r.y } : null, moved: false };
+    svgEl().setPointerCapture(e.pointerId);
+    refreshPlan();
+    return;
+  }
   if (lv.bg && !lv.bg.locked && e.target.closest?.('[data-bg]')) {
     ui.drag = { kind: 'bg', start: toWorld(e), bx: lv.bg.x, by: lv.bg.y, moved: false };
-    ui.selWall = null; ui.selPlace = null;
+    ui.selWall = null; ui.selPlace = null; ui.selOpening = null; ui.selRoom = null;
     svgEl().setPointerCapture(e.pointerId);
     return;
   }
-  if (ui.selWall != null || ui.selPlace != null) { ui.selWall = null; ui.selPlace = null; refreshPlan(); }
+  if (ui.selWall != null || ui.selPlace != null || ui.selOpening != null || ui.selRoom != null) { ui.selWall = null; ui.selPlace = null; ui.selOpening = null; ui.selRoom = null; refreshPlan(); }
 }
 
 function onPointerMove(e) {
@@ -544,6 +640,20 @@ function onPointerMove(e) {
     d.moved = true;
     updatePlaceEl(found);
     drawOverlay();
+  } else if (d.kind === 'opening') {
+    const o = lv.openings.find((x) => x.id === d.id);
+    if (!o) return;
+    const pt = toWorld(e);
+    const near = nearestWall(lv, pt.x, pt.y, ui.view.w * 0.06);
+    if (near) { o.wall = near.wall.id; o.pos = near.pos; d.moved = true; refreshPlan(); }
+  } else if (d.kind === 'room') {
+    const r = lv.rooms.find((x) => x.id === d.id);
+    if (!r || !d.orig) return;
+    const pt = toWorld(e);
+    r.x = snap(d.orig.x + (pt.x - d.start.x));
+    r.y = snap(d.orig.y + (pt.y - d.start.y));
+    d.moved = true;
+    refreshPlan();
   }
 }
 
@@ -574,6 +684,22 @@ function deleteSelectedWall() {
   if (ui.selWall == null) return;
   removeWall(lv, ui.selWall);
   ui.selWall = null;
+  deps.markDirty(); refreshPlan();
+}
+
+function deleteSelectedOpening() {
+  const lv = currentLevel();
+  if (ui.selOpening == null) return;
+  removeOpening(lv, ui.selOpening);
+  ui.selOpening = null;
+  deps.markDirty(); refreshPlan();
+}
+
+function deleteSelectedRoom() {
+  const lv = currentLevel();
+  if (ui.selRoom == null) return;
+  removeRoom(lv, ui.selRoom);
+  ui.selRoom = null;
   deps.markDirty(); refreshPlan();
 }
 
@@ -765,5 +891,7 @@ export function resetPlanView() {
   ui.selWall = null;
   ui.selPlace = null;
   ui.placeArmed = null;
+  ui.selOpening = null;
+  ui.selRoom = null;
   fitLevel(currentLevel());
 }

@@ -320,7 +320,7 @@ tbody tr:hover { background: #f9fafb; }
 .welcome-recent:hover { background: #eef2f7; border-color: #cbd5e1; }
 .welcome-recent .welcome-recent-path { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
 
-/* ---------- Schéma d'implantation ---------- */
+/* ---------- Schï¿½ma d'implantation ---------- */
 [data-pane="plan"].active { display: flex; flex-direction: column; overflow: hidden; }
 .plan-workspace { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .plan-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fff; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
@@ -358,3 +358,7 @@ tbody tr:hover { background: #f9fafb; }
 .plan-sel-ring { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 5 4; }
 #plan-canvas.place-armed { cursor: crosshair; }
 #plan-ghost { position: fixed; z-index: 200; pointer-events: none; opacity: .75; font-size: 12px; border: 1px solid var(--accent); background: #fff; padding: 3px 7px; border-radius: 5px; }
+.plan-opening { stroke: #111827; fill: none; pointer-events: all; cursor: move; }
+.plan-opening.selected { stroke: var(--accent); }
+.plan-room { fill: #4b5563; font-family: sans-serif; text-anchor: middle; cursor: move; }
+.plan-room.selected { fill: var(--accent); }

@@ -5,7 +5,7 @@ import { assetGet } from './plan-assets.js';
 import { symbolOf, symbolUrl } from './symbols.js';
 import { symbolHref } from './render.js';
 import { nodeById, circuitStartOf } from './model.js';
-import { symbolSideCm } from './plan-model.js';
+import { symbolSideCm, pointOnWall, wallLength } from './plan-model.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -80,6 +80,53 @@ export function renderPlanLevel(svg, level, view, opts = {}) {
   }
 
   if (opts.project) drawPlacements(svg, opts.project, level, opts.n || 100, opts.selPlace);
+  drawOpenings(svg, level, opts.selOpening);
+  drawRooms(svg, level, opts.n || 100, opts.selRoom);
 
   el('g', { id: 'plan-overlay' }, svg);
+}
+
+/** Ouvertures (portes, fenêtres) posées sur un mur : le mur est interrompu visuellement.
+ *  Rendu dans le repère local du mur (origine sur le mur, x le long du mur). */
+function drawOpenings(svg, level, selOpening) {
+  const g = el('g', { class: 'plan-openings' }, svg);
+  for (const o of level.openings) {
+    const w = level.walls.find((x) => x.id === o.wall);
+    if (!w) continue;
+    const L = wallLength(w);
+    if (L === 0) continue;
+    const dx = (w.x2 - w.x1) / L, dy = (w.y2 - w.y1) / L;
+    const P = pointOnWall(w, o.pos);
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+    const og = el('g', {
+      transform: `translate(${P.x},${P.y}) rotate(${angle})`,
+      class: 'plan-opening' + (o.id === selOpening ? ' selected' : ''),
+      'data-opening': o.id,
+    }, g);
+    // interruption du mur (fond opaque par-dessus le trait)
+    el('rect', { x: -o.w / 2, y: -(w.t + 4) / 2, width: o.w, height: w.t + 4, fill: '#fff', stroke: 'none' }, og);
+    if (o.kind === 'door') {
+      // battant + arc d'ouverture (quart de cercle)
+      el('line', { x1: 0, y1: 0, x2: 0, y2: o.w, 'stroke-width': 2 }, og);
+      el('path', { d: `M 0 ${o.w} A ${o.w} ${o.w} 0 0 1 ${o.w} 0`, 'stroke-width': 1.5 }, og);
+    } else {
+      // fenêtre : double trait
+      const off = Math.max(2, w.t / 4);
+      el('line', { x1: -o.w / 2, y1: -off, x2: o.w / 2, y2: -off, 'stroke-width': 2 }, og);
+      el('line', { x1: -o.w / 2, y1: off, x2: o.w / 2, y2: off, 'stroke-width': 2 }, og);
+    }
+  }
+}
+
+/** Libellés de pièces : texte libre, taille constante sur papier (comme les repères). */
+function drawRooms(svg, level, n, selRoom) {
+  const fs = symbolSideCm(n) * 0.5;
+  for (const r of level.rooms) {
+    const t = el('text', {
+      x: r.x, y: r.y, 'font-size': fs,
+      class: 'plan-room' + (r.id === selRoom ? ' selected' : ''),
+      'data-room': r.id,
+    }, svg);
+    t.textContent = r.name || 'Pièce';
+  }
 }
