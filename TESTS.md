@@ -141,3 +141,4 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T10.30 | Boutons **zoom − / +** (barre d'outils) | Le dessin se dézoome / zoome autour du **centre de la zone de travail** (le curseur d'opacité et « Recentrer » restent inchangés) |
 | T10.31 | Barre dédiée « Texte » (taille, **G**, *I*, <u>S</u>) | N'apparaît **que** quand un texte est sélectionné ; disparaît à la désélection |
 | T10.32 | Réglages de la barre « Texte » | « Taille » (Petite / Normale / Grande / Très grande) change la taille du texte ; G / I / S activent/désactivent gras / italique / souligné (bouton surligné si actif) |
+| T10.33 | Boutons d'outils (Sélection, Mur, Porte, Fenêtre, Texte) | Affichés en **icônes** ; l'outil actif est surligné en bleu avec l'icône **inversée** (blanche) ; infobulle + `aria-label` conservés |

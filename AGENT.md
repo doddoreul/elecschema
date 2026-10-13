@@ -255,7 +255,10 @@ placements (repère non tourne + image pivitee), ouvertures (arc porte / double 
 mur interrompu), pieces. `opts.print` : fond blanc opaque, pas de grille, pas d'overlay
 (pour le PDF). `planLabel` = repère de l'element, sinon repère du debut de circuit.
 
-Interactions (`plan-ui.js`) : outils **Selection / Mur / Porte / Fenetre / Texte**. L'outil
+Interactions (`plan-ui.js`) : outils **Selection / Mur / Porte / Fenetre / Texte**, presentes
+par des **icones** (`assets/selection.png`, `firewall.png`, `opened-door-aperture.png`,
+`window.png`, `text.png` ; icone inversee sur le bouton actif via `button.active .plan-icon`).
+L'outil
 « Texte » reutilise l'entite `rooms` (libelle positionnable, rendu `.plan-room`) ; le contenu
 se saisit par le dialogue commun (`askValue`, boite « Contenu ») a la pose et au **double-clic**
 pour modification ; la mise en forme (taille, gras, italique, souligne) se fait dans une barre

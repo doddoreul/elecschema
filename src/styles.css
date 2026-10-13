@@ -337,6 +337,8 @@ tbody tr:hover { background: #f9fafb; }
 .plan-bar-group[hidden] { display: none; }
 .plan-icon-btn { padding: 4px 6px; display: inline-flex; align-items: center; }
 .plan-icon { width: 18px; height: 18px; display: block; }
+/* Icone blanche quand le bouton est actif (fond bleu) : les icones sont noires. */
+button.active .plan-icon { filter: invert(1); }
 /* « Miroir horizontal » : meme icone que « vertical », pivotee d'un quart de tour. */
 #plan-opening-hinge .plan-icon { transform: rotate(90deg); }
 .plan-body { flex: 1; min-height: 0; display: flex; }
