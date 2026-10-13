@@ -10,6 +10,7 @@ import {
   addOpening, removeOpening, removeRoom, pointOnWall,
 } from '../src/plan-model.js';
 import { encodeElx, decodeElx, referencedAssets } from '../src/format.js';
+import { planFillCount } from '../src/plan-print.js';
 
 const addEl = (p, id, symbolType, extra = {}) => {
   p.elements.push({ id, symbolType, parent: 1, dir: 'right', label: '', children: {}, ...extra });
@@ -176,6 +177,19 @@ test('pièces : libellé ajouté, déplaçable, supprimable', () => {
   assert.equal(lv.rooms[0].x, 150, 'position modifiable en place');
   removeRoom(lv, r.id);
   assert.equal(lv.rooms.length, 0);
+});
+
+test('pages de plan : une seule par étage non vide', () => {
+  const p = emptyProject();
+  p.plan = emptyPlan();
+  assert.equal(planFillCount(p), 0, 'plan vide -> aucune page');
+  const lv = p.plan.levels[0];
+  addWall(p.plan, lv, { x1: 0, y1: 0, x2: 400, y2: 0 });
+  assert.equal(planFillCount(p), 1);
+  const l2 = addLevel(p.plan);
+  assert.equal(planFillCount(p), 1, 'étage vide compté pour rien');
+  addRoom(p.plan, l2, { x: 10, y: 10, name: 'Étage' });
+  assert.equal(planFillCount(p), 2);
 });
 
 test('format .elx : images référencées uniquement, aller-retour, absence tolérée', () => {

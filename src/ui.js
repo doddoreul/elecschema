@@ -6,6 +6,7 @@ import { encodeElx, decodeElx, checkCompatibility, FILE_EXT, APP_VERSION, refere
 import { initPlan, refreshPlan, resetPlanView } from './plan-ui.js';
 import { assetsObject, assetsReplace, saveAssetsIdb, loadAssetsIdb } from './plan-assets.js';
 import { renderSchema, sheetSize, deviceDetail, PAGE, layoutForced, drawCartouche } from './render.js';
+import { buildPlanPages } from './plan-print.js';
 import { SYMBOLS, SYMBOL_CATEGORIES, symbolName, symbolUrl, SOCKET_TYPES, SWITCH_TYPES, DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
 import { validate, RULES_BE, RULE_SEVERITY } from './rules-be.js';
 import { DEFAULT_SCHEMA } from './default-schema.js';
@@ -1019,7 +1020,10 @@ ${box('Remarques', [row('Remarques', i.remarques)])}
     return `<section class="page schema">${clone.outerHTML}</section>`;
   }).join('');
 
-  // 3. liste des circuits : une ligne par protection (disjoncteur, fusible) avec son repère
+  // 3. plan d'implantation : une page A4 paysage par étage non vide
+  const plans = buildPlanPages(project);
+
+  // 4. liste des circuits : une ligne par protection (disjoncteur, fusible) avec son repère
   const protections = treeOrder(project).filter((n) => ['breaker', 'fuse'].includes(n.symbolType));
   const circuits = `<section class="page"><h2>Liste des circuits</h2>
 <table><thead><tr><th>Repère</th><th>Protection</th><th>Caractéristique</th><th>Alimenté depuis</th></tr></thead><tbody>
@@ -1030,7 +1034,7 @@ ${protections.map((n) => {
   }).join('') || '<tr><td colspan="4">Aucun circuit.</td></tr>'}
 </tbody></table></section>`;
 
-  // 4. liste des matériaux, regroupés par désignation et caractéristique
+  // 5. liste des matériaux, regroupés par désignation et caractéristique
   const groups = new Map();
   for (const n of treeOrder(project)) {
     if (n.symbolType === 'node') continue;
@@ -1055,6 +1059,7 @@ ${mats.map((g) => `<tr><td>${escHtml(g.name)}</td><td>${escHtml(g.det)}</td><td>
 .page:last-child { page-break-after: auto; break-after: auto; }
 .schema { height: 186mm; }
 .schema svg { display: block; }
+.plan svg { display: block; width: 100%; height: 100%; }
   h1 { font-size:20px; margin:0 0 4px; }
   h2 { font-size:16px; margin:0 0 8px; }
   h3 { font-size:12px; margin:0 0 4px; }
@@ -1073,9 +1078,20 @@ ${mats.map((g) => `<tr><td>${escHtml(g.name)}</td><td>${escHtml(g.det)}</td><td>
   .lbl-sm { font-size:8px; fill:#4b5563; white-space: pre-line; }
   .cart-title { font-size:8px; font-weight:600; fill:#111827; }
   .cart-line { font-size:6.5px; fill:#4b5563; }
+  .plan-title { font-size:13px; font-weight:600; fill:#111827; }
+  .plan-scale-txt { font-size:7px; fill:#4b5563; }
+  .plan-legend-title { font-size:8px; font-weight:600; fill:#111827; }
+  .plan-legend-txt { font-size:7px; fill:#374151; }
+  .plan-wall { stroke:#111827; fill:none; }
+  .plan-wall.selected { stroke:#111827; }
+  .plan-opening { stroke:#111827; fill:none; pointer-events:none; }
+  .plan-room { fill:#111827; font-family:sans-serif; text-anchor:middle; }
+  .plan-label { fill:#111827; font-family:sans-serif; }
+  .plan-sym-hit { fill:none; stroke:none; }
 </style></head><body>
 ${cover}
 ${schema}
+${plans}
 ${circuits}
 ${materials}
 </body></html>`;

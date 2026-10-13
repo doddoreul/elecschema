@@ -54,10 +54,15 @@ export function renderPlanLevel(svg, level, view, opts = {}) {
   svg.replaceChildren();
   svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.h}`);
 
-  const defs = el('defs', {}, svg);
-  const pat = el('pattern', { id: 'plan-grid', width: 100, height: 100, patternUnits: 'userSpaceOnUse' }, defs);
-  el('path', { d: 'M 100 0 L 0 0 0 100', fill: 'none', stroke: '#e5e7eb', 'stroke-width': 1 }, pat);
-  el('rect', { x: -1e6, y: -1e6, width: 2e6, height: 2e6, fill: 'url(#plan-grid)' }, svg);
+  if (opts.print) {
+    // fond blanc opaque (plan lisible en N&B), pas de grille
+    el('rect', { x: view.x, y: view.y, width: view.w, height: view.h, fill: '#fff' }, svg);
+  } else {
+    const defs = el('defs', {}, svg);
+    const pat = el('pattern', { id: 'plan-grid', width: 100, height: 100, patternUnits: 'userSpaceOnUse' }, defs);
+    el('path', { d: 'M 100 0 L 0 0 0 100', fill: 'none', stroke: '#e5e7eb', 'stroke-width': 1 }, pat);
+    el('rect', { x: -1e6, y: -1e6, width: 2e6, height: 2e6, fill: 'url(#plan-grid)' }, svg);
+  }
 
   const bg = level.bg;
   if (bg && bg.visible) {
