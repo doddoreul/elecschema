@@ -9,7 +9,7 @@ import { emptyPlan, normalizePlan, ensurePlan } from './plan-model.js';
 
 export { ensurePlan };
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 const DOMAINE = 'DOMESTIQUE';
 const PAYS = 'BE';
 
@@ -183,7 +183,8 @@ export function migrateProject(p) {
   migratePlan(p);
 }
 
-/** Passe au modèle v4 : bloc `plan` (étages, murs, placements) ramené à une forme valide.
+/** Passe au modèle courant : bloc `plan` (étages, murs, placements) ramené à une forme
+ *  valide. Migration v4 -> v5 : `printScale` 'auto' converti en nombre, `printCenter`.
  *  Idempotent. Doit venir après la construction de `elements`. */
 export function migratePlan(p) {
   p.plan = normalizePlan(p);

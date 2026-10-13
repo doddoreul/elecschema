@@ -2,7 +2,7 @@
 // Exécution : node --test test/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { emptyProject, createElement, nodeById, treeOrder, migrateProject, normalizeTypes, letterOf, renumberCircuits } from '../src/model.js';
+import { emptyProject, createElement, nodeById, treeOrder, migrateProject, normalizeTypes, letterOf, renumberCircuits, SCHEMA_VERSION } from '../src/model.js';
 
 test('migrateProject : ancien format (circuits/difs) -> arbre v3', () => {
   const legacy = {
@@ -14,7 +14,7 @@ test('migrateProject : ancien format (circuits/difs) -> arbre v3', () => {
     ] }],
   };
   migrateProject(legacy);
-  assert.equal(legacy.schemaVersion, 4);
+  assert.equal(legacy.schemaVersion, SCHEMA_VERSION);
   assert.equal(legacy.plan.levels.length, 1);
   assert.ok(Array.isArray(legacy.elements) && legacy.elements.length >= 3);
   assert.equal(legacy.circuits, undefined);
@@ -23,12 +23,12 @@ test('migrateProject : ancien format (circuits/difs) -> arbre v3', () => {
   for (const t of ['rcd', 'node', 'breaker', 'socket']) assert.ok(types.includes(t), `type ${t} attendu`);
 });
 
-test('migrateProject : projet v4 déjà en place -> inchangé', () => {
+test('migrateProject : projet déjà en place -> inchangé', () => {
   const p = emptyProject();
   const before = JSON.stringify(p);
   migrateProject(p);
   assert.equal(JSON.stringify(p), before);
-  assert.equal(p.schemaVersion, 4);
+  assert.equal(p.schemaVersion, SCHEMA_VERSION);
 });
 
 test('normalizeTypes : types éclatés legacy -> type unique', () => {

@@ -3,7 +3,7 @@
 // de l'état interne de ui.js : tout passe par `initPlan(deps)`.
 import {
   levelById, addLevel, removeLevel, renameLevel, moveLevel, hasPlanContent, levelBounds,
-  effectiveScale, chooseScale, nextPlanId, addWall, removeWall, wallLength, paperMm,
+  effectiveScale, fitScale, fitBounds, frameOverflow, nextPlanId, addWall, removeWall, wallLength, cmToPaperMm,
   snap, orthoTarget, placeElement, unplaceElement, findPlacement, unplacedElements,
   symbolSideCm, addOpening, addRoom, removeOpening, removeRoom, nearestWall,
 } from './plan-model.js';
@@ -97,11 +97,12 @@ export function initPlan(d) {
   $('#plan-level-del').addEventListener('click', removeFlow);
 
   const scale = $('#plan-scale');
-  scale.innerHTML = '<option value="auto">Automatique</option>' +
-    PLAN_SCALES.map((n) => `<option value="${n}">1:${n}</option>`).join('');
+  scale.innerHTML = PLAN_SCALES.map((n) => `<option value="${n}">1:${n}</option>`).join('') +
+    '<option value="custom" hidden>(non normalisée)</option>';
   scale.addEventListener('change', () => {
     const lv = currentLevel();
-    lv.printScale = scale.value === 'auto' ? 'auto' : Number(scale.value);
+    if (scale.value === 'custom') return;
+    lv.printScale = Number(scale.value);
     deps.markDirty(); refreshPlan();
   });
 
@@ -371,10 +372,15 @@ function toggleElements() {
 }
 
 function renderScale(lv) {
-  $('#plan-scale').value = String(lv.printScale);
   const eff = effectiveScale(lv);
-  const fits = typeof lv.printScale === 'number' || chooseScale(levelBounds(lv)).fits;
-  $('#plan-scale-eff').textContent = `Échelle 1:${eff}` + (fits ? '' : ' — dessin trop grand pour une page');
+  const sel = $('#plan-scale');
+  if (sel) {
+    sel.value = PLAN_SCALES.includes(eff) ? String(eff) : 'custom';
+    const custom = sel.querySelector('option[value="custom"]');
+    if (custom) custom.textContent = `1:${eff} (non normalisée)`;
+  }
+  const overflow = frameOverflow(fitBounds(lv), undefined, eff);
+  $('#plan-scale-eff').textContent = `Échelle 1:${eff}` + (overflow ? ' — dessin trop grand pour une page' : '');
 }
 
 function renderBgPanel(lv) {
@@ -400,7 +406,7 @@ function renderWallPanel(lv) {
   $('#plan-wall-t').value = String(w.t);
   const len = wallLength(w);
   const scale = effectiveScale(lv);
-  $('#plan-wall-info').textContent = `Longueur ${Math.round(len)} cm — sur papier à 1:${scale} : ${paperMm(len, scale).toFixed(1)} mm`;
+  $('#plan-wall-info').textContent = `Longueur ${Math.round(len)} cm — sur papier à 1:${scale} : ${cmToPaperMm(len, scale).toFixed(1)} mm`;
 }
 
 function renderOpeningPanel(lv) {

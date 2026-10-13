@@ -13,10 +13,22 @@ export const DEFAULT_OPENING_CM = { door: 90, window: 120 };
  *  bas). `hinge` : côté de la charnière sur l'ouverture (-1 = bord gauche, +1 = bord droit).
  *  `open` : côté du mur où la porte s'ouvre (-1 / +1). Modifiables (voir plan-ui.js). */
 export const DEFAULT_DOOR = { hinge: -1, open: 1 };
-/** Zone utile d'une page A4 paysage du plan (594 x 420 px à 2 px/mm), hors marges,
- *  titre et cartouche (62 px en bas à droite). */
-export const PAGE_USABLE_PX = { w: 554, h: 298 };
-const PAGE_PX_PER_CM_NUMERATOR = 20;              // px/cm = 20 / N (à 2 px/mm)
+
+/** Géométrie de la page de plan, en millimètres (feuille A4 paysage 297 x 210).
+ *  Source unique et pure, partagée par l'écran (cadre A4) et le PDF : plus aucune
+ *  dimension de page en pixels. `planFrame(level)` convertit ces rectangles en cm
+ *  monde selon l'échelle 1:N. Les zones ne se chevauchent pas (voir tests). */
+export const PLAN_PAGE_MM = { w: 297, h: 210 };                          // feuille A4 paysage
+export const PLAN_MARGIN_MM = 10;                                        // marge du PDF
+export const PLAN_PRINTABLE_MM = { x: 10, y: 10, w: 277, h: 186 };       // zone imprimable
+export const PLAN_PLOT_MM = { x: 10, y: 22, w: 277, h: 140 };            // zone de tracé (sous le titre)
+export const PLAN_CART_MM = { x: 162, y: 165, w: 125, h: 31 };           // cartouche (250 x 62 px à 2 px/mm)
+export const PLAN_LEGEND_MM = { x: 10, y: 162, w: 145, h: 34 };          // légende + barre d'échelle
+
+/** Bornes de l'échelle d'impression 1:N (entier) et valeur par défaut. */
+export const PLAN_MIN_SCALE = 10;
+export const PLAN_MAX_SCALE = 1000;
+export const PLAN_DEFAULT_SCALE = 100;
 
 /* ------------------------------------------------------------------ identifiants */
 
@@ -27,7 +39,10 @@ export function nextPlanId(plan, prefix = 'p') {
 }
 
 function newLevel(plan, name) {
-  return { id: nextPlanId(plan, 'p'), name, bg: null, walls: [], openings: [], rooms: [], placements: [], printScale: 'auto' };
+  return {
+    id: nextPlanId(plan, 'p'), name, bg: null, walls: [], openings: [], rooms: [], placements: [],
+    printScale: PLAN_DEFAULT_SCALE, printCenter: null,
+  };
 }
 
 /* ----------------------------------------------------------------- construction */
@@ -76,7 +91,7 @@ export function normalizePlan(project) {
       name: typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim() : 'Étage',
       bg: normBg(raw.bg),
       walls: [], openings: [], rooms: [], placements: [],
-      printScale: raw.printScale === 'auto' || PLAN_SCALES.includes(raw.printScale) ? raw.printScale : 'auto',
+      printScale: PLAN_DEFAULT_SCALE, printCenter: null,
     };
     const seenIds = new Set();
     const fresh = (x) => (typeof x === 'string' && x && !seenIds.has(x) ? x : nextPlanId(plan, 'w'));
@@ -115,6 +130,10 @@ export function normalizePlan(project) {
       placed.add(eid);
       lv.placements.push({ elementId: eid, x: p.x, y: p.y, rot: isNum(p.rot) ? p.rot : 0 });
     }
+    // Échelle et centre d'impression : calculés APRÈS le contenu, car « auto »
+    // (hérité) se convertit en la plus grande échelle normalisée qui tient.
+    lv.printScale = normalizePrintScale(raw.printScale, lv);
+    lv.printCenter = normPrintCenter(raw.printCenter);
     plan.levels.push(lv);
   }
   if (plan.levels.length === 0) plan.levels.push(newLevel(plan, 'Rez-de-chaussée'));
@@ -287,8 +306,8 @@ export function nearestWall(level, x, y, tol) {
   return best;
 }
 
-/** Emprise d'un niveau (cm), fond compris s'il est visible. null si vide. */
-export function levelBounds(level) {
+/** Emprise d'un niveau (cm), fond compris s'il est visible (sauf `withBg:false`). null si vide. */
+export function levelBounds(level, { withBg = true } = {}) {
   const xs = [], ys = [];
   for (const w of level.walls) {
     const pad = w.t / 2;
@@ -296,23 +315,23 @@ export function levelBounds(level) {
   }
   for (const r of level.rooms) { xs.push(r.x); ys.push(r.y); }
   for (const p of level.placements) { xs.push(p.x - 20, p.x + 20); ys.push(p.y - 20, p.y + 20); }
-  if (level.bg && level.bg.visible) {
+  if (withBg && level.bg && level.bg.visible) {
     xs.push(level.bg.x, level.bg.x + level.bg.w); ys.push(level.bg.y, level.bg.y + level.bg.h);
   }
   if (xs.length === 0) return null;
   return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
 }
 
+/** Emprise pour l'ajustement d'échelle : le contenu tracé, sinon le fond seul. */
+export function fitBounds(level) {
+  return levelBounds(level, { withBg: false }) || levelBounds(level);
+}
+
 export function hasPlanContent(level) {
   return level.walls.length > 0 || level.openings.length > 0 || level.rooms.length > 0 || level.placements.length > 0;
 }
 
-/* ------------------------------------------------------------------------ échelle */
-
-/** Pixels de page par cm réel pour l'échelle 1:N (à 2 px/mm). 1:100 -> 0,2 px/cm. */
-export function pxPerCm(n) {
-  return PAGE_PX_PER_CM_NUMERATOR / n;
-}
+/* ------------------------------------------------------- échelle et géométrie de page */
 
 /** Côté d'un symbole sur le plan (cm réels) : PLAN_SYMBOL_MM sur papier, à l'échelle 1:N.
  *  Constant sur papier quelle que soit l'échelle. */
@@ -320,24 +339,92 @@ export function symbolSideCm(n) {
   return PLAN_SYMBOL_MM * n / 10;
 }
 
-/** Longueur réelle (cm) -> longueur sur papier (mm) à l'échelle 1:N. */
-export function paperMm(lengthCm, n) {
+/** Longueur réelle (cm monde) -> longueur sur papier (mm) à l'échelle 1:N. */
+export function cmToPaperMm(lengthCm, n) {
   return (lengthCm * 10) / n;
 }
 
-/** Plus grande échelle normalisée (1:20 d'abord) dont le dessin tient dans la zone utile.
- *  Si rien ne tient : la plus petite (1:500) avec fits = false. */
-export function chooseScale(bounds, usable = PAGE_USABLE_PX) {
-  if (!bounds) return { n: 100, fits: true };
+/** Longueur papier (mm) -> longueur réelle (cm monde) à l'échelle 1:N. */
+export function paperMmToCm(mm, n) {
+  return (mm * n) / 10;
+}
+
+/** Échelle validée : entier de PLAN_MIN_SCALE à PLAN_MAX_SCALE, sinon la valeur par défaut. */
+export function normalizePrintScale(raw, level = null) {
+  if (raw === 'auto') return level ? fitScale(fitBounds(level)).n : PLAN_DEFAULT_SCALE;  // hérité
+  const v = Number(raw);
+  if (Number.isInteger(v) && v >= PLAN_MIN_SCALE && v <= PLAN_MAX_SCALE) return v;
+  return PLAN_DEFAULT_SCALE;
+}
+
+/** Centre d'impression normalisé : { x, y } en cm, ou null (calculé à la volée). */
+export function normPrintCenter(pc) {
+  return isObj(pc) && isNum(pc.x) && isNum(pc.y) ? { x: pc.x, y: pc.y } : null;
+}
+
+/** Échelle effective (1:N) d'un niveau : entier 10…1000, défaut 100. */
+export function effectiveScale(level) {
+  const v = Number(level && level.printScale);
+  return Number.isInteger(v) && v >= PLAN_MIN_SCALE && v <= PLAN_MAX_SCALE ? v : PLAN_DEFAULT_SCALE;
+}
+
+/** Plus grande échelle normalisée (1:20 d'abord) dont l'emprise tient dans la zone de
+ *  tracé. Si rien ne tient : la plus petite (1:500) avec fits = false. */
+export function fitScale(bounds, plot = PLAN_PLOT_MM) {
+  if (!bounds) return { n: PLAN_DEFAULT_SCALE, fits: true };
   const wcm = bounds.x1 - bounds.x0, hcm = bounds.y1 - bounds.y0;
   for (const n of PLAN_SCALES) {
-    const k = pxPerCm(n);
-    if (wcm * k <= usable.w && hcm * k <= usable.h) return { n, fits: true };
+    if (wcm <= plot.w * n / 10 && hcm <= plot.h * n / 10) return { n, fits: true };
   }
   return { n: PLAN_SCALES[PLAN_SCALES.length - 1], fits: false };
 }
 
-/** Échelle effective d'un niveau : valeur choisie, ou calcul automatique. */
-export function effectiveScale(level) {
-  return typeof level.printScale === 'number' ? level.printScale : chooseScale(levelBounds(level)).n;
+/** Longueur « ronde » (1, 2 ou 5 × 10^k cm) pour la barre d'échelle, ~35 mm sur papier. */
+export function niceBarCm(n) {
+  const cm = (35 * n) / 10;
+  const pow = 10 ** Math.floor(Math.log10(cm));
+  const f = cm / pow;
+  return (f >= 5 ? 5 : f >= 2 ? 2 : 1) * pow;
+}
+
+/** Barre d'échelle à 1:N : longueur ronde en cm et sa longueur EXACTE en mm sur papier. */
+export function scaleBar(n) {
+  const cm = niceBarCm(n);
+  return { cm, mm: cmToPaperMm(cm, n), label: cm >= 100 ? `${cm / 100} m` : `${cm} cm` };
+}
+
+/** Rectangle de la page de plan exprimé en cm monde (échelle 1:N), à partir des zones
+ *  en mm. Le point `center` (cm) est placé au centre de la zone de tracé. */
+function mmRectToWorld(r, ox, oy, k) {
+  return { x: ox + r.x * k, y: oy + r.y * k, w: r.w * k, h: r.h * k };
+}
+
+/** Description unique de la page d'un niveau, en cm monde (écran ET PDF).
+ *  { n, center, sheet, printable, plot, legend, cartouche }. */
+export function planFrame(level) {
+  const n = effectiveScale(level);
+  const k = n / 10;                                    // mm papier -> cm monde
+  const b = levelBounds(level);
+  const center = normPrintCenter(level.printCenter)
+    || (b ? { x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2 } : { x: 0, y: 0 });
+  const ox = center.x - (PLAN_PLOT_MM.x + PLAN_PLOT_MM.w / 2) * k;
+  const oy = center.y - (PLAN_PLOT_MM.y + PLAN_PLOT_MM.h / 2) * k;
+  const rect = (r) => mmRectToWorld(r, ox, oy, k);
+  return {
+    n,
+    center,
+    sheet: rect({ x: 0, y: 0, w: PLAN_PAGE_MM.w, h: PLAN_PAGE_MM.h }),
+    printable: rect(PLAN_PRINTABLE_MM),
+    plot: rect(PLAN_PLOT_MM),
+    legend: rect(PLAN_LEGEND_MM),
+    cartouche: rect(PLAN_CART_MM),
+  };
+}
+
+/** Vrai si l'emprise déborde de la zone de tracé (une partie ne sera pas imprimée). */
+export function frameOverflow(bounds, plot = PLAN_PLOT_MM, n = PLAN_DEFAULT_SCALE) {
+  if (!bounds) return false;
+  const k = n / 10;
+  const px0 = plot.x * k, py0 = plot.y * k, px1 = (plot.x + plot.w) * k, py1 = (plot.y + plot.h) * k;
+  return bounds.x0 < px0 - 1e-6 || bounds.y0 < py0 - 1e-6 || bounds.x1 > px1 + 1e-6 || bounds.y1 > py1 + 1e-6;
 }

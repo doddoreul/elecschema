@@ -5,9 +5,9 @@ import assert from 'node:assert/strict';
 import { emptyProject, migrateProject, SCHEMA_VERSION } from '../src/model.js';
 import {
   emptyPlan, normalizePlan, ensurePlan, addLevel, removeLevel, renameLevel, moveLevel,
-  addWall, removeWall, placeElement, unplaceElement, placedIds, unplacedElements, levelBounds,
-  nearestWall, orthoTarget, snap, pxPerCm, paperMm, chooseScale, effectiveScale, addRoom, symbolSideCm,
-  addOpening, removeOpening, removeRoom, pointOnWall, DEFAULT_DOOR,
+  addWall, removeWall, placeElement, unplaceElement, placedIds, unplacedElements, levelBounds, fitBounds,
+  nearestWall, orthoTarget, snap, cmToPaperMm, paperMmToCm, fitScale, effectiveScale, addRoom, symbolSideCm,
+  addOpening, removeOpening, removeRoom, pointOnWall, DEFAULT_DOOR, planFrame,
 } from '../src/plan-model.js';
 import { encodeElx, decodeElx, referencedAssets } from '../src/format.js';
 import { planFillCount } from '../src/plan-print.js';
@@ -16,7 +16,7 @@ const addEl = (p, id, symbolType, extra = {}) => {
   p.elements.push({ id, symbolType, parent: 1, dir: 'right', label: '', children: {}, ...extra });
 };
 
-test('migration v3 -> v4 : plan par défaut, idempotente', () => {
+test('migration v3 -> v5 : plan par défaut, idempotente', () => {
   const v3 = { schemaVersion: 3, supply: { id: 1, symbolType: 'compteur', label: 'W1', children: {} }, elements: [] };
   migrateProject(v3);
   assert.equal(v3.schemaVersion, SCHEMA_VERSION);
@@ -112,26 +112,85 @@ test('taille des symboles : constante sur papier (4 mm), proportionnelle à l’
   assert.equal(symbolSideCm(250), 100);
 });
 
-test('échelle : 1:100 -> 0,2 px/cm ; distance exacte sur le papier', () => {
-  assert.equal(pxPerCm(100), 0.2);
-  // mur de 500 cm à 1:100 = 5 m réels = 50 mm sur papier = 100 px à 2 px/mm
-  assert.equal(paperMm(500, 100), 50);
-  assert.equal(500 * pxPerCm(100), 100);
+test('échelle : distance exacte sur le papier (cm -> mm et retour)', () => {
+  // mur de 1000 cm à 1:100 = 10 m réels = 100 mm sur papier
+  assert.equal(cmToPaperMm(1000, 100), 100);
+  assert.equal(cmToPaperMm(500, 100), 50);
+  assert.equal(cmToPaperMm(500, 50), 100);
+  assert.equal(paperMmToCm(100, 100), 1000);
+  assert.equal(paperMmToCm(10, 50), 50);
 });
 
 test('échelle automatique : plus grande échelle normalisée qui tient', () => {
-  assert.equal(chooseScale({ x0: 0, y0: 0, x1: 300, y1: 200 }).n, 20, '300x200 cm tient en 1:20');
-  const mid = { x0: 0, y0: 0, x1: 1000, y1: 700 };   // 1:20 : 1000 px trop large ; 1:50 : 400x280 px
-  assert.equal(chooseScale(mid).n, 50, 'plus grande échelle normalisée tenant dans 554x298 px');
+  assert.equal(fitScale({ x0: 0, y0: 0, x1: 300, y1: 200 }).n, 20, '300x200 cm tient en 1:20');
+  const mid = { x0: 0, y0: 0, x1: 1000, y1: 700 };
+  assert.equal(fitScale(mid).n, 50, 'plus grande échelle normalisée qui tient');
   const huge = { x0: 0, y0: 0, x1: 100000, y1: 100000 };
-  const r = chooseScale(huge);
+  const r = fitScale(huge);
   assert.equal(r.n, 500);
   assert.equal(r.fits, false);
-  assert.equal(chooseScale(null).n, 100);
+  assert.equal(fitScale(null).n, 100);
   const lv = emptyPlan().levels[0];
   assert.equal(effectiveScale(lv), 100, 'vide -> 100 par défaut');
   lv.printScale = 75;
   assert.equal(effectiveScale(lv), 75);
+});
+
+test('géométrie de page : zones en mm cohérentes et disjointes', () => {
+  const lv = emptyPlan().levels[0];
+  const disjoint = (a, b) => a.x + a.w <= b.x + 1e-6 || b.x + b.w <= a.x + 1e-6
+    || a.y + a.h <= b.y + 1e-6 || b.y + b.h <= a.y + 1e-6;
+  const inside = (a, b) => a.x >= b.x - 1e-6 && a.y >= b.y - 1e-6
+    && a.x + a.w <= b.x + b.w + 1e-6 && a.y + a.h <= b.y + b.h + 1e-6;
+  for (const n of [20, 50, 75, 80, 100, 250, 500]) {
+    lv.printScale = n;
+    const f = planFrame(lv);
+    assert.ok(Math.abs(f.sheet.w - 29.7 * n) < 1e-6, `feuille largeur à 1:${n}`);
+    assert.ok(Math.abs(f.sheet.h - 21 * n) < 1e-6, `feuille hauteur à 1:${n}`);
+    assert.ok(Math.abs(f.plot.w * 10 / n - 277) < 1e-9, `zone de tracé largeur mm à 1:${n}`);
+    assert.ok(Math.abs(f.plot.h * 10 / n - 140) < 1e-9, `zone de tracé hauteur mm à 1:${n}`);
+    assert.ok(inside(f.plot, f.printable), `zone de tracé dans la zone imprimable à 1:${n}`);
+    assert.ok(inside(f.cartouche, f.printable), `cartouche dans la zone imprimable à 1:${n}`);
+    assert.ok(disjoint(f.plot, f.cartouche), `cartouche hors zone de tracé à 1:${n}`);
+    assert.ok(disjoint(f.plot, f.legend), `légende hors zone de tracé à 1:${n}`);
+  }
+});
+
+test('planFrame : centre du contenu par défaut, printCenter prioritaire', () => {
+  const plan = emptyPlan();
+  const lv = plan.levels[0];
+  lv.printScale = 100;
+  addWall(plan, lv, { x1: 0, y1: 0, x2: 1000, y2: 0 });
+  assert.deepEqual(planFrame(lv).center, { x: 500, y: 0 });
+  lv.printCenter = { x: 0, y: 0 };
+  assert.deepEqual(planFrame(lv).center, { x: 0, y: 0 });
+  assert.equal(planFrame(lv).n, 100);
+});
+
+test('migration v4 -> v5 : printScale auto/nombre, printCenter, idempotence', () => {
+  const p = emptyProject();
+  p.plan = { seq: 0, levels: [
+    { id: 'p1', name: 'A', printScale: 'auto', walls: [{ id: 'w1', x1: 0, y1: 0, x2: 400, y2: 0, t: 20 }] },
+    { id: 'p2', name: 'B', printScale: 80, printCenter: { x: 12, y: 34 } },
+    { id: 'p3', name: 'C', printScale: 99999 },
+    { id: 'p4', name: 'D', printScale: 3 },
+    { id: 'p5', name: 'E' },
+  ] };
+  const plan = normalizePlan(p);
+  assert.equal(plan.levels[0].printScale, fitScale(fitBounds(plan.levels[0])).n, 'auto -> ajustement');
+  assert.equal(plan.levels[1].printScale, 80, 'entier non normalisé conservé');
+  assert.deepEqual(plan.levels[1].printCenter, { x: 12, y: 34 });
+  assert.equal(plan.levels[2].printScale, 100, 'au-dessus des bornes -> 100');
+  assert.equal(plan.levels[3].printScale, 100, 'en dessous des bornes -> 100');
+  assert.equal(plan.levels[4].printScale, 100, 'défaut');
+  assert.equal(plan.levels[4].printCenter, null, 'printCenter absent -> null');
+  const again = normalizePlan({ plan });
+  assert.deepEqual(again.levels.map((l) => l.printScale), plan.levels.map((l) => l.printScale), 'idempotent');
+  assert.deepEqual(again.levels.map((l) => l.printCenter), plan.levels.map((l) => l.printCenter), 'idempotent');
+  // aller-retour .elx : échelle conservée
+  const back = decodeElx(encodeElx(p)).project;
+  assert.equal(back.plan.levels[1].printScale, 80);
+  assert.deepEqual(back.plan.levels[1].printCenter, { x: 12, y: 34 });
 });
 
 test('géométrie : accrochage, orthogonal, mur le plus proche, emprise', () => {
