@@ -207,18 +207,18 @@ async function showWelcome() {
   const welcomeEl = $('#welcome');
   if (!welcomeEl) return;
 
-  // Détermine s'il y a un autosave à proposer
+  // Détermine s'il y a un autosave à proposer (localStorage d'abord, puis disque).
   let pending = getLocalAutosave();
-  if (!pending) {
-    pending = await getDiskAutosave();
-  }
+  const disk = await getDiskAutosave();
+  if (!pending) pending = disk;
   if (resumeBtn) {
     if (pending) {
       const name = pending.file ? pending.file.split(/[\\/]/).pop() : 'sans titre';
       resumeBtn.textContent = `Reprendre « ${name} »`;
       resumeBtn.hidden = false;
       resumeBtn.onclick = async () => {
-        const assets = pending.assets ?? (await loadAssetsIdb()) ?? {};
+        // Images de fond : celles du miroir disque (bureau), sinon IndexedDB (navigateur).
+        const assets = pending.assets ?? disk?.assets ?? (await loadAssetsIdb()) ?? {};
         loadProject(pending.project, pending.file, assets);
         status('Restauration du dernier état (sauvegarde locale/stockage).');
       };

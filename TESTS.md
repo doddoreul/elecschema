@@ -123,3 +123,5 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T10.15 | Étages sans tracé | Aucune page de plan générée pour eux |
 | T10.16 | Plan vide | Aucune page de plan ; PDF sinon inchangé |
 | T10.17 | Élément du schéma non posé (plan non vide) | Alerte **BE-09** ; clic → onglet Implantation |
+| T10.18 | Bouton « Masquer les éléments » puis « Afficher les éléments » | Les symboles posés disparaissent puis réapparaissent ; murs, ouvertures, pièces et fond restent visibles |
+| T10.19 | Importer un fond, puis **actualiser la page** et reprendre | Le fond est toujours là (miroir disque en bureau, IndexedDB en navigateur) |

@@ -40,8 +40,9 @@
       w.print();
       return 'impression';
     },
-    // pas de miroir disque en navigateur : le localStorage suffit
-    autosaveWrite: async () => true,
-    autosaveRead: async () => null,
+    // Pas de autosaveWrite/autosaveRead ici (réservés au bureau, via preload.js) :
+    // ui.js détecte leur absence et range alors les images de fond dans IndexedDB.
+    // Les définir en no-op faisait croire à un miroir disque : les fonds n'étaient
+    // jamais écrits et disparaissaient à l'actualisation.
   };
 })();

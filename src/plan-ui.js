@@ -238,7 +238,7 @@ export function refreshPlan() {
   renderToolButtons();
   renderUnplaced(project());
   renderPlacePanel();
-  renderPlanLevel(svgEl(), lv, ui.view, { project: project(), n: ui.n, selWall: ui.selWall, selPlace: ui.selPlace, selOpening: ui.selOpening, selRoom: ui.selRoom });
+  renderPlanLevel(svgEl(), lv, ui.view, { project: project(), n: ui.n, hideElements: ui.hideElements, selWall: ui.selWall, selPlace: ui.selPlace, selOpening: ui.selOpening, selRoom: ui.selRoom });
   drawOverlay();
   svgEl().classList.toggle('place-armed', ui.placeArmed != null);
   $('#plan-hint').textContent = hintText(lv);
@@ -290,7 +290,10 @@ function renderToolButtons() {
     $(`#plan-tool-${t}`)?.classList.toggle('active', ui.tool === t);
   }
   const btn = $('#plan-toggle-elements');
-  if (btn) btn.textContent = ui.hideElements ? 'Afficher les éléments' : 'Masquer les éléments';
+  if (btn) {
+    btn.textContent = ui.hideElements ? 'Afficher les éléments' : 'Masquer les éléments';
+    btn.setAttribute('aria-pressed', String(ui.hideElements));
+  }
   svgEl().classList.toggle('hide-elements', ui.hideElements);
 }
 

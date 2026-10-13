@@ -84,7 +84,9 @@ export function renderPlanLevel(svg, level, view, opts = {}) {
     }, walls);
   }
 
-  if (opts.project) drawPlacements(svg, opts.project, level, opts.n || 100, opts.selPlace);
+  // Les symboles posés peuvent être masqués (bouton « afficher / masquer ») pour
+  // comparer avant / après sans toucher aux murs, ouvertures, pièces ni au fond.
+  if (opts.project && !opts.hideElements) drawPlacements(svg, opts.project, level, opts.n || 100, opts.selPlace);
   drawOpenings(svg, level, opts.selOpening);
   drawRooms(svg, level, opts.n || 100, opts.selRoom);
 

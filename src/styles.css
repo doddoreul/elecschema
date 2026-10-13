@@ -363,3 +363,4 @@ tbody tr:hover { background: #f9fafb; }
 .plan-room { fill: #4b5563; font-family: sans-serif; text-anchor: middle; cursor: move; }
 .plan-room.selected { fill: var(--accent); }
 #plan-canvas.hide-elements .plan-sym { display: none; }
+#plan-toggle-elements[aria-pressed="true"] { background: var(--accent); border-color: #1d4ed8; color: #fff; }

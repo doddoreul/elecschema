@@ -323,6 +323,11 @@ l'element dans le schema).
    ajout de code, surtout dans `ui.js` qui a ete beaucoup édite.
 5. **IDs** : le compteur porte l'ID fixe `1`. `idCounter` demarre a `2`. Sinon un element
    cree prend l'ID 1 et cree un cycle infini au parcours de l'arbre (stack overflow).
+6. **`src/platform.js` ne doit PAS definir `autosaveWrite`/`autosaveRead`.** `ui.js` s'en
+   sert pour distinguer le bureau (miroir disque) du navigateur (IndexedDB) : des no-op
+   dans le shim web font croire a un miroir disque et les images de fond ne sont plus
+   jamais ecrites (fonds perdus a l'actualisation). A la reprise, les images viennent de
+   `pending.assets` (disque) sinon `loadAssetsIdb()` — le localStorage seul ne les a pas.
 
 ## Build des .exe
 
