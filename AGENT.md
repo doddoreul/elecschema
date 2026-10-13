@@ -257,9 +257,12 @@ ajout / renommage (double-clic) / monter / descendre / suppression.
 Vue : bouton **Afficher / masquer le dessin** (ne garde que l'arriere-plan ; murs,
 ouvertures, pieces, symboles et grille disparaissent ; etat visible via `aria-pressed`),
 bouton **Recentrer** (`centerLevel()`, centrage sans changer le zoom) et
-curseur **opacite des elements** (groupe `.plan-elements` en SVG ; vue seule, non
-enregistree). Le fond a son propre curseur « opacite de l'arriere-plan » (`bg.opacity`,
-enregistre dans le projet).
+curseur **opacite des elements** place dans la **barre d'outils du haut** (groupe
+`.plan-elements` en SVG ; vue seule, non enregistree). Le fond a son propre curseur
+« opacite de l'arriere-plan » (`bg.opacity`, enregistre dans le projet) et des boutons
+**« − » / « + »** dans le panneau de droite (« Taille de l'arriere-plan ») qui
+l'agrandissent / le retrecissent autour de son centre (`scaleBg()`) ; ces boutons ne sont
+actifs que fond **deverrouille**.
 
 Panneau de droite « Ouverture selectionnee » : info + suppression. Le champ
 **Largeur (cm)** et les deux boutons **Miroir horizontal / Miroir vertical** sont dans la
@@ -270,7 +273,10 @@ Les miroirs agissent dans le repere local du mur : horizontal = le long du mur (
 
 Fond de plan (`plan-assets.js`) : image **hors du projet** (le projet ne garde que la cle
 `bg.asset`). Reduite (<= 2400 px, JPEG 0,85), refus > 20 Mo. Calibrable (2 points + distance
-reelle). Autosave : miroir disque (Electron, `assets` de `autosave.json`) **et** IndexedDB
+reelle). **Deverrouille** (`bg.locked === false`), il se deplace au glisser (sur l'image) et se
+redimensionne (boutons « − »/« + ») ; les **autres elements restent selectionnables et
+modifiables** (murs, ouvertures, pieces, symboles), le fond etant dessine sous eux.
+Autosave : miroir disque (Electron, `assets` de `autosave.json`) **et** IndexedDB
 (les deux plateformes), **jamais** `localStorage`. Ecriture **immediate** des images des que
 leur liste change (import/suppression) ; restauration = fusion IndexedDB + disque + autosave.
 Le `.elx` ne contient que les images **referencees** (`referencedAssets`).
@@ -356,6 +362,11 @@ l'element dans le schema).
    fermeture rapide ; le reste est differe de 400 ms. A la reprise, les images sont
    fusionnees depuis IndexedDB + miroir disque + `pending.assets` (le localStorage seul ne
    les contient pas : il ne garde que la cle `bg.asset`).
+8. **Import manquant** : une fonction utilisee au rendu mais absente des `import` (`symbolOf`
+   dans `plan-ui.js`) ne se voit ni au `check-syntax` ni aux tests (ils n'executent pas le
+   DOM) ; le `ReferenceError` n'apparait qu'a l'affichage. Un clic qui declenche ce rendu
+   interrompt alors tout le traitement (impression que « rien n'est modifiable »). Verifier
+   tout symbole utilise dans un fichier est bien importe.
 
 ## Build des .exe
 
