@@ -1078,7 +1078,7 @@ ${mats.map((g) => `<tr><td>${escHtml(g.name)}</td><td>${escHtml(g.det)}</td><td>
   h3 { font-size:12px; margin:0 0 4px; }
   .sub { color:#6b7280; margin-bottom:10px; }
   .grid { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; }
-  .box { border:1px solid #d1d5db; border-radius:4px; padding:6px; }
+  .box { border:1px solid #d1d5db; padding:6px; }
   table { border-collapse: collapse; width:100%; font-size:10px; }
   th, td { border:1px solid #d1d5db; padding:3px 6px; text-align:left; vertical-align:top; }
   thead th { background:#f3f4f6; }
