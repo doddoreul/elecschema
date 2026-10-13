@@ -26,7 +26,7 @@
   <nav class="tabs" role="tablist">
     <button class="tab active" role="tab" data-tab="info" aria-selected="true">Informations sur l'installation</button>
     <button class="tab" role="tab" data-tab="schema" aria-selected="false">Schéma unifilaire</button>
-    <button class="tab disabled" role="tab" data-tab="plan" aria-selected="false" disabled title="Prévu dans une version ultérieure">Schéma d'implantation</button>
+    <button class="tab" role="tab" data-tab="plan" aria-selected="false">Schéma d'implantation</button>
     <button class="tab" role="tab" data-tab="bom" aria-selected="false">Liste des composants</button>
   </nav>
 
@@ -223,13 +223,56 @@
       </div>
     </section>
 
-    <!-- ONGLET 3 : IMPLANTATION (plus tard) -->
+    <!-- ONGLET 3 : SCHÉMA D'IMPLANTATION -->
     <section class="pane" data-pane="plan">
-      <div class="placeholder">
-        <h2>Schéma d'implantation</h2>
-        <p>Fonction prévue dans une version ultérieure. Contient le plan de position des appareillages dans l'habitation.</p>
+      <div class="plan-workspace">
+        <div class="plan-bar">
+          <div id="plan-levels" class="plan-levels" role="tablist"></div>
+          <button id="plan-level-add" title="Ajouter un étage">+ Étage</button>
+          <button id="plan-level-rename" title="Renommer l'étage actif">Renommer…</button>
+          <button id="plan-level-up" title="Monter l'étage">◀</button>
+          <button id="plan-level-down" title="Descendre l'étage">▶</button>
+          <button id="plan-level-del" title="Supprimer l'étage (les éléments du schéma sont conservés)">Supprimer l'étage</button>
+          <span class="spacer"></span>
+          <label class="plan-scale-label">Échelle d'impression
+            <select id="plan-scale"></select>
+          </label>
+          <span id="plan-scale-eff" class="count"></span>
+        </div>
+        <div class="plan-body">
+          <div id="plan-host" class="canvas-host plan-host">
+            <svg id="plan-canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+          </div>
+          <aside class="plan-side">
+            <h3>Fond de plan</h3>
+            <p class="count">Image temporaire : tracez par-dessus, puis supprimez-la.</p>
+            <button id="plan-bg-import">Importer un fond…</button>
+            <div id="plan-bg-panel" class="plan-bg-panel" hidden>
+              <p id="plan-bg-state" class="count"></p>
+              <button id="plan-bg-calib">Calibrer…</button>
+              <label class="plan-field">Opacité <input id="plan-bg-opacity" type="range" min="0" max="100" value="50"></label>
+              <label class="plan-field"><input id="plan-bg-visible" type="checkbox" checked> Afficher</label>
+              <label class="plan-field"><input id="plan-bg-lock" type="checkbox" checked> Verrouillé</label>
+              <button id="plan-bg-del">Supprimer le fond</button>
+            </div>
+            <p id="plan-hint" class="count"></p>
+          </aside>
+        </div>
       </div>
     </section>
+
+    <dialog id="plan-dialog" class="prop-dialog">
+      <form method="dialog" id="plan-dialog-form">
+        <h3 id="plan-dialog-title"></h3>
+        <label class="plan-field"><span id="plan-dialog-label"></span>
+          <input id="plan-dialog-input" type="text" autocomplete="off">
+        </label>
+        <menu class="prop-actions">
+          <button type="submit" value="cancel" formnovalidate>Annuler</button>
+          <button type="submit" value="ok" class="primary">OK</button>
+        </menu>
+      </form>
+    </dialog>
 
   <!-- ONGLET 4 : LISTE DES COMPOSANTS -->
     <section class="pane" data-pane="bom">

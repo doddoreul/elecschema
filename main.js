@@ -177,7 +177,7 @@ ipcMain.handle('autosave:read', async () => {
 });
 
 ipcMain.handle('autosave:write', async (event, text) => {
-  if (typeof text !== 'string' || text.length > 10_000_000) throw new Error('Autosave refusé.');
+  if (typeof text !== 'string' || text.length > 100_000_000) throw new Error('Autosave refusé.');
   await ensureDir(path.dirname(autosavePath()));
   await writeFileAtomic(autosavePath(), text);
   return true;

@@ -2,7 +2,9 @@
 // Toute mutation du projet passe par markDirty() + refreshAll() pour rester synchronisé.
 
 import { emptyProject, createElement, syncIdCounter, nodeById, treeOrder, nextId, PREFIXES, migrateProject, normalizeTypes, isCircuitStart, renumberCircuits } from './model.js';
-import { encodeElx, decodeElx, checkCompatibility, FILE_EXT, APP_VERSION } from './format.js';
+import { encodeElx, decodeElx, checkCompatibility, FILE_EXT, APP_VERSION, referencedAssets } from './format.js';
+import { initPlan, refreshPlan, resetPlanView } from './plan-ui.js';
+import { assetsObject, assetsReplace, saveAssetsIdb, loadAssetsIdb } from './plan-assets.js';
 import { renderSchema, sheetSize, deviceDetail, PAGE, layoutForced, drawCartouche } from './render.js';
 import { SYMBOLS, SYMBOL_CATEGORIES, symbolName, symbolUrl, SOCKET_TYPES, SWITCH_TYPES, DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
 import { validate, RULES_BE, RULE_SEVERITY } from './rules-be.js';
@@ -113,11 +115,19 @@ function persistSnapshot() {
   } catch (err) {
     console.warn('Autosave local impossible :', err);
   }
-  // Miroir disque (bureau) : debounce 400 ms, jamais bloquant ; ignoré en navigateur.
+  // Miroir disque (bureau) : debounce 400 ms, jamais bloquant. Les images de fond
+  // (seulement celles référencées) vont dans ce miroir ; en navigateur, dans IndexedDB.
+  clearTimeout(autosaveFileTimer);
   if (typeof window.elexio?.autosaveWrite === 'function') {
-    clearTimeout(autosaveFileTimer);
     autosaveFileTimer = setTimeout(() => {
-      window.elexio.autosaveWrite(rec).catch((err) => console.warn('Autosave disque impossible :', err));
+      const disk = JSON.stringify({ project, file: currentFile, assets: referencedAssets(project, assetsObject()) });
+      window.elexio.autosaveWrite(disk).catch((err) => console.warn('Autosave disque impossible :', err));
+    }, 400);
+  } else {
+    autosaveFileTimer = setTimeout(() => {
+      saveAssetsIdb(referencedAssets(project, assetsObject())).then((ok) => {
+        if (!ok) status('Fonds de plan non sauvegardés (stockage navigateur indisponible).');
+      });
     }, 400);
   }
 }
@@ -144,7 +154,7 @@ async function getDiskAutosave() {
     if (!rawFile) return null;
     const rec = JSON.parse(rawFile);
     if (rec && rec.project && rec.project.supply && Array.isArray(rec.project.elements)) {
-      return { project: rec.project, file: rec.file || null };
+      return { project: rec.project, file: rec.file || null, assets: rec.assets || {} };
     }
   } catch (err) {
     console.warn('Autosave disque illisible, ignoré :', err);
@@ -206,8 +216,9 @@ async function showWelcome() {
       const name = pending.file ? pending.file.split(/[\\/]/).pop() : 'sans titre';
       resumeBtn.textContent = `Reprendre « ${name} »`;
       resumeBtn.hidden = false;
-      resumeBtn.onclick = () => {
-        loadProject(pending.project, pending.file);
+      resumeBtn.onclick = async () => {
+        const assets = pending.assets ?? (await loadAssetsIdb()) ?? {};
+        loadProject(pending.project, pending.file, assets);
         status('Restauration du dernier état (sauvegarde locale/stockage).');
       };
     } else {
@@ -250,6 +261,7 @@ function switchTab(name) {
   });
   $$('.pane').forEach((p) => p.classList.toggle('active', p.dataset.pane === name));
   try { localStorage.setItem(TAB_KEY, name); } catch (err) { /* ignore */ }
+  refreshPlan();
 }
 
 $$('.tab').forEach((btn) => {
@@ -747,6 +759,7 @@ function refreshAll() {
   renderIssues();
   renderProps();
   refreshPaletteAccept();
+  refreshPlan();
   renderSchema($('#canvas'), project, {
     viewBox: `${view.x} ${view.y} ${view.w} ${view.h}`,
     selectedIds,
@@ -799,7 +812,7 @@ $('#btn-save').addEventListener('click', saveLocal);
 
 $('#btn-export').addEventListener('click', () => {
   project.info.projet.dateModification = new Date().toISOString().slice(0, 10);
-  const text = encodeElx(project);
+  const text = encodeElx(project, APP_VERSION, assetsObject());
   const blob = new Blob([text], { type: 'application/octet-stream' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -845,7 +858,8 @@ $('#recent-select').addEventListener('change', async (e) => {
   await openRecentPath(p);
 });
 
-function loadProject(data, filePath) {
+function loadProject(data, filePath, assets = {}) {
+  assetsReplace(assets);
   const base = emptyProject();
   project = {
     ...base,
@@ -868,6 +882,7 @@ function loadProject(data, filePath) {
   history.future.length = 0;
   updateHistoryButtons();
   clearDirty(filePath || null);
+  resetPlanView();
   refreshAll();
   switchTab('info');
   fitView();
@@ -894,7 +909,7 @@ function importProjectText(text, filePath) {
   }
   const compat = checkCompatibility(decoded.meta);
   if (compat.level === 'future' && !confirm(`${compat.message}\n\nOuvrir quand même ? (comportement non garanti)`)) return false;
-  loadProject(data, filePath);
+  loadProject(data, filePath, decoded.assets);
   if (compat.level === 'migrate' || compat.level === 'unknown') status(compat.message);
   return true;
 }
@@ -1812,6 +1827,8 @@ document.addEventListener('DOMContentLoaded', () => {
   updateHistoryButtons();
   switchTab(['info', 'schema', 'bom'].includes(savedTab) ? savedTab : 'info');
   status('Prêt. Sélectionnez un projet pour commencer.');
+
+  initPlan({ getProject: () => project, markDirty, status, activeTab: () => activeTab });
 
   // Affiche l'écran d'accueil (reprendre, nouveau, ouvrir, récents)
   showWelcome();

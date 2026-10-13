@@ -45,6 +45,7 @@ function normBg(bg) {
     opacity: isNum(bg.opacity) ? Math.min(1, Math.max(0, bg.opacity)) : 0.5,
     visible: bg.visible !== false,
     locked: bg.locked !== false,
+    calibrated: bg.calibrated === true,
   };
 }
 
