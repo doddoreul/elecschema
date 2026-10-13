@@ -364,12 +364,13 @@ function renderOpeningPanel(lv) {
   const o = ui.selOpening != null ? lv.openings.find((x) => x.id === ui.selOpening) : null;
   $('#plan-opening-panel').hidden = !o;
   $('#plan-opening-w-wrap').hidden = !o;
+  // Les miroirs ne concernent que les portes : masqués hors sélection et pour une fenêtre.
+  $('#plan-door-panel').hidden = !o || o.kind !== 'door';
   if (!o) return;
   const nom = o.kind === 'door' ? 'Porte' : 'Fenêtre';
   const w = lv.walls.find((x) => x.id === o.wall);
   $('#plan-opening-info').textContent = `${nom} sur ${w ? 'mur ' + w.id : 'mur supprimé'}`;
   $('#plan-opening-w').value = String(o.w);
-  $('#plan-door-panel').hidden = o.kind !== 'door';
 }
 
 function renderRoomPanel(lv) {
