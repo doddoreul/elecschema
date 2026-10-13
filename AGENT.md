@@ -261,10 +261,12 @@ curseur **opacite des elements** (groupe `.plan-elements` en SVG ; vue seule, no
 enregistree). Le fond a son propre curseur « opacite de l'arriere-plan » (`bg.opacity`,
 enregistre dans le projet).
 
-Panneau de droite « Ouverture selectionnee » : info + reglages de porte (charniere /
-cote) + suppression. Le champ **Largeur (cm)** est dans la **barre d'outils du haut**
-(`#plan-opening-w-wrap`, affiche seulement quand une ouverture est selectionnee), pour
-un reglage rapide.
+Panneau de droite « Ouverture selectionnee » : info + suppression. Le champ
+**Largeur (cm)** et les deux boutons **Miroir horizontal / Miroir vertical** sont dans la
+**barre d'outils du haut** (`#plan-opening-w-wrap` et `#plan-door-panel`, affiches selon la
+selection : largeur pour toute ouverture, miroirs pour une porte), pour un reglage rapide.
+Les miroirs agissent dans le repere local du mur : horizontal = le long du mur (champ
+`hinge`), vertical = de l'autre cote du mur (champ `open`).
 
 Fond de plan (`plan-assets.js`) : image **hors du projet** (le projet ne garde que la cle
 `bg.asset`). Reduite (<= 2400 px, JPEG 0,85), refus > 20 Mo. Calibrable (2 points + distance

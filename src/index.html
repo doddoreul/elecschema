@@ -247,6 +247,10 @@
           <label id="plan-opening-w-wrap" class="plan-bar-field" hidden>Largeur (cm)
             <input id="plan-opening-w" type="number" min="1" step="1" value="90">
           </label>
+          <div id="plan-door-panel" class="plan-bar-group" hidden>
+            <button id="plan-opening-hinge" title="Miroir horizontal : bascule la porte le long du mur (inverse la charnière)">Miroir horizontal</button>
+            <button id="plan-opening-swing" title="Miroir vertical : bascule la porte de l'autre côté du mur">Miroir vertical</button>
+          </div>
           <span class="spacer"></span>
           <label class="plan-scale-label">Échelle d'impression
             <select id="plan-scale"></select>
@@ -276,10 +280,6 @@
             <div id="plan-opening-panel" class="plan-bg-panel" hidden>
               <h3>Ouverture sélectionnée</h3>
               <p id="plan-opening-info" class="count"></p>
-              <div id="plan-door-panel" class="plan-checks" hidden>
-                <button id="plan-opening-hinge">Inverser la charnière</button>
-                <button id="plan-opening-swing">Changer le côté d’ouverture</button>
-              </div>
               <button id="plan-opening-del">Supprimer l’ouverture</button>
             </div>
             <div id="plan-room-panel" class="plan-bg-panel" hidden>

@@ -131,7 +131,7 @@ export function initPlan(d) {
   });
   $('#plan-opening-del').addEventListener('click', deleteSelectedOpening);
 
-  // Porte : inverser la charnière (bord gauche/droit) et le côté d'ouverture (côté du mur).
+  // Porte : miroir horizontal (le long du mur) et vertical (de l'autre côté du mur).
   $('#plan-opening-hinge').addEventListener('click', () => {
     const o = currentLevel().openings.find((x) => x.id === ui.selOpening);
     if (!o || o.kind !== 'door') return;
