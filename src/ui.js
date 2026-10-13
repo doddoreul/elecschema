@@ -1333,6 +1333,12 @@ function fitView() {
   setView({ x: 0, y: 0, w: s.w, h: s.h });
 }
 
+/** Recentre le schéma dans la fenêtre en conservant le zoom courant. */
+function centerView() {
+  const s = baseSize();
+  setView({ x: (s.w - view.w) / 2, y: (s.h - view.h) / 2, w: view.w, h: view.h });
+}
+
 function zoomAt(f, p = { x: view.x + view.w / 2, y: view.y + view.h / 2 }) {
   const w = Math.min(baseSize().w * 4, Math.max(120, view.w * f));
   const k = w / view.w;
@@ -1488,6 +1494,7 @@ svgEl.addEventListener('wheel', (e) => {
 $('#btn-zoom-in').addEventListener('click', () => zoomAt(0.8));
 $('#btn-zoom-out').addEventListener('click', () => zoomAt(1.25));
 $('#btn-zoom-reset').addEventListener('click', fitView);
+$('#btn-recenter').addEventListener('click', centerView);
 
 /* --------------------------------------------- aperçu avant impression */
 

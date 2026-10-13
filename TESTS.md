@@ -39,6 +39,7 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T3.7 | Sélectionner un élément, `Suppr` | Élément supprimé (le compteur est protégé) |
 | T3.8 | `Ctrl+Z` / `Ctrl+Y` | Annuler / rétablir |
 | T3.9 | `Maj + clic` sur plusieurs éléments | Sélection multiple |
+| T3.10 | « Recentrer » (barre de zoom) | Le schéma se recentre dans la fenêtre **sans changer le zoom** |
 
 ## T4 — Propriétés
 
@@ -129,3 +130,5 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T10.21 | Sélectionner une porte : « Inverser la charnière » | L'arc d'ouverture est centré sur l'autre bord de l'ouverture (battant de l'autre côté) |
 | T10.22 | Sélectionner une porte : « Changer le côté d'ouverture » | Le battant et l'arc basculent de l'autre côté du mur |
 | T10.23 | Sélectionner une fenêtre | Pas de réglages de porte (charnière / côté) : le bloc « Porte » reste masqué |
+| T10.24 | Sélectionner une ouverture | Le champ **« Largeur (cm) »** apparaît dans la barre d'outils du haut (il n'est plus dans le panneau de droite) ; le modifier change la largeur |
+| T10.25 | Bouton « Recentrer » (barre d'outils) | Le dessin se recentre dans la fenêtre **sans changer le zoom** |

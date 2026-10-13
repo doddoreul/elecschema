@@ -255,10 +255,16 @@ deplacement (grille 5 cm), rotation (champ + `R`), retrait (`Suppr`/bouton ; ele
 conserve) ; selection partagee (clic symbole plan -> `selectElement` schema). Etages :
 ajout / renommage (double-clic) / monter / descendre / suppression.
 Vue : bouton **Afficher / masquer le dessin** (ne garde que l'arriere-plan ; murs,
-ouvertures, pieces, symboles et grille disparaissent ; etat visible via `aria-pressed`) et
+ouvertures, pieces, symboles et grille disparaissent ; etat visible via `aria-pressed`),
+bouton **Recentrer** (`centerLevel()`, centrage sans changer le zoom) et
 curseur **opacite des elements** (groupe `.plan-elements` en SVG ; vue seule, non
 enregistree). Le fond a son propre curseur « opacite de l'arriere-plan » (`bg.opacity`,
 enregistre dans le projet).
+
+Panneau de droite « Ouverture selectionnee » : info + reglages de porte (charniere /
+cote) + suppression. Le champ **Largeur (cm)** est dans la **barre d'outils du haut**
+(`#plan-opening-w-wrap`, affiche seulement quand une ouverture est selectionnee), pour
+un reglage rapide.
 
 Fond de plan (`plan-assets.js`) : image **hors du projet** (le projet ne garde que la cle
 `bg.asset`). Reduite (<= 2400 px, JPEG 0,85), refus > 20 Mo. Calibrable (2 points + distance
@@ -308,7 +314,8 @@ Arbre d'ancrage sur une **grille** (1 element / cellule, sans recouvrement) :
   - **Prises** : aucun repère auto (`NO_AUTO_LABEL = ['node','socket']`) et aucun détail affiché (`deviceDetail` renvoie `''`) → le schéma reste muet ; un libellé n'apparaît que si l'utilisateur saisit le champ repère. `normalizeTypes` vide les anciens repères auto `^X\d+$`. Le BOM affiche « — » en détail.
   - Détail (`deviceDetail`) : breaker = `poles - courbe+calibre` (ex. « 2P - C16A »), rcd = **3 lignes** « ΔxmA », « 2P - 40A », « Type AC » (`.lbl-sm` en `white-space: pre-line`, tourne avec le bloc).
 - Canvas : svg plein cadre (CSS), zoom/pan = viewBox seulement (pas de re-rendu).
-  Molette = zoom curseur, bouton milieu ou clic fond = pan, Ajuster = fitView().
+  Molette = zoom curseur, bouton milieu ou clic fond = pan, Ajuster = fitView(),
+  Recentrer = `centerView()` (centrage sans changer le zoom).
 - `fitView()` apres chargement / nouveau projet.
 
 ## Regles
