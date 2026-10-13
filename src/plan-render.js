@@ -147,6 +147,6 @@ function drawRooms(parent, level, n, selRoom) {
       class: 'plan-room' + (r.id === selRoom ? ' selected' : ''),
       'data-room': r.id,
     }, parent);
-    t.textContent = r.name || 'Pièce';
+    t.textContent = r.name || 'Texte';
   }
 }

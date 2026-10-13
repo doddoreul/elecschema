@@ -323,7 +323,8 @@ tbody tr:hover { background: #f9fafb; }
 /* ---------- Sch�ma d'implantation ---------- */
 [data-pane="plan"].active { display: flex; flex-direction: column; overflow: hidden; }
 .plan-workspace { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.plan-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fff; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.plan-bar { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px; background: #fff; border-bottom: 1px solid var(--line); }
+.plan-bar-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .plan-levels { display: flex; gap: 2px; }
 .plan-level { border-radius: 6px 6px 0 0; background: none; color: var(--muted); font-weight: 500; }
 .plan-level.active { background: var(--accent); border-color: #1d4ed8; color: #fff; }
@@ -339,6 +340,8 @@ tbody tr:hover { background: #f9fafb; }
 .plan-host.hand { cursor: grab; }
 #plan-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .plan-side { width: 250px; flex: none; padding: 12px; background: #fff; border-left: 1px solid var(--line); overflow: auto; }
+.plan-palette { width: 230px; flex: none; padding: 12px; background: #fff; border-right: 1px solid var(--line); overflow: auto; }
+.plan-palette h3 { margin: 0 0 6px; font-size: 13px; }
 .plan-side h3 { margin: 0 0 6px; font-size: 13px; }
 .plan-side button { display: block; width: 100%; margin: 6px 0; }
 .plan-bg-panel { margin-top: 6px; }

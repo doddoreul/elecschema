@@ -18,6 +18,7 @@ const DEFAULT_VIEW = { x: -200, y: -200, w: 1600, h: 1000 };
 const MIN_VIEW_CM = 50, MAX_VIEW_CM = 200000;
 const MIN_WALL_CM = 1;
 const BG_ZOOM_STEP = 1.05;   // pas d'agrandissement du fond par clic (+/- 5 %)
+const PLAN_ZOOM_STEP = 1.25; // pas de zoom de la vue par clic sur − / +
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 let deps = null;
@@ -98,6 +99,8 @@ export function initPlan(d) {
   $('#plan-tool-room').addEventListener('click', () => setTool(ui.tool === 'room' ? 'select' : 'room'));
   $('#plan-toggle-elements').addEventListener('click', toggleElements);
   $('#plan-recenter').addEventListener('click', () => { fitLevel(currentLevel()); refreshPlan(); });
+  $('#plan-zoom-in').addEventListener('click', () => zoomCenter(1 / PLAN_ZOOM_STEP));
+  $('#plan-zoom-out').addEventListener('click', () => zoomCenter(PLAN_ZOOM_STEP));
 
   $('#plan-bg-import').addEventListener('click', importBg);
   $('#plan-bg-calib').addEventListener('click', () => setTool(ui.tool === 'calib' ? 'select' : 'calib'));
@@ -428,7 +431,7 @@ function hintText(lv) {
   if (ui.tool === 'door' || ui.tool === 'window') {
     return ui.tool === 'door' ? 'Porte : cliquez près d’un mur pour la poser.' : 'Fenêtre : cliquez près d’un mur pour la poser.';
   }
-  if (ui.tool === 'room') return 'Pièce : cliquez pour poser un libellé, puis saisissez son nom.';
+  if (ui.tool === 'room') return 'Texte : cliquez pour poser un texte, puis saisissez-le.';
   if (ui.placeArmed != null) return 'Cliquez sur le plan pour poser. Échap pour annuler.';
   if (lv.bg && !lv.bg.locked) return 'Fond déverrouillé : glissez-le ou changez sa taille. Les autres éléments restent modifiables.';
   return 'Clic sur un mur ou un symbole : sélection. R : rotation. Suppr : retirer. Molette : zoom · Espace ou bouton milieu : déplacer la vue.';
@@ -470,6 +473,12 @@ function zoomAt(e, k) {
   ui.view = { x: anchor.x - nw * fx, y: anchor.y - nh * fy, w: nw, h: nh };
   applyView();
   drawOverlay();
+}
+
+/** Zoom de la vue autour du centre de la zone de travail (boutons − / +). */
+function zoomCenter(k) {
+  const r = $('#plan-host').getBoundingClientRect();
+  zoomAt({ clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }, k);
 }
 
 /** Coordonnées monde (cm) d'un événement souris. */

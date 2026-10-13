@@ -228,39 +228,49 @@
     <section class="pane" data-pane="plan">
       <div class="plan-workspace">
         <div class="plan-bar">
-          <div id="plan-levels" class="plan-levels" role="tablist"></div>
-          <button id="plan-level-add" title="Ajouter un étage">+ Étage</button>
-          <button id="plan-level-rename" title="Renommer l'étage actif">Renommer…</button>
-          <button id="plan-level-up" title="Monter l'étage">◀</button>
-          <button id="plan-level-down" title="Descendre l'étage">▶</button>
-          <button id="plan-level-del" title="Supprimer l'étage (les éléments du schéma sont conservés)">Supprimer l'étage</button>
-          <span class="plan-sep"></span>
-          <button id="plan-tool-select" title="Sélectionner et déplacer">Sélection</button>
-          <button id="plan-tool-wall" title="Tracer des murs">Mur</button>
-          <button id="plan-tool-door" title="Poser une porte sur un mur">Porte</button>
-          <button id="plan-tool-window" title="Poser une fenêtre sur un mur">Fenêtre</button>
-          <button id="plan-tool-room" title="Poser un libellé de pièce">Pièce</button>
-          <span class="plan-sep"></span>
-          <button id="plan-toggle-elements" title="Tout masquer pour ne garder que l'arrière-plan, ou tout réafficher">Afficher / masquer le dessin</button>
-          <button id="plan-recenter" title="Réajuster le dessin à la fenêtre (ajuste le zoom et recentre)">Recentrer</button>
-          <label class="plan-bar-field">Opacité des éléments
-            <input id="plan-elements-opacity" type="range" min="0" max="100" value="100">
-          </label>
-          <span class="plan-sep"></span>
-          <label id="plan-opening-w-wrap" class="plan-bar-field" hidden>Largeur (cm)
-            <input id="plan-opening-w" type="number" min="1" step="1" value="90">
-          </label>
-          <div id="plan-door-panel" class="plan-bar-group" hidden>
-            <button id="plan-opening-hinge" title="Miroir horizontal : bascule la porte le long du mur (inverse la charnière)">Miroir horizontal</button>
-            <button id="plan-opening-swing" title="Miroir vertical : bascule la porte de l'autre côté du mur">Miroir vertical</button>
+          <div class="plan-bar-row">
+            <div id="plan-levels" class="plan-levels" role="tablist"></div>
+            <button id="plan-level-add" title="Ajouter un étage">+ Étage</button>
+            <button id="plan-level-rename" title="Renommer l'étage actif">Renommer…</button>
+            <button id="plan-level-up" title="Monter l'étage">◀</button>
+            <button id="plan-level-down" title="Descendre l'étage">▶</button>
+            <button id="plan-level-del" title="Supprimer l'étage (les éléments du schéma sont conservés)">Supprimer l'étage</button>
+            <span class="spacer"></span>
+            <label class="plan-scale-label">Échelle d'impression
+              <select id="plan-scale"></select>
+            </label>
+            <span id="plan-scale-eff" class="count"></span>
           </div>
-          <span class="spacer"></span>
-          <label class="plan-scale-label">Échelle d'impression
-            <select id="plan-scale"></select>
-          </label>
-          <span id="plan-scale-eff" class="count"></span>
+          <div class="plan-bar-row">
+            <button id="plan-tool-select" title="Sélectionner et déplacer">Sélection</button>
+            <button id="plan-tool-wall" title="Tracer des murs">Mur</button>
+            <button id="plan-tool-door" title="Poser une porte sur un mur">Porte</button>
+            <button id="plan-tool-window" title="Poser une fenêtre sur un mur">Fenêtre</button>
+            <button id="plan-tool-room" title="Poser un texte sur le plan">Texte</button>
+            <label id="plan-opening-w-wrap" class="plan-bar-field" hidden>Largeur (cm)
+              <input id="plan-opening-w" type="number" min="1" step="1" value="90">
+            </label>
+            <div id="plan-door-panel" class="plan-bar-group" hidden>
+              <button id="plan-opening-hinge" title="Miroir horizontal : bascule la porte le long du mur (inverse la charnière)">Miroir horizontal</button>
+              <button id="plan-opening-swing" title="Miroir vertical : bascule la porte de l'autre côté du mur">Miroir vertical</button>
+            </div>
+          </div>
+          <div class="plan-bar-row">
+            <button id="plan-toggle-elements" title="Tout masquer pour ne garder que l'arrière-plan, ou tout réafficher">Afficher / masquer le dessin</button>
+            <button id="plan-recenter" title="Réajuster le dessin à la fenêtre (ajuste le zoom et recentre)">Recentrer</button>
+            <button id="plan-zoom-out" title="Dézoomer">−</button>
+            <button id="plan-zoom-in" title="Zoomer">+</button>
+            <label class="plan-bar-field">Opacité des éléments
+              <input id="plan-elements-opacity" type="range" min="0" max="100" value="100">
+            </label>
+          </div>
         </div>
         <div class="plan-body">
+          <aside class="plan-palette">
+            <h3>Non placés</h3>
+            <p class="count">Éléments du schéma à poser (glisser-déposer ou cliquer puis cliquer le plan).</p>
+            <div id="plan-unplaced"></div>
+          </aside>
           <div id="plan-host" class="canvas-host plan-host">
             <svg id="plan-canvas" xmlns="http://www.w3.org/2000/svg"></svg>
           </div>
@@ -289,9 +299,9 @@
               <button id="plan-opening-del">Supprimer l’ouverture</button>
             </div>
             <div id="plan-room-panel" class="plan-bg-panel" hidden>
-              <h3>Pièce sélectionnée</h3>
-              <label class="plan-field">Nom <input id="plan-room-name" type="text" placeholder="Salon, Cuisine…"></label>
-              <button id="plan-room-del">Supprimer le libellé</button>
+              <h3>Texte sélectionné</h3>
+              <label class="plan-field">Texte <input id="plan-room-name" type="text" placeholder="Note, repère…"></label>
+              <button id="plan-room-del">Supprimer le texte</button>
             </div>
             <div id="plan-wall-panel" class="plan-bg-panel" hidden>
               <h3>Mur sélectionné</h3>
@@ -299,9 +309,6 @@
               <label class="plan-field">Épaisseur (cm) <input id="plan-wall-t" type="number" min="1" step="1" value="20"></label>
               <button id="plan-wall-del">Supprimer le mur</button>
             </div>
-            <h3>Non placés</h3>
-            <p class="count">Éléments du schéma à poser (glisser-déposer ou cliquer puis cliquer le plan).</p>
-            <div id="plan-unplaced"></div>
             <div id="plan-place-panel" class="plan-bg-panel" hidden>
               <h3>Symbole sélectionné</h3>
               <p id="plan-place-info" class="count"></p>
