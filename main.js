@@ -110,6 +110,9 @@ ipcMain.handle('project:open', async (event) => {
     // contrôle de version sont faits dans le rendu (src/format.js), seul endroit
     // où le décodeur est disponible (ESM partagé navigateur/bureau).
     const text = await fs.readFile(filePath, 'utf8');
+    // Ajoute le projet aux récents : sans cela, la liste restait vide sous Electron
+    // (l'ouverture par dialogue ne passait pas par project:openPath).
+    try { await pushRecent(filePath); } catch { /* les récents sont un confort, pas un blocage */ }
     return { filePath, text };
   } catch (err) {
     dialog.showErrorBox('Ouverture impossible', `Le fichier n’a pas pu être lu.\n\n${filePath}\n\n${err.message}`);
@@ -132,6 +135,8 @@ ipcMain.handle('project:openPath', async (event, filePath) => {
 });
 
 /* ------------------------------------------------------------------ IPC : PDF */
+// Remarque : « Exporter en PDF » n'ajoute rien aux projets récents (ceux-ci ne
+// listent que des projets .elx/.json ; un PDF exporté n'est pas un projet).
 
 ipcMain.handle('pdf:export', async (event, html, defaultName) => {
   const dir = await ensureProjectsDir();
