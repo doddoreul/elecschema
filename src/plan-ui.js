@@ -6,6 +6,7 @@ import {
   effectiveScale, fitScale, fitBounds, frameOverflow, nextPlanId, addWall, removeWall, wallLength, cmToPaperMm,
   snap, orthoTarget, placeElement, unplaceElement, findPlacement, unplacedElements,
   symbolSideCm, addOpening, addRoom, removeOpening, removeRoom, nearestWall,
+  planFrame, PLAN_DEFAULT_SCALE, PLAN_MIN_SCALE, PLAN_MAX_SCALE,
 } from './plan-model.js';
 import { PLAN_SCALES } from './standards.js';
 import { symbolName, symbolOf } from './symbols.js';
@@ -19,6 +20,7 @@ const MIN_VIEW_CM = 50, MAX_VIEW_CM = 200000;
 const MIN_WALL_CM = 1;
 const BG_ZOOM_STEP = 1.05;   // pas d'agrandissement du fond par clic (+/- 5 %)
 const PLAN_ZOOM_STEP = 1.25; // pas de zoom de la vue par clic sur − / +
+const FRAME_KEY = 'elexio.planFrame';   // préférence « afficher le cadre A4 » (mémorisée)
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 let deps = null;
@@ -39,6 +41,7 @@ const ui = {
   hideElements: false,  // masquer tous les éléments (ne garder que l'arrière-plan)
   elementOpacity: 1,    // opacité des éléments du plan (murs, ouvertures, pièces, symboles)
   n: 100,               // échelle effective courante (pour la taille des symboles)
+  showFrame: true,      // afficher le cadre A4 (feuille, zones, cartouche) à l'écran
 };
 
 function plan() { return deps.getProject().plan; }
@@ -96,15 +99,26 @@ export function initPlan(d) {
   $('#plan-level-down').addEventListener('click', () => moveFlow(1));
   $('#plan-level-del').addEventListener('click', removeFlow);
 
-  const scale = $('#plan-scale');
-  scale.innerHTML = PLAN_SCALES.map((n) => `<option value="${n}">1:${n}</option>`).join('') +
-    '<option value="custom" hidden>(non normalisée)</option>';
-  scale.addEventListener('change', () => {
-    const lv = currentLevel();
-    if (scale.value === 'custom') return;
-    lv.printScale = Number(scale.value);
-    deps.markDirty(); refreshPlan();
+  const scaleInput = $('#plan-scale-input');
+  const dl = $('#plan-scale-list');
+  if (dl) dl.innerHTML = PLAN_SCALES.map((n) => `<option value="${n}"></option>`).join('');
+  scaleInput.addEventListener('change', () => setScale(Number(scaleInput.value)));
+  $('#plan-scale-dec').addEventListener('click', () => stepScale(false));
+  $('#plan-scale-inc').addEventListener('click', () => stepScale(true));
+  scaleInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); setScale(Number(scaleInput.value)); }
   });
+
+  const frameShow = $('#plan-frame-show');
+  frameShow.checked = loadShowFrame();
+  ui.showFrame = frameShow.checked;
+  frameShow.addEventListener('change', (e) => {
+    ui.showFrame = e.target.checked;
+    try { localStorage.setItem(FRAME_KEY, ui.showFrame ? '1' : '0'); } catch (err) { /* ignore */ }
+    refreshPlan();
+  });
+  $('#plan-frame-center').addEventListener('click', () => { centerViewOnFrame(currentLevel()); refreshPlan(); });
+  $('#plan-fit-drawing').addEventListener('click', fitDrawing);
 
   $('#plan-tool-select').addEventListener('click', () => setTool('select'));
   $('#plan-tool-wall').addEventListener('click', () => setTool(ui.tool === 'wall' ? 'select' : 'wall'));
@@ -112,7 +126,7 @@ export function initPlan(d) {
   $('#plan-tool-window').addEventListener('click', () => setTool(ui.tool === 'window' ? 'select' : 'window'));
   $('#plan-tool-room').addEventListener('click', () => setTool(ui.tool === 'room' ? 'select' : 'room'));
   $('#plan-toggle-elements').addEventListener('click', toggleElements);
-  $('#plan-recenter').addEventListener('click', () => { fitLevel(currentLevel()); refreshPlan(); });
+  $('#plan-recenter').addEventListener('click', () => { fitViewToSheet(currentLevel()); refreshPlan(); });
   $('#plan-zoom-in').addEventListener('click', () => zoomCenter(1 / PLAN_ZOOM_STEP));
   $('#plan-zoom-out').addEventListener('click', () => zoomCenter(PLAN_ZOOM_STEP));
 
@@ -301,7 +315,7 @@ export function refreshPlan() {
   renderToolButtons();
   renderUnplaced(project());
   renderPlacePanel();
-  renderPlanLevel(svgEl(), lv, ui.view, { project: project(), n: ui.n, hideElements: ui.hideElements, elementOpacity: ui.elementOpacity, selWall: ui.selWall, selPlace: ui.selPlace, selOpening: ui.selOpening, selRoom: ui.selRoom });
+  renderPlanLevel(svgEl(), lv, ui.view, { project: project(), n: ui.n, frame: ui.showFrame ? planFrame(lv) : undefined, hideElements: ui.hideElements, elementOpacity: ui.elementOpacity, selWall: ui.selWall, selPlace: ui.selPlace, selOpening: ui.selOpening, selRoom: ui.selRoom });
   drawOverlay();
   svgEl().classList.toggle('place-armed', ui.placeArmed != null);
   $('#plan-hint').textContent = hintText(lv);
@@ -313,8 +327,9 @@ function drawOverlay() {
   const g = svgEl().querySelector('#plan-overlay');
   if (!g) return;
   g.replaceChildren();
-  if (ui.hideElements) return;   // vue « arrière-plan seul » : aucun calque d'aperçu
   const lv = currentLevel();
+  drawFrame(g, lv);              // cadre A4 : toujours visible, même « dessin masqué »
+  if (ui.hideElements) return;   // vue « arrière-plan seul » : aucun calque d'aperçu
   if (ui.tool === 'wall' && ui.draft && ui.cursor) {
     const t = ui.altKey ? ui.cursor : orthoTarget(ui.draft.x, ui.draft.y, ui.cursor.x, ui.cursor.y);
     el('line', { x1: ui.draft.x, y1: ui.draft.y, x2: t.x, y2: t.y, class: 'plan-wall-preview' }, g);
@@ -373,14 +388,79 @@ function toggleElements() {
 
 function renderScale(lv) {
   const eff = effectiveScale(lv);
-  const sel = $('#plan-scale');
-  if (sel) {
-    sel.value = PLAN_SCALES.includes(eff) ? String(eff) : 'custom';
-    const custom = sel.querySelector('option[value="custom"]');
-    if (custom) custom.textContent = `1:${eff} (non normalisée)`;
-  }
+  const input = $('#plan-scale-input');
+  if (input && document.activeElement !== input) input.value = String(eff);
   const overflow = frameOverflow(fitBounds(lv), undefined, eff);
-  $('#plan-scale-eff').textContent = `Échelle 1:${eff}` + (overflow ? ' — dessin trop grand pour une page' : '');
+  $('#plan-scale-eff').textContent = `1:${eff}` + (overflow ? ' — dessin trop grand pour une page' : '');
+}
+
+/** Applique une échelle 1:N saisie (bornée), garde le centre et recale la vue sur la feuille. */
+function setScale(raw) {
+  const lv = currentLevel();
+  const v = Math.round(Number(raw));
+  const n = Number.isFinite(v) ? Math.min(PLAN_MAX_SCALE, Math.max(PLAN_MIN_SCALE, v)) : effectiveScale(lv);
+  if (n !== effectiveScale(lv)) { lv.printScale = n; deps.markDirty(); }
+  fitViewToSheet(lv);
+  refreshPlan();
+}
+
+/** Change d'échelle par pas de la gamme normalisée. `largerN` : 1:N plus grand (dessin plus petit). */
+function stepScale(largerN) {
+  const lv = currentLevel();
+  const s = effectiveScale(lv);
+  const idx = PLAN_SCALES.indexOf(s);
+  let next = s;
+  if (idx >= 0) {
+    next = PLAN_SCALES[Math.min(PLAN_SCALES.length - 1, Math.max(0, idx + (largerN ? 1 : -1)))];
+  } else {
+    const list = largerN ? PLAN_SCALES.filter((x) => x > s) : PLAN_SCALES.filter((x) => x < s).reverse();
+    next = list.length ? list[0] : s;
+  }
+  if (next === s) return;
+  lv.printScale = next;
+  deps.markDirty();
+  fitViewToSheet(lv);
+  refreshPlan();
+}
+
+/** « Ajuster au dessin » : choisit l'échelle qui fait tenir le tracé dans la page et centre dessus. */
+function fitDrawing() {
+  const lv = currentLevel();
+  const b = fitBounds(lv);
+  lv.printScale = b ? fitScale(b).n : PLAN_DEFAULT_SCALE;
+  lv.printCenter = b ? { x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2 } : null;
+  deps.markDirty();
+  fitViewToSheet(lv);
+  refreshPlan();
+}
+
+/** Préférence mémorisée : afficher le cadre A4 (vrai par défaut). */
+function loadShowFrame() {
+  try { const v = localStorage.getItem(FRAME_KEY); return v === null ? true : v === '1'; } catch (err) { return true; }
+}
+
+/** Cadre A4 à l'écran : voile hors zone de tracé, bords des zones, cartouche, étiquette,
+ *  poignée de déplacement. Traits `non-scaling-stroke` (épaisseur constante au zoom). */
+function drawFrame(g, lv) {
+  if (!ui.showFrame) return;
+  const f = planFrame(lv);
+  const fs = ui.view.w / 55;                       // taille de police écran (~constante au zoom)
+  const noPointer = { 'pointer-events': 'none', 'vector-effect': 'non-scaling-stroke', fill: 'none' };
+  const v = ui.view;
+  const d = `M${v.x} ${v.y} H${v.x + v.w} V${v.y + v.h} H${v.x} Z `
+    + `M${f.plot.x} ${f.plot.y} H${f.plot.x + f.plot.w} V${f.plot.y + f.plot.h} H${f.plot.x} Z`;
+  el('path', { d, 'fill-rule': 'evenodd', class: 'plan-veil ui-only', 'pointer-events': 'none' }, g);
+  el('rect', { x: f.sheet.x, y: f.sheet.y, width: f.sheet.w, height: f.sheet.h, class: 'plan-frame-sheet ui-only', ...noPointer }, g);
+  el('rect', { x: f.printable.x, y: f.printable.y, width: f.printable.w, height: f.printable.h, class: 'plan-frame-printable ui-only', ...noPointer }, g);
+  el('rect', { x: f.plot.x, y: f.plot.y, width: f.plot.w, height: f.plot.h, class: 'plan-frame-plot ui-only', ...noPointer }, g);
+  el('rect', { x: f.cartouche.x, y: f.cartouche.y, width: f.cartouche.w, height: f.cartouche.h, class: 'plan-frame-cartouche ui-only', ...noPointer }, g);
+  el('line', { x1: f.cartouche.x, y1: f.cartouche.y + f.cartouche.h * 0.42, x2: f.cartouche.x + f.cartouche.w, y2: f.cartouche.y + f.cartouche.h * 0.42, class: 'plan-frame-cartouche ui-only', ...noPointer }, g);
+  el('text', { x: f.sheet.x, y: f.sheet.y - fs * 0.3, 'font-size': fs, class: 'plan-frame-label ui-only', 'pointer-events': 'none' }, g)
+    .textContent = `${lv.name} — 1:${f.n}`;
+  if (ui.tool === 'select') {
+    el('circle', { cx: f.center.x, cy: f.center.y, r: ui.view.w / 120, class: 'plan-frame-handle ui-only', 'pointer-events': 'none' }, g);
+    el('circle', { cx: f.center.x, cy: f.center.y, r: ui.view.w / 45, class: 'plan-frame-hit ui-only', 'data-frame-move': '1' }, g);
+  }
 }
 
 function renderBgPanel(lv) {
@@ -495,6 +575,24 @@ function hostAspect() {
   return h && h.clientWidth > 0 && h.clientHeight > 0 ? h.clientHeight / h.clientWidth : DEFAULT_VIEW.h / DEFAULT_VIEW.w;
 }
 
+/** Cadre la feuille A4 entière (zoom + centrage). */
+function fitViewToSheet(lv) {
+  const b = planFrame(lv).sheet;
+  const pad = Math.max(b.w, b.h) * 0.04;
+  const bw = b.w + 2 * pad, bh = b.h + 2 * pad;
+  const aspect = hostAspect();
+  const w = Math.max(bw, bh / aspect), h = w * aspect;
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+  ui.view = { x: cx - w / 2, y: cy - h / 2, w, h };
+}
+
+/** Centre la vue sur le cadre sans changer le zoom. */
+function centerViewOnFrame(lv) {
+  const b = planFrame(lv).sheet;
+  ui.view.x = b.x + b.w / 2 - ui.view.w / 2;
+  ui.view.y = b.y + b.h / 2 - ui.view.h / 2;
+}
+
 /** Cadre le niveau (emprise + marge), ou la vue par défaut s'il est vide. */
 function fitLevel(lv) {
   const b = levelBounds(lv);
@@ -577,6 +675,14 @@ function onPointerDown(e) {
   }
   if (e.button !== 0) return;
   const lv = currentLevel();
+
+  // Poignée de déplacement du cadre : déplace le centre d'impression (printCenter).
+  if (ui.tool === 'select' && e.target.closest?.('[data-frame-move]')) {
+    const f = planFrame(lv);
+    ui.drag = { kind: 'frame', start: toWorld(e), orig: { x: f.center.x, y: f.center.y }, moved: false };
+    svgEl().setPointerCapture(e.pointerId);
+    return;
+  }
 
   if (ui.tool === 'calib') { addCalibPoint(toWorld(e)); return; }
 
@@ -712,6 +818,11 @@ function onPointerMove(e) {
     ui.view.y = d.vy - (e.clientY - d.sy) / s;
     applyView();
     drawOverlay();
+  } else if (d.kind === 'frame') {
+    const pt = toWorld(e);
+    lv.printCenter = { x: d.orig.x + (pt.x - d.start.x), y: d.orig.y + (pt.y - d.start.y) };
+    d.moved = true;
+    refreshPlan();
   } else if (d.kind === 'bg') {
     const pt = toWorld(e);
     const bg = lv.bg;
@@ -880,7 +991,7 @@ function selectLevel(id) {
   if (id === ui.levelId) return;
   ui.levelId = id;
   ui.tool = 'select'; ui.calibPts = []; ui.draft = null; ui.selWall = null; ui.selPlace = null; ui.placeArmed = null;
-  fitLevel(currentLevel());
+  fitViewToSheet(currentLevel());
   refreshPlan();
 }
 
@@ -888,7 +999,7 @@ async function addLevelFlow() {
   const lv = addLevel(plan());
   ui.levelId = lv.id;
   ui.selWall = null; ui.selPlace = null; ui.draft = null;
-  fitLevel(lv);
+  fitViewToSheet(lv);
   deps.markDirty(); refreshPlan();
 }
 
@@ -912,7 +1023,7 @@ function removeFlow() {
   removeLevel(p, lv.id);
   ui.levelId = p.levels[0].id;
   ui.selWall = null; ui.selPlace = null; ui.draft = null;
-  fitLevel(currentLevel());
+  fitViewToSheet(currentLevel());
   deps.markDirty(); refreshPlan();
 }
 
@@ -1047,5 +1158,5 @@ export function resetPlanView() {
   ui.placeArmed = null;
   ui.selOpening = null;
   ui.selRoom = null;
-  fitLevel(currentLevel());
+  fitViewToSheet(currentLevel());
 }

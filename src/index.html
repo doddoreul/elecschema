@@ -236,9 +236,12 @@
             <button id="plan-level-down" title="Descendre l'étage">▶</button>
             <button id="plan-level-del" title="Supprimer l'étage (les éléments du schéma sont conservés)">Supprimer l'étage</button>
             <span class="spacer"></span>
-            <label class="plan-scale-label">Échelle d'impression
-              <select id="plan-scale"></select>
+            <label class="plan-scale-label">Échelle 1:
+              <input id="plan-scale-input" type="number" min="10" max="1000" step="1" value="100" list="plan-scale-list">
             </label>
+            <datalist id="plan-scale-list"></datalist>
+            <button id="plan-scale-dec" title="Réduire le numéro d'échelle (1:N plus petit, dessin plus grand)">−</button>
+            <button id="plan-scale-inc" title="Augmenter le numéro d'échelle (1:N plus grand, dessin plus petit)">+</button>
             <span id="plan-scale-eff" class="count"></span>
           </div>
           <div class="plan-bar-row">
@@ -257,7 +260,11 @@
           </div>
           <div class="plan-bar-row">
             <button id="plan-toggle-elements" title="Tout masquer pour ne garder que l'arrière-plan, ou tout réafficher">Afficher / masquer le dessin</button>
-            <button id="plan-recenter" title="Réajuster le dessin à la fenêtre (ajuste le zoom et recentre)">Recentrer</button>
+            <label class="plan-bar-check"><input id="plan-frame-show" type="checkbox" checked> Afficher le cadre A4</label>
+            <button id="plan-recenter" title="Cadrer toute la feuille A4 dans la fenêtre">Recentrer</button>
+            <button id="plan-frame-center" title="Centrer le cadre dans la fenêtre (sans changer le zoom)">Centrer le cadre</button>
+            <button id="plan-fit-drawing" title="Choisir l'échelle qui ajuste le dessin à la page et recentrer">Ajuster au dessin</button>
+            <span class="plan-sep"></span>
             <button id="plan-zoom-out" title="Dézoomer">−</button>
             <button id="plan-zoom-in" title="Zoomer">+</button>
             <label class="plan-bar-field">Opacité des éléments

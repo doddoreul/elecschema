@@ -68,6 +68,15 @@ export function renderPlanLevel(svg, level, view, opts = {}) {
     el('rect', { x: -1e6, y: -1e6, width: 2e6, height: 2e6, fill: 'url(#plan-grid)' }, svg);
   }
 
+  // Feuille A4 (écran seulement) : rectangle blanc posé sous le fond et le dessin,
+  // pour que la page se distingue du fond de l'atelier.
+  if (opts.frame) {
+    el('rect', {
+      x: opts.frame.sheet.x, y: opts.frame.sheet.y,
+      width: opts.frame.sheet.w, height: opts.frame.sheet.h, class: 'plan-sheet ui-only',
+    }, svg);
+  }
+
   const bg = level.bg;
   if (bg && bg.visible) {
     const src = assetGet(bg.asset);
