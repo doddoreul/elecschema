@@ -5,8 +5,8 @@
 //   {
 //     format:        "elexio",   // identifiant du format
 //     formatVersion: 1,          // version de la STRUCTURE du fichier (enveloppe)
-//     schemaVersion: 3,          // version du MODÈLE de données (voir model.js)
-//     app:           "0.3.0",    // version de l'application qui a exporté
+//     schemaVersion: 5,          // version du MODÈLE de données (voir model.js)
+//     app:           "0.4.0",    // version de l'application qui a exporté
 //     exportedAt:    "…ISO…",
 //     project:       { …projet… },
 //     assets:        { "p9": "data:image/jpeg;base64,…" }   // optionnel (fonds de plan)
@@ -25,7 +25,7 @@ import { SCHEMA_VERSION } from './model.js';
 
 export const FORMAT = 'elexio';
 export const FORMAT_VERSION = 1;
-export const APP_VERSION = '0.3.0';
+export const APP_VERSION = '0.4.0';
 export const FILE_EXT = 'elx';
 
 /* ------------------------------------------------------- base64 / UTF-8 (Web + Node) */

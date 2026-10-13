@@ -1,8 +1,14 @@
 // Tests du format de fichier Elexio (.elx) — module pur src/format.js.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { emptyProject, SCHEMA_VERSION } from '../src/model.js';
 import { encodeElx, decodeElx, checkCompatibility, FORMAT, FORMAT_VERSION, APP_VERSION } from '../src/format.js';
+
+test('APP_VERSION est synchronisée avec package.json', () => {
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.equal(APP_VERSION, pkg.version);
+});
 
 test('encodeElx : base64 (pas de JSON apparent) et versions notées', () => {
   const text = encodeElx(emptyProject());

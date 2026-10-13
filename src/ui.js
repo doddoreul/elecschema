@@ -26,7 +26,21 @@ let armedSymbol = null;      // symbole choisi dans la bibliothèque, posé sur 
 let dragActive = false;      // glisser-déposer depuis la palette en cours
 let printPreview = false;    // mode mise en page (cadres A4 + panneau de mise en page)
 let currentPage = 0;         // index de la page courante (sélectionnée dans la liste)
-try { printPreview = localStorage.getItem('elecschema.printPreview') === '1'; } catch (err) { /* ignore */ }
+
+/** Lit une clé `elexio.*` ; à défaut, reprend l'ancienne clé `elecschema.*` (renommage
+ *  du 0.4.0) et la recopie. L'ancienne entrée n'est jamais supprimée. */
+function lsGet(key) {
+  try {
+    const v = localStorage.getItem(key);
+    if (v !== null) return v;
+    const legacy = localStorage.getItem('elecschema.' + key.replace(/^elexio\./, ''));
+    if (legacy === null) return null;
+    try { localStorage.setItem(key, legacy); } catch (err) { /* recopie impossible : valeur rendue quand même */ }
+    return legacy;
+  } catch (err) { return null; }
+}
+
+try { printPreview = lsGet('elexio.printPreview') === '1'; } catch (err) { /* ignore */ }
 let view = { x: 0, y: 0, w: 2100, h: 1100 };
 
 const escHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -103,8 +117,8 @@ const status = (t) => ($('#status').textContent = t);
 
 /* ------------------------------------------------------------- autosave (localStorage) */
 
-const AUTOSAVE_KEY = 'elecschema.autosave';
-const TAB_KEY = 'elecschema.tab';   // onglet actif, conservé au refresh
+const AUTOSAVE_KEY = 'elexio.autosave';
+const TAB_KEY = 'elexio.tab';   // onglet actif, conservé au refresh
 
 /** Persiste projet + fichier courant dans le localStorage (ne rien perdre au reload). */
 let autosaveFileTimer = null;
@@ -145,7 +159,7 @@ function persistSnapshot() {
 
 function getLocalAutosave() {
   let raw;
-  try { raw = localStorage.getItem(AUTOSAVE_KEY); } catch (err) { raw = null; }
+  try { raw = lsGet(AUTOSAVE_KEY); } catch (err) { raw = null; }
   if (!raw) return null;
   try {
     const rec = JSON.parse(raw);
@@ -284,7 +298,7 @@ function switchTab(name) {
 /** Onglet mémorisé (survit à l'actualisation) : un onglet connu, sinon « Informations ». */
 function savedTabName() {
   let name = null;
-  try { name = localStorage.getItem(TAB_KEY); } catch (err) { /* ignore */ }
+  try { name = lsGet(TAB_KEY); } catch (err) { /* ignore */ }
   return ['info', 'schema', 'plan', 'bom'].includes(name) ? name : 'info';
 }
 
@@ -1204,12 +1218,12 @@ function refreshPaletteAccept() {
 
 /* ------------------------------------------------------------- symboles favoris */
 
-const FAV_KEY = 'elecschema.favorites';   // liste ordonnée de clés de symbole
+const FAV_KEY = 'elexio.favorites';   // liste ordonnée de clés de symbole
 
 /** Favoris valides (symboles connus), dans l'ordre d'ajout. */
 function favoriteKeys() {
   try {
-    const list = JSON.parse(localStorage.getItem(FAV_KEY) || '[]');
+    const list = JSON.parse(lsGet(FAV_KEY) || '[]');
     return Array.isArray(list) ? list.filter((k) => SYMBOLS[k]) : [];
   } catch (err) { return []; }
 }
@@ -1517,7 +1531,7 @@ $('#btn-recenter').addEventListener('click', centerView);
 $('#preview-print').checked = printPreview;
 $('#preview-print').addEventListener('change', (e) => {
   printPreview = e.target.checked;
-  try { localStorage.setItem('elecschema.printPreview', printPreview ? '1' : '0'); } catch (err) { /* ignore */ }
+  try { localStorage.setItem('elexio.printPreview', printPreview ? '1' : '0'); } catch (err) { /* ignore */ }
   refreshAll();
 });
 $('#layout-scale').addEventListener('input', (e) => {

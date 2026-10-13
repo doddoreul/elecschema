@@ -7,6 +7,7 @@
 
 import { nodeById } from './model.js';
 import { PLAN_EXCLUDED } from './standards.js';
+import { symbolName } from './symbols.js';
 
 export const RULE_SEVERITY = { ERROR: 'erreur', WARN: 'avertissement', INFO: 'info' };
 
@@ -93,7 +94,7 @@ export const RULES_BE = [
     check: (p) => (p.elements || [])
       .filter((e) => e.symbolType !== 'node' && e.symbolType !== 'fil')
       .filter((e) => !(e.label || '').trim())
-      .map((e) => ({ elementId: e.id, message: `Symbole sans repère (${e.symbolType}).` })),
+      .map((e) => ({ elementId: e.id, message: `${symbolName(e.symbolType)} sans repère.` })),
   },
   {
     id: 'BE-08',
@@ -126,7 +127,8 @@ export const RULES_BE = [
       const out = [];
       for (const e of [p.supply, ...(p.elements || [])]) {
         if (!e || PLAN_EXCLUDED.includes(e.symbolType) || placed.has(e.id)) continue;
-        out.push({ elementId: e.id, message: `${e.symbolType} non placé sur le plan.` });
+        const rep = (e.label || '').trim();
+        out.push({ elementId: e.id, message: `${symbolName(e.symbolType)}${rep ? ` « ${rep} »` : ''} non placé sur le plan.` });
       }
       return out;
     },
