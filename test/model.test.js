@@ -14,7 +14,8 @@ test('migrateProject : ancien format (circuits/difs) -> arbre v3', () => {
     ] }],
   };
   migrateProject(legacy);
-  assert.equal(legacy.schemaVersion, 3);
+  assert.equal(legacy.schemaVersion, 4);
+  assert.equal(legacy.plan.levels.length, 1);
   assert.ok(Array.isArray(legacy.elements) && legacy.elements.length >= 3);
   assert.equal(legacy.circuits, undefined);
   assert.equal(legacy.difs, undefined);
@@ -22,12 +23,12 @@ test('migrateProject : ancien format (circuits/difs) -> arbre v3', () => {
   for (const t of ['rcd', 'node', 'breaker', 'socket']) assert.ok(types.includes(t), `type ${t} attendu`);
 });
 
-test('migrateProject : projet v3 déjà en place -> inchangé', () => {
+test('migrateProject : projet v4 déjà en place -> inchangé', () => {
   const p = emptyProject();
   const before = JSON.stringify(p);
   migrateProject(p);
   assert.equal(JSON.stringify(p), before);
-  assert.equal(p.schemaVersion, 3);
+  assert.equal(p.schemaVersion, 4);
 });
 
 test('normalizeTypes : types éclatés legacy -> type unique', () => {

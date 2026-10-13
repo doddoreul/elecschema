@@ -5,8 +5,9 @@
 
 import { DEFAULT_ICB, isProtection, DEFAULT_CABLE, TABLEAU_OUTPUTS, ANCHOR_DIRECTIONS, outputIndex } from './standards.js';
 import { DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
+import { emptyPlan, normalizePlan } from './plan-model.js';
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 const DOMAINE = 'DOMESTIQUE';
 const PAYS = 'BE';
 
@@ -54,6 +55,7 @@ function emptyProject() {
     supply: emptySupply(),
     info: emptyInfo(),
     elements: [],
+    plan: emptyPlan(),
   };
 }
 
@@ -132,7 +134,7 @@ const LEGACY_SYMBOLS = { carrefour: 'node' };
 /** Migration d'un ancien projet (circuits/difs) vers l'arbre d'éléments v3.
  *  Sans effet sur un projet déjà en v3 (retour anticipé). */
 export function migrateProject(p) {
-  if (Array.isArray(p.elements) && (p.schemaVersion || 0) >= 3) { delete p.circuits; delete p.difs; return; }
+  if (Array.isArray(p.elements) && (p.schemaVersion || 0) >= 3) { delete p.circuits; delete p.difs; migratePlan(p); return; }
   const els = [];
   p.supply = p.supply || {};
   p.supply.symbolType = p.supply.symbolType || 'compteur';
@@ -176,6 +178,14 @@ export function migrateProject(p) {
   p.schemaVersion = 3;
   delete p.circuits;
   delete p.difs;
+  migratePlan(p);
+}
+
+/** Passe au modèle v4 : bloc `plan` (étages, murs, placements) ramené à une forme valide.
+ *  Idempotent. Doit venir après la construction de `elements`. */
+export function migratePlan(p) {
+  p.plan = normalizePlan(p);
+  p.schemaVersion = SCHEMA_VERSION;
 }
 
 /** Ramène les anciens types éclatés (prises, interrupteurs) vers le type unique + sa propriété de type. */

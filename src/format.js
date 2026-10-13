@@ -8,8 +8,12 @@
 //     schemaVersion: 3,          // version du MODÈLE de données (voir model.js)
 //     app:           "0.3.0",    // version de l'application qui a exporté
 //     exportedAt:    "…ISO…",
-//     project:       { …projet… }
+//     project:       { …projet… },
+//     assets:        { "p9": "data:image/jpeg;base64,…" }   // optionnel (fonds de plan)
 //   }
+//
+// `assets` ne contient que les images réellement référencées par un niveau du plan
+// (`project.plan.levels[].bg.asset`). Absent ou vide = fichier valide sans image.
 //
 // La compatibilité est gouvernée par `schemaVersion` : plus petit que la version
 // courante -> migration automatique ; plus grand -> fichier trop récent (alerte).
@@ -46,8 +50,19 @@ function isBase64Like(s) {
 
 /* ---------------------------------------------------------------------- encodage */
 
-/** Sérialise un projet en fichier `.elx` (JSON enveloppé, encodé en base64). */
-export function encodeElx(project, appVersion = APP_VERSION) {
+/** Images réellement référencées par le plan, prises dans le magasin `assets` (id -> dataURL). */
+export function referencedAssets(project, assets) {
+  const out = {};
+  for (const lv of project?.plan?.levels || []) {
+    const key = lv.bg?.asset;
+    if (key && assets && typeof assets[key] === 'string') out[key] = assets[key];
+  }
+  return out;
+}
+
+/** Sérialise un projet en fichier `.elx` (JSON enveloppé, encodé en base64).
+ *  `assets` (optionnel) : magasin d'images ; seules les images référencées sont écrites. */
+export function encodeElx(project, appVersion = APP_VERSION, assets = null) {
   const envelope = {
     format: FORMAT,
     formatVersion: FORMAT_VERSION,
@@ -56,12 +71,15 @@ export function encodeElx(project, appVersion = APP_VERSION) {
     exportedAt: new Date().toISOString(),
     project,
   };
+  const used = referencedAssets(project, assets);
+  if (Object.keys(used).length) envelope.assets = used;
   return base64Encode(JSON.stringify(envelope));
 }
 
 /* ---------------------------------------------------------------------- décodage */
 
-/** Décode un `.elx` (base64) ou un JSON clair (legacy) -> { project, meta }.
+/** Décode un `.elx` (base64) ou un JSON clair (legacy) -> { project, meta, assets }.
+ *  `assets` : images valides (dataURL d'image) ; {} si absentes.
  *  Lève une Error explicite si le contenu est illisible. */
 export function decodeElx(text) {
   const raw = String(text ?? '').trim();
@@ -91,7 +109,13 @@ export function decodeElx(text) {
     app: enveloped ? (obj.app ?? null) : null,
     exportedAt: enveloped ? (obj.exportedAt ?? null) : null,
   };
-  return { project, meta };
+  const assets = {};
+  if (enveloped && obj.assets && typeof obj.assets === 'object' && !Array.isArray(obj.assets)) {
+    for (const [k, v] of Object.entries(obj.assets)) {
+      if (typeof v === 'string' && /^data:image\//.test(v)) assets[k] = v;
+    }
+  }
+  return { project, meta, assets };
 }
 
 /* ---------------------------------------------------------------- compatibilité */

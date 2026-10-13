@@ -30,6 +30,14 @@ export function isProtection(symbolType) {
 /** Directions cardinales des points d'ancrage. */
 export const ANCHOR_DIRECTIONS = ['right', 'top', 'left', 'bottom'];
 
+/* ---------- plan d'implantation ---------- */
+/** Éléments jamais posés sur le plan (liaisons de schéma, pas d'appareillage). */
+export const PLAN_EXCLUDED = ['node', 'fil', 'breaker', 'rcd', 'fuse', 'sectionneur'];
+/** Échelles normalisées 1:N, de la plus grande (1:20) à la plus petite (1:500). */
+export const PLAN_SCALES = [20, 25, 50, 75, 100, 125, 150, 200, 250, 500];
+/** Taille d'un symbole sur papier, en mm (constante quelle que soit l'échelle). */
+export const PLAN_SYMBOL_MM = 4;
+
 /** Tableau : une entrée (ancrage à gauche, occupée par le parent), des sorties en haut.
  *  Chaque sortie occupée ouvre une sortie vierge : le tableau s'élargit. */
 export const TABLEAU_OUTPUTS = 2;
