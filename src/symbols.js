@@ -22,168 +22,168 @@ export const SYMBOL_CATEGORIES = [
 const SYMBOLS = {
   board: {
     name: 'Tableau de répartition', ref: 'B', category: 'tableaux', prefix: 'TD',
-    w: 120, h: 40, file: 'symbols/board.svg',
+    w: 110, h: 30, file: 'symbols/board.svg',
   },
   // Barre de tableau / sous-tableau : reçoit plusieurs départs (ramifiable comme un node).
   tableau: {
     name: 'Tableau (barre)', ref: 'B', category: 'tableaux', prefix: 'TB',
-    w: 64, h: 24, file: 'symbols/tableau.svg',
+    w: 54, h: 14, file: 'symbols/tableau.svg',
   },
 
   fuse: {
     name: 'Coupe-circuit à fusible', ref: 'D', category: 'protection', prefix: 'F',
-    w: 40, h: 40, file: 'symbols/fuse.svg',
+    w: 30, h: 30, file: 'symbols/fuse.svg',
   },
   breaker: {
     name: 'Disjoncteur', ref: 'D', category: 'protection', prefix: 'Q',
-    w: 40, h: 40, file: 'symbols/breaker.svg',
+    w: 30, h: 30, file: 'symbols/breaker.svg',
   },
   rcd: {
     name: 'Différentiel', ref: 'D', category: 'protection', prefix: 'Q',
-    w: 40, h: 40, file: 'symbols/differentiel.svg',
+    w: 30, h: 30, file: 'symbols/differentiel.svg',
   },
   sectionneur: {
     name: 'Sectionneur (coupe à vide)', ref: 'D', category: 'protection', prefix: 'Q',
-    w: 40, h: 40, file: 'symbols/sectionneur.svg',
+    w: 30, h: 30, file: 'symbols/sectionneur.svg',
   },
   earth: {
     name: 'Prise de terre', ref: 'D', category: 'protection', prefix: 'PE',
-    w: 40, h: 40, file: 'symbols/earth.svg',
+    w: 30, h: 30, file: 'symbols/earth.svg',
   },
 
   switch: {
     name: 'Interrupteur', ref: 'E', category: 'interrupteurs', prefix: 'S',
-    w: 40, h: 40, file: 'symbols/switch.svg',
+    w: 30, h: 30, file: 'symbols/switch.svg',
   },
   switch_pilot: {
     name: 'Interrupteur à lampe témoin', ref: 'E', category: 'interrupteurs', prefix: 'S',
-    w: 40, h: 40, file: 'symbols/switch_pilot.svg',
+    w: 30, h: 30, file: 'symbols/switch_pilot.svg',
   },
   push: {
     name: 'Bouton-poussoir', ref: 'E', category: 'interrupteurs', prefix: 'B',
-    w: 40, h: 40, file: 'symbols/push.svg',
+    w: 30, h: 30, file: 'symbols/push.svg',
   },
   timer: {
     name: 'Minuterie', ref: 'E', category: 'interrupteurs', prefix: 'K',
-    w: 40, h: 40, file: 'symbols/timer.svg',
+    w: 30, h: 30, file: 'symbols/timer.svg',
   },
   clock_switch: {
     name: 'Interrupteur horaire', ref: 'E', category: 'interrupteurs', prefix: 'K',
-    w: 40, h: 40, file: 'symbols/clock_switch.svg',
+    w: 30, h: 30, file: 'symbols/clock_switch.svg',
   },
   contactor: {
     name: 'Télérupteur', ref: 'E', category: 'interrupteurs', prefix: 'K',
-    w: 40, h: 40, file: 'symbols/contactor.svg',
+    w: 30, h: 30, file: 'symbols/contactor.svg',
   },
   thermostat: {
     name: 'Thermostat', ref: 'E', category: 'interrupteurs', prefix: 'TH',
-    w: 40, h: 40, file: 'symbols/thermostat.svg',
+    w: 30, h: 30, file: 'symbols/thermostat.svg',
   },
   motion: {
     name: 'Détecteur de mouvement', ref: 'E', category: 'interrupteurs', prefix: 'DM',
-    w: 40, h: 40, file: 'symbols/motion.svg',
+    w: 30, h: 30, file: 'symbols/motion.svg',
   },
 
   socket: {
     name: 'Prise de courant', ref: 'F', category: 'prises', prefix: 'X',
-    w: 40, h: 40, file: 'symbols/socket_earth_childproof.svg',
+    w: 30, h: 30, file: 'symbols/socket_earth_childproof.svg',
   },
 
   light: {
     name: 'Point lumineux', ref: 'G', category: 'eclairage', prefix: 'E',
-    w: 40, h: 40, file: 'symbols/light.svg',
+    w: 30, h: 30, file: 'symbols/light.svg',
   },
   fluo: {
     name: 'Appareil d’éclairage à fluorescence', ref: 'G', category: 'eclairage', prefix: 'E',
-    w: 40, h: 40, file: 'symbols/fluo.svg',
+    w: 30, h: 30, file: 'symbols/fluo.svg',
   },
   projector: {
     name: 'Projecteur', ref: 'G', category: 'eclairage', prefix: 'E',
-    w: 40, h: 40, file: 'symbols/projector.svg',
+    w: 30, h: 30, file: 'symbols/projector.svg',
   },
   emergency: {
     name: 'Éclairage de sécurité', ref: 'G', category: 'eclairage', prefix: 'E',
-    w: 40, h: 40, file: 'symbols/emergency.svg',
+    w: 30, h: 30, file: 'symbols/emergency.svg',
   },
 
   heater: {
     name: 'Appareil de chauffage', ref: 'G', category: 'appareils', prefix: 'R',
-    w: 40, h: 40, file: 'symbols/heater.svg',
+    w: 30, h: 30, file: 'symbols/heater.svg',
   },
   boiler: {
     name: 'Chauffe-eau', ref: 'G', category: 'appareils', prefix: 'CE',
-    w: 40, h: 40, file: 'symbols/boiler.svg',
+    w: 30, h: 30, file: 'symbols/boiler.svg',
   },
   fan: {
     name: 'Ventilateur', ref: 'G', category: 'appareils', prefix: 'V',
-    w: 40, h: 40, file: 'symbols/fan.svg',
+    w: 30, h: 30, file: 'symbols/fan.svg',
   },
   bell: {
     name: 'Sonnerie', ref: 'G', category: 'appareils', prefix: 'SO',
-    w: 40, h: 40, file: 'symbols/bell.svg',
+    w: 30, h: 30, file: 'symbols/bell.svg',
   },
   motor: {
     name: 'Moteur', ref: 'G', category: 'appareils', prefix: 'M',
-    w: 40, h: 40, file: 'symbols/motor.svg',
+    w: 30, h: 30, file: 'symbols/motor.svg',
   },
   kwh: {
     name: 'Compteur kWh', ref: 'G', category: 'appareils', prefix: 'W',
-    w: 40, h: 40, file: 'symbols/kwh.svg',
+    w: 30, h: 30, file: 'symbols/kwh.svg',
   },
   appliance: {
     name: 'Appareil électrodomestique fixe', ref: 'G', category: 'appareils', prefix: 'AP',
-    w: 40, h: 40, file: 'symbols/appliance.svg',
+    w: 30, h: 30, file: 'symbols/appliance.svg',
   },
 
   // Électroménager : sous-catégorie palette de « Appareils d’utilisation ». Mêmes
-  // dimensions que `appliance` (boîte 40 x 40), un dessin distinct par appareil.
+  // dimensions que `appliance` (boîte 30 x 30), un dessin distinct par appareil.
   fridge: {
     name: 'Réfrigérateur', ref: 'G', category: 'electromenager', prefix: 'FR',
-    w: 40, h: 40, file: 'symbols/fridge.svg',
+    w: 30, h: 30, file: 'symbols/fridge.svg',
   },
   freezer: {
     name: 'Congélateur', ref: 'G', category: 'electromenager', prefix: 'CG',
-    w: 40, h: 40, file: 'symbols/freezer.svg',
+    w: 30, h: 30, file: 'symbols/freezer.svg',
   },
   oven: {
     name: 'Four', ref: 'G', category: 'electromenager', prefix: 'FO',
-    w: 40, h: 40, file: 'symbols/oven.svg',
+    w: 30, h: 30, file: 'symbols/oven.svg',
   },
   microwave: {
     name: 'Four à micro-ondes', ref: 'G', category: 'electromenager', prefix: 'MO',
-    w: 40, h: 40, file: 'symbols/microwave.svg',
+    w: 30, h: 30, file: 'symbols/microwave.svg',
   },
   dishwasher: {
     name: 'Lave-vaisselle', ref: 'G', category: 'electromenager', prefix: 'LV',
-    w: 40, h: 40, file: 'symbols/dishwasher.svg',
+    w: 30, h: 30, file: 'symbols/dishwasher.svg',
   },
   washing_machine: {
     name: 'Lave-linge', ref: 'G', category: 'electromenager', prefix: 'LL',
-    w: 40, h: 40, file: 'symbols/washing_machine.svg',
+    w: 30, h: 30, file: 'symbols/washing_machine.svg',
   },
   dryer: {
     name: 'Sèche-linge', ref: 'G', category: 'electromenager', prefix: 'SL',
-    w: 40, h: 40, file: 'symbols/dryer.svg',
+    w: 30, h: 30, file: 'symbols/dryer.svg',
   },
   kitchenette: {
     name: 'Kitchenette', ref: 'G', category: 'electromenager', prefix: 'KT',
-    w: 40, h: 40, file: 'symbols/kitchenette.svg',
+    w: 30, h: 30, file: 'symbols/kitchenette.svg',
   },
 
   transformer: {
     name: 'Transformateur', ref: 'H', category: 'sources', prefix: 'T',
-    w: 40, h: 40, file: 'symbols/transformer.svg',
+    w: 30, h: 30, file: 'symbols/transformer.svg',
   },
   solar: {
     name: 'Panneau solaire', ref: 'H', category: 'sources', prefix: 'PV',
-    w: 40, h: 40, file: 'symbols/solar.svg',
+    w: 30, h: 30, file: 'symbols/solar.svg',
   },
 
   // Câble / fil (ligne de câble, propriétés dédiées : conducteurs, section, type, montage).
-  // SVG deux fois plus haut que large : viewBox 40 x 80 attendu (tracé centré).
+  // SVG deux fois plus haut que large : viewBox 30 x 70 attendu (tracé centré, rogné de 5 px).
   fil: {
     name: 'Fil / câble', ref: '—', category: 'cables', prefix: 'C',
-    w: 40, h: 80, file: 'symbols/fil.svg',
+    w: 30, h: 70, file: 'symbols/fil.svg',
   },
 
   // Pseudo-symbole inséré entre deux éléments (pas dans la palette).

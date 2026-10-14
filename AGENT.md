@@ -153,11 +153,16 @@ Decisions actees :
   (viewBox `0 0 5 5`), centré sur le conducteur : sa définition `SYMBOLS.node` (`w: 5, h: 5`)
   reprend cette taille réelle, qui pilote la place réservée (grille), la hitbox et les « + ».
   `normalizeTypes` nettoie les anciens champs hérités (label, labelPos, showLabel, poles…).
+- **Rognage des symboles** : tous les SVG de `src/symbols/` sont **rabotés de 5 px par côté**
+  (viewBox `0 0 W H` → `5 5 (W-10) (H-10)`, attributs width/height -10) ; les tracés (paths) ne
+  sont pas redimensionnés. La taille réservée `SYMBOLS.w/h` suit (-10) pour conserver l'échelle :
+  40×40 → **30×30**, `fil` 40×80 → 30×70, `tableau` 64×24 → 54×14, `board` 120×40 → 110×30.
+  Seul `carrefour` (5×5) est laissé intact (trop petit pour perdre 10 px).
 - **Catégories & sous-catégories de la palette** : `SYMBOL_CATEGORIES` (`symbols.js`) liste les
   groupes affichés (`<h4>`) ; un groupe peut porter des `subs` (sous-groupes `<h5>` avec leur
   propre `id`). `renderPalette` répartit les symboles par `s.category === id` (`symItemsHtml`).
   La sous-catégorie **« Électroménager »** (id `electromenager`, sous « Appareils d’utilisation (G) »)
-  regroupe 8 appareils dessinés en **40 × 40** : `fridge` (FR), `freezer` (CG), `oven` (FO),
+  regroupe 8 appareils dessinés en **30 × 30** : `fridge` (FR), `freezer` (CG), `oven` (FO),
   `microwave` (MO), `dishwasher` (LV), `washing_machine` (LL),
   `dryer` (SL), `kitchenette` (KT). Repères auto (`PREFIXES`, `model.js`) et libellé BOM
   (`TYPE_LABELS`, `ui.js`) ajoutés pour chacun.
@@ -205,13 +210,13 @@ Decisions actees :
   aerienne. Sur le schema, le fil n'affiche **que le type + la section** de cable
   avec « mm² » (par ex. « XVB 2,5mm² ») — ni conducteurs, ni terre, ni montage. Exclu de
   la règle « élément avec enfant » et de BE-06 (pas de repere obligatoire).
-  **Taille du symbole : 40 x 80** (width 40, height 80 — 2x plus haut ; viewBox 40x80 attendu).
+  **Taille du symbole : 30 x 70** (width 30, height 70 — 2x plus haut ; viewBox 30x70 attendu).
 - **Dessin du fil selon le montage** : `FIL_MOUNT_FILES` (`symbols.js`) mappe
   `node.cable.montage` -> fichier SVG (`filUrl(node)`, repli `fil.svg`) :
   apparent, apparent_conduit, encastre, encastre_conduit, enterree, aerienne.
 
 - **Tableau / sous-tableau** : nouveau symbole `tableau` (« Tableau (barre) », catégorie
-  « Tableaux », préfixe `TB`), fichier `symbols/tableau.svg` (64 x 24, barre de 5 pt).
+  « Tableaux », préfixe `TB`), fichier `symbols/tableau.svg` (54 x 14, barre de 5 pt).
   - **toujours horizontal** par défaut (`e.orient = 0` à la pose, réglable ensuite) ;
   - **ramifiable** comme un node (`freeAnchorDirs`, `drawAnchors`) : plusieurs départs ;
   - **hors règles de composition** (`canAccept`) : posable partout, y compris sur un
