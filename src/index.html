@@ -9,16 +9,14 @@
 <body>
   <header class="toolbar">
     <strong class="brand">🗲 Elexio</strong>
-    <span class="scope">Domestique · Belgique · RGIE/AREI</span>
     <span class="spacer"></span>
+    <span id="norm-display" class="scope"></span>
     <button id="btn-new" title="Nouveau projet (Ctrl+N)">Nouveau</button>
     <button id="btn-open" title="Ouvrir un projet (Ctrl+O)">Ouvrir…</button>
     <button id="btn-save" title="Enregistrer dans le stockage local (Ctrl+S)">Enregistrer</button>
     <button id="btn-undo" title="Annuler (Ctrl+Z)" disabled>↶</button>
     <button id="btn-redo" title="Rétablir (Ctrl+Maj+Z)" disabled>↷</button>
     <span class="spacer"></span>
-    <span id="recent-label" class="recents-label">Récents</span>
-    <select id="recent-select" class="recents" title="Projets récents"></select>
     <button id="btn-export" title="Exporter le schéma en JSON">Exporter…</button>
     <button id="btn-pdf" title="Exporter le schéma en PDF">PDF…</button>
   </header>
@@ -54,6 +52,12 @@
             <select data-info="projet.typeAlim">
               <option value="MONO">Monophasé</option>
               <option value="TRI">Triphasé 400 V 3N~</option>
+            </select>
+          </label>
+          <label>Norme
+            <select data-info="projet.norme">
+              <option value="RGIE">RGIE / AREI (belgique)</option>
+              <option value="NFC15-100">NFC15-100 (france)</option>
             </select>
           </label>
           <div class="row">

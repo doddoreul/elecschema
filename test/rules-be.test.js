@@ -7,8 +7,8 @@ import { validate, RULES_BE } from '../src/rules-be.js';
 const ids = (issues) => issues.map((i) => i.rule.id);
 
 test('les 7 règles sont définies et ordonnées', () => {
-  assert.equal(RULES_BE.length, 7);
-  assert.deepEqual(RULES_BE.map((r) => r.id), ['BE-01', 'BE-03', 'BE-04', 'BE-05', 'BE-06', 'BE-08', 'BE-09']);
+  assert.equal(RULES_BE.length, 14);
+  assert.deepEqual(RULES_BE.map((r) => r.id), ['BE-01', 'BE-03', 'BE-04', 'BE-05', 'BE-06', 'BE-08', 'BE-09', 'BE-10', 'BE-11', 'BE-12', 'BE-13', 'BE-14', 'BE-15', 'BE-16']);
 });
 
 test('BE-01 : schéma sans élément', () => {

@@ -48,6 +48,7 @@ function emptyInfo() {
       domaine: DOMAINE,
       pays: PAYS,
       typeAlim: 'MONO', // MONO | TRI
+      norme: 'RGIE',
     },
     remarques: '',
   };
@@ -139,7 +140,7 @@ const LEGACY_SYMBOLS = { carrefour: 'node', washinmachine: 'washing_machine' };
 /** Migration d'un ancien projet (circuits/difs) vers l'arbre d'éléments v3.
  *  Sans effet sur un projet déjà en v3 (retour anticipé). */
 export function migrateProject(p) {
-  if (Array.isArray(p.elements) && (p.schemaVersion || 0) >= 3) { delete p.circuits; delete p.difs; migratePlan(p); return; }
+  if (Array.isArray(p.elements) && (p.schemaVersion || 0) >= 3) { delete p.circuits; delete p.difs; if (p.info && p.info.projet && p.info.projet.norme == null) p.info.projet.norme = 'RGIE'; migratePlan(p); return; }
   const els = [];
   p.supply = p.supply || {};
   p.supply.symbolType = p.supply.symbolType || 'compteur';

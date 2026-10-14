@@ -8,7 +8,7 @@ import { assetsObject, assetsReplace, saveAssetsIdb, loadAssetsIdb } from './pla
 import { renderSchema, sheetSize, deviceDetail, PAGE, layoutForced, drawCartouche } from './render.js';
 import { buildPlanPages, planOverflowLevels } from './plan-print.js';
 import { SYMBOLS, SYMBOL_CATEGORIES, symbolName, symbolUrl, SOCKET_TYPES, SWITCH_TYPES, DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
-import { validate, RULES_BE, RULE_SEVERITY } from './rules-be.js';
+import { validate, RULES_BE, rulesFor, RULE_SEVERITY } from './rules-be.js';
 import { DEFAULT_SCHEMA } from './default-schema.js';
 import { RATINGS, CURVES, RCD_TYPES, RCD_VALUES, RCD_RATINGS, DEFAULT_ICB, isProtection, anchorKeysOf, baseDir, outputIndex, SECTIONS, CABLE_TYPES, MOUNT_TYPES, mountName, DEFAULT_CABLE, TABLEAU_OUTPUTS, TABLEAU_OUTPUT_TYPES } from './standards.js';
 
@@ -220,7 +220,6 @@ async function renderWelcomeRecents() {
       try {
         const res = await window.elexio.openPath(p);
         if (importProjectText(res.text, res.filePath)) {
-          await loadRecents();
         }
       } catch (err) {
         alert(`Ouverture impossible.\n\n${p}\n\n${err.message}`);
@@ -334,6 +333,7 @@ function loadInfoForm() {
     input.value = value ?? '';
   }
   refreshTitleBlock();
+  updateNormDisplay();
 }
 
 INFO_PATHS.forEach((input) => {
@@ -341,9 +341,15 @@ INFO_PATHS.forEach((input) => {
     setInfo(input.dataset.info, input.value);
     markDirty();
     refreshTitleBlock();
+    if (input.dataset.info === 'projet.norme') updateNormDisplay();
   });
 });
 
+function updateNormDisplay() {
+  const n = project.info?.projet?.norme || 'RGIE';
+  const el = $('#norm-display');
+  if (el) el.textContent = n === 'RGIE' ? 'RGIE / AREI' : n;
+}
 function refreshTitleBlock() {
   const p = project.info;
   const place = [p.chantier.codePostal && p.chantier.localite].filter(Boolean).join(' ') || p.chantier.denomination || '—';
@@ -784,13 +790,14 @@ function renderBom() {
 
 function renderIssues() {
   const host = $('#issues');
-  const issues = validate(project);
+  const selectedRules = rulesFor(project);
+  const issues = validate(project, selectedRules);
   if ((project.elements || []).length === 0) { host.hidden = true; host.innerHTML = ''; return; }
   const errs = issues.filter((i) => i.rule.severity === RULE_SEVERITY.ERROR);
   const forced = layoutForced(project);   // plafond de mise en page atteint (tracé contraint)
   if (issues.length === 0 && !forced) {
     host.hidden = false;
-    host.innerHTML = `<span class="ok">✔ Aucune anomalie détectée (${RULES_BE.length} règles).</span>`;
+    host.innerHTML = `<span class="ok">✔ Aucune anomalie détectée (${selectedRules.length} règles).</span>`;
     return;
   }
   host.hidden = false;
@@ -890,41 +897,6 @@ $('#btn-export').addEventListener('click', () => {
   status(`Fichier .${FILE_EXT} exporté.`);
 });
 
-async function loadRecents() {
-  const sel = $('#recent-select');
-  if (typeof window.elexio !== 'object') {
-    sel.innerHTML = '<option value="">(version navigateur — pas de fichiers récents)</option>';
-    return;
-  }
-  const list = await window.elexio.recents();
-  sel.innerHTML = list.length
-    ? '<option value="">— Projets récents —</option>' +
-      list.map((r) => `<option value="${escHtml(r.path)}">${escHtml(r.name)}</option>`).join('')
-    : '<option value="">(aucun projet récent)</option>';
-}
-
-async function openRecentPath(p) {
-  if (typeof window.elexio !== 'object') return;
-  if (dirty && !confirm('Des modifications ne sont pas enregistrées. Ouvrir un autre projet ?')) { $('#recent-select').value = ''; return; }
-  try {
-    const res = await window.elexio.openPath(p);
-    if (importProjectText(res.text, res.filePath)) {
-      status(`Projet ouvert : ${res.filePath}`);
-      await loadRecents();
-    } else {
-      $('#recent-select').value = '';
-    }
-  } catch (err) {
-    alert(`Ouverture impossible.\n\n${p}\n\n${err.message}`);
-    $('#recent-select').value = '';
-  }
-}
-
-$('#recent-select').addEventListener('change', async (e) => {
-  const p = e.target.value;
-  if (!p) return;
-  await openRecentPath(p);
-});
 
 function loadProject(data, filePath, assets = {}) {
   assetsReplace(assets);
@@ -1004,7 +976,6 @@ $('#btn-open').addEventListener('click', async () => {
   const res = await window.elexio.open();
   if (!res) return;
   if (importProjectText(res.text, res.filePath)) {
-    await loadRecents();
     status('Projet ouvert.');
   }
 });
@@ -1936,7 +1907,6 @@ document.addEventListener('DOMContentLoaded', () => {
   fitView();
   renderPalette();
   loadInfoForm();
-  loadRecents();
   refreshAll();
   updateHistoryButtons();
   switchTab(savedTabName());
