@@ -157,10 +157,9 @@ const SYMBOLS = {
     name: 'Lave-vaisselle', ref: 'G', category: 'electromenager', prefix: 'LV',
     w: 40, h: 40, file: 'symbols/dishwasher.svg',
   },
-  // Nom de fichier tel que fourni (orthographe conservée) : symbols/washinmachine.svg.
-  washinmachine: {
+  washing_machine: {
     name: 'Lave-linge', ref: 'G', category: 'electromenager', prefix: 'LL',
-    w: 40, h: 40, file: 'symbols/washinmachine.svg',
+    w: 40, h: 40, file: 'symbols/washing_machine.svg',
   },
   dryer: {
     name: 'Sèche-linge', ref: 'G', category: 'electromenager', prefix: 'SL',

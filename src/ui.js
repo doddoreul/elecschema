@@ -54,7 +54,7 @@ const TYPE_LABELS = {
   push: 'Bouton', heater: 'Chauffage', boiler: 'Chauffe-eau', fan: 'Ventilateur',
   bell: 'Sonnerie', motor: 'Moteur', kwh: 'Compteur', appliance: 'Appareil',
   fridge: 'Électroménager', freezer: 'Électroménager', oven: 'Électroménager',
-  microwave: 'Électroménager', dishwasher: 'Électroménager', washinmachine: 'Électroménager',
+  microwave: 'Électroménager', dishwasher: 'Électroménager', washing_machine: 'Électroménager',
   dryer: 'Électroménager', kitchenette: 'Électroménager',
   transformer: 'Transformateur', solar: 'Source', earth: 'Terre',
   fil: 'Fil / câble',

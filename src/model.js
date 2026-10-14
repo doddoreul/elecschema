@@ -20,7 +20,7 @@ const PREFIXES = {
   heater: 'R', boiler: 'CE', fan: 'V', bell: 'SO', motor: 'M',
   kwh: 'W', appliance: 'AP', transformer: 'T', solar: 'PV', earth: 'PE',
   fridge: 'FR', freezer: 'CG', oven: 'FO', microwave: 'MO', dishwasher: 'LV',
-  washinmachine: 'LL', dryer: 'SL', kitchenette: 'KT',
+  washing_machine: 'LL', dryer: 'SL', kitchenette: 'KT',
   node: 'D', fil: 'C', tableau: 'TB',
 };
 
@@ -133,7 +133,7 @@ export function treeOrder(project) {
 
 const LEGACY_SOCKETS = { socket: 'generic', socket_earth: 'earth', socket_switch: 'switch', socket_waterproof: 'waterproof' };
 const LEGACY_SWITCHES = { switch_2way: 'two_way' };
-const LEGACY_SYMBOLS = { carrefour: 'node' };
+const LEGACY_SYMBOLS = { carrefour: 'node', washinmachine: 'washing_machine' };
 
 /** Migration d'un ancien projet (circuits/difs) vers l'arbre d'éléments v3.
  *  Sans effet sur un projet déjà en v3 (retour anticipé). */
