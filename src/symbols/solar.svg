@@ -1,1 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40"><g fill="none" stroke="#111827" stroke-width="2"><path d="M20 0 V6 M20 34 V40"/><rect x="6" y="6" width="28" height="28"/><path d="M12 28 L28 12 M22 12 H28 V18"/></g></svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+  <title>solar.svg</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <path d="M20 0 L20 6 M20 34 L20 40" fill="none" stroke="#111827" stroke-width="2"/>
+    <path d="M6 6 L34 6 L34 34 L6 34 Z" fill="none" stroke="#111827" stroke-width="2"/>
+    <g>
+      <path d="M18.14 8.402 L24.86 15.122 M24.86 12.602 L24.86 15.122 L22.34 15.122" fill="none" stroke="#111827"/>
+      <path d="M15.14 11.402 L21.86 18.122 M21.86 15.602 L21.86 18.122 L19.34 18.122" fill="none" stroke="#111827"/>
+    </g>
+    <path d="M6.119 20 L34.043 20" fill="none" stroke="#000000" stroke-miterlimit="10"/>
+  </g>
+</svg>

@@ -1,1 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40"><g fill="none" stroke="#111827" stroke-width="2"><path d="M20 0 V10 M20 30 V40"/><rect x="6" y="10" width="28" height="20"/></g><text x="20" y="24" font-size="8" text-anchor="middle" fill="#111827">kWh</text></svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+  <title>kwh.svg</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <g>
+      <path d="M20 0 L20 10 M20 30 L20 40" fill="#ffffff" stroke="#111827" stroke-width="2"/>
+      <path d="M6 10 L34 10 L34 30 L6 30 Z" fill="#ffffff" stroke="#111827" stroke-width="2"/>
+    </g>
+    <text transform="matrix(1 0 0 1 20 24)" x="0" y="0" xml:space="preserve" font-family="&apos;Source Sans 3&apos;" font-size="8" fill="#111827" text-anchor="middle"><tspan x="0" y="0">kWh</tspan></text>
+  </g>
+</svg>
