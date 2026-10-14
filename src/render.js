@@ -460,7 +460,6 @@ export function drawCartouche(parent, project, ox) {
 
 function drawNodeParallel(node, L, svg, c, sel, px, py) {
   const span = L.span(node);
-  const nout = node.outputs || 2;
   const u = barAxis(node);                                    // sens de la barre (colonnes)
   const [wx, wy] = DIR[anchorDir(node, 'top-1')];             // cote des sorties
   const rx = px(c.x), ry = py(c.y);                          // racine = colonne 0 (arrivée du parent)
@@ -471,10 +470,12 @@ function drawNodeParallel(node, L, svg, c, sel, px, py) {
   // dernière colonne. Aucun débord avant l'entrée (sinon un « tiret » rebique vers le fil).
   const a = pt(0, 0), b = pt(span * BAR_PITCH + NP_END, 0);
   el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'bus' }, g);
-  // une petite barre par sortie (axe de la barre -> côté des sorties) ;
-  // les sorties sont en colonnes 1..N : la colonne 0 reste l'entrée, sans tiret
-  for (let i = 0; i < nout; i++) {
-    const p0 = pt((i + 1) * BAR_PITCH, 0), p1 = pt((i + 1) * BAR_PITCH, 6);
+  // une petite barre par sortie OCCUPÉE seulement : un emplacement libre n'a que son « + »
+  // (sinon le tiret du haut, non recouvert par un fil, apparaît en trop).
+  for (const key of Object.keys(node.children || {})) {
+    if (node.children[key] == null || outputIndex(key) < 0) continue;
+    const d = L.col(node, key) * BAR_PITCH;
+    const p0 = pt(d, 0), p1 = pt(d, 6);
     el('line', { x1: p0.x, y1: p0.y, x2: p1.x, y2: p1.y, class: 'bus' }, g);
   }
   // zone cliquable : enveloppe de la barre et de ses sorties
