@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30" height="30" viewBox="0 0 30 30">
   <title>socket_childproof.svg</title>
   <g id="Layer_1" data-name="Layer 1">
     <g>
-      <path d="M19.993 40 L19.993 26" fill="none" stroke="#111827" stroke-width="2"/>
-      <path d="M13.993 20 C13.993 23.314 16.679 26 19.993 26 C23.307 26 25.993 23.314 25.993 20" fill="none" stroke="#111827" stroke-width="2"/>
-      <path d="M14.998 19.03 L10.716 19.03" fill="none" stroke="#111827" stroke-width="2"/>
-      <path d="M29.277 19.03 L24.996 19.03" fill="none" stroke="#111827" stroke-width="2"/>
+      <g>
+        <path d="M14.997 40 L14.997 26" fill="none" stroke="#111827" stroke-width="2"/>
+        <path d="M8.997 20 C8.997 23.314 11.683 26 14.997 26 C18.31 26 20.997 23.314 20.997 20" fill="none" stroke="#111827" stroke-width="2"/>
+        <path d="M10.002 19.03 L5.719 19.03" fill="none" stroke="#111827" stroke-width="2"/>
+        <path d="M24.281 19.03 L20 19.03" fill="none" stroke="#111827" stroke-width="2"/>
+      </g>
     </g>
   </g>
 </svg>

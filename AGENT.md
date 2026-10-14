@@ -157,7 +157,7 @@ Decisions actees :
   groupes affichés (`<h4>`) ; un groupe peut porter des `subs` (sous-groupes `<h5>` avec leur
   propre `id`). `renderPalette` répartit les symboles par `s.category === id` (`symItemsHtml`).
   La sous-catégorie **« Électroménager »** (id `electromenager`, sous « Appareils d’utilisation (G) »)
-  regroupe 8 appareils dessinés en **40 × 40** : `fridge` (FR), `freezer` (CG), `oven` (FO),
+  regroupe 8 appareils dessinés en **30 × 30** : `fridge` (FR), `freezer` (CG), `oven` (FO),
   `microwave` (MO), `dishwasher` (LV), `washing_machine` (LL),
   `dryer` (SL), `kitchenette` (KT). Repères auto (`PREFIXES`, `model.js`) et libellé BOM
   (`TYPE_LABELS`, `ui.js`) ajoutés pour chacun.
@@ -379,7 +379,7 @@ Arbre d'ancrage sur une **grille** (1 element / cellule, sans recouvrement) :
 - **Les « + » sont dessinés en dernier** (au-dessus des symboles) pour rester cliquables —
   indispensable pour le compteur, plus large qu'une cellule. Leur position dépasse le bord du
   corps de 6 px, d'après la taille réelle du symbole (`halfOf`, **sans plancher**) : compteur
-  44×32 → +50/+38 px du centre, socket 20×20 → +26, carrefour (node) 2,5×2,5 → +8,5 (ses « + »
+  44×32 → +50/+38 px du centre, socket 15×15 → +21, carrefour (node) 2,5×2,5 → +8,5 (ses « + »
   restent ainsi collés au petit point). Le « + » gris d'insertion se
   décale vers l'enfant (`t` entre 0,5 et 0,85) pour sortir du corps du parent.
 - **Demi-taille** (`plusMark`) : fond `r=5`, barres ±2,5, zone cliquable `r=7,5` (les

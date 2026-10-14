@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30" height="30" viewBox="0 0 30 30">
   <title>switch_bipolar.svg</title>
   <g id="Layer_1" data-name="Layer 1">
     <g>
-      <path d="M20 20.299 L8.238 8.536" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-      <path d="M16.623 20.048 C16.623 18.058 18.236 16.444 20.227 16.444 C22.218 16.444 23.831 18.058 23.831 20.048 C23.831 22.039 22.218 23.653 20.227 23.653 C18.236 23.653 16.623 22.039 16.623 20.048 Z" fill="#ffffff" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-      <path d="M9.504 8.684 L12.676 5.512" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-      <path d="M12.456 11.398 L15.628 8.227" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M14.723 15.102 L2.961 3.339" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M11.346 14.851 C11.346 12.861 12.959 11.247 14.95 11.247 C16.941 11.247 18.554 12.861 18.554 14.851 C18.554 16.842 16.941 18.456 14.95 18.456 C12.959 18.456 11.346 16.842 11.346 14.851 Z" fill="#ffffff" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M4.227 3.487 L7.399 0.315" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M7.179 6.201 L10.351 3.03" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
     </g>
   </g>
 </svg>

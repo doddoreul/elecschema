@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30" height="30" viewBox="0 0 30 30">
   <title>switch_tripolar.svg</title>
   <g id="Layer_1" data-name="Layer 1">
     <g>
-      <path d="M20.038 20.169 L8.276 8.406" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-      <path d="M16.661 19.918 C16.661 17.928 18.274 16.314 20.265 16.314 C22.256 16.314 23.869 17.928 23.869 19.918 C23.869 21.909 22.256 23.523 20.265 23.523 C18.274 23.523 16.661 21.909 16.661 19.918 Z" fill="#ffffff" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-      <path d="M9.542 8.554 L12.714 5.382" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-      <path d="M12.494 11.268 L15.666 8.097" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-      <path d="M15.256 14.054 L18.428 10.882" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <g>
+        <path d="M14.841 15.208 L3.079 3.445" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+        <path d="M11.464 14.957 C11.464 12.967 13.077 11.353 15.068 11.353 C17.059 11.353 18.672 12.967 18.672 14.957 C18.672 16.948 17.059 18.562 15.068 18.562 C13.077 18.562 11.464 16.948 11.464 14.957 Z" fill="#ffffff" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+        <path d="M4.345 3.593 L7.517 0.421" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+        <path d="M7.297 6.307 L10.469 3.136" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+        <path d="M10.059 9.093 L13.231 5.921" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      </g>
     </g>
   </g>
 </svg>

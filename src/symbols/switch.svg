@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30" height="30" viewBox="0 0 30 30">
   <title>switch.svg</title>
   <g id="Layer_1" data-name="Layer 1">
-    <path d="M19.81 20.193 L8.048 8.43" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-    <path d="M16.433 19.942 C16.433 17.952 18.046 16.338 20.037 16.338 C22.028 16.338 23.641 17.952 23.641 19.942 C23.641 21.933 22.028 23.547 20.037 23.547 C18.046 23.547 16.433 21.933 16.433 19.942 Z" fill="#ffffff" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-    <path d="M9.314 8.578 L12.486 5.406" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+    <g>
+      <path d="M14.535 15.194 L2.773 3.431" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M11.158 14.943 C11.158 12.953 12.771 11.339 14.762 11.339 C16.753 11.339 18.366 12.953 18.366 14.943 C18.366 16.934 16.753 18.548 14.762 18.548 C12.771 18.548 11.158 16.934 11.158 14.943 Z" fill="#ffffff" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M4.039 3.579 L7.211 0.407" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+    </g>
   </g>
 </svg>

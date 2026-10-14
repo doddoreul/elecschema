@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30" height="30" viewBox="0 0 30 30">
   <title>projector.svg</title>
   <g id="Layer_1" data-name="Layer 1">
-    <path d="M28 20 C28 24.418 24.418 28 20 28 C15.582 28 12 24.418 12 20 C12 15.582 15.582 12 20 12 C24.418 12 28 15.582 28 20 Z" fill="#ffffff" stroke="#111827" stroke-width="2"/>
-    <path d="M15 15 L25 25 M25 15 L15 25" fill="none" stroke="#111827"/>
+    <g>
+      <path d="M23 15 C23 19.418 19.418 23 15 23 C10.582 23 7 19.418 7 15 C7 10.582 10.582 7 15 7 C19.418 7 23 10.582 23 15 Z" fill="#ffffff" stroke="#111827" stroke-width="2"/>
+      <path d="M10 10 L20 20 M20 10 L10 20" fill="none" stroke="#111827"/>
+    </g>
   </g>
 </svg>

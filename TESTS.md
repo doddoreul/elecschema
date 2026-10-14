@@ -49,6 +49,7 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T3.14 | Repère d'un **fil** vertical (orienté 0°) | Le texte longe le conducteur, **centré** sur sa longueur et **resserré** contre lui (plus de décalage vers le haut ni de grand écart) |
 | T3.15 | **Carrefour** (node) redessiné en **5×5** | Le point de dérivation est rendu à sa taille réelle (plus d'étirement ×4) ; la place réservée (grille), la hitbox et les « + » d'ancrage suivent la nouvelle taille (≈ +8,5 px du centre, collés au point) |
 | T3.16 | Palette, catégorie **Appareils d'utilisation (G)** | Sous le titre apparaît la sous-catégorie **Électroménager** (`<h5>`) avec 8 symboles : Réfrigérateur, Congélateur, Four, Four à micro-ondes, Lave-vaisselle, Lave-linge, Sèche-linge, Kitchenette (vignettes chargées, repères FR/CG/FO/MO/LV/LL/SL/KT, libellé BOM « Électroménager ») |
+| T3.17 | Symboles **redimensionnés** (dessins refaits) | La taille réservée (`SYMBOLS.<clé>.w/h`) suit le `viewBox` du SVG : **30×30** par défaut ; formats spéciaux `fuse` 30×35, `timer`/`clock_switch`/`contactor`/`thermostat`/`freezer` 40×30, `transformer` 30×40, `board` 120×40, `tableau` 64×24, `fil` 40×80, `node` 5×5. La grille, les ancrages et les libellés suivent (pas d'étirement) |
 
 ## T4 — Propriétés
 

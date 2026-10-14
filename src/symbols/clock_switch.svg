@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="30" viewBox="0 0 40 30">
   <title>clock_switch.svg</title>
   <g id="Layer_1" data-name="Layer 1">
-    <path d="M20 0 L20 14 M20 26 L20 40" fill="none" stroke="#111827" stroke-width="2"/>
-    <path d="M4 14 L36 14 L36 26 L4 26 Z" fill="#ffffff" stroke="#111827" stroke-width="2"/>
-    <path d="M16 20 C16 22.209 14.209 24 12 24 C9.791 24 8 22.209 8 20 C8 17.791 9.791 16 12 16 C14.209 16 16 17.791 16 20 Z" fill="none" stroke="#111827"/>
-    <path d="M19.351 20.792 L24.763 20.792" fill="none" stroke="#000000" stroke-miterlimit="10"/>
-    <path d="M34.763 20.792 L29.351 20.792 L25.1 16.618" fill="none" stroke="#000000" stroke-miterlimit="10"/>
-    <path d="M11.869 17.681 L11.869 20.281 L14.231 20.281" fill="#ffffff" stroke="#000000" stroke-miterlimit="10"/>
+    <g>
+      <path d="M20 -5 L20 9 M20 21 L20 35" fill="none" stroke="#111827" stroke-width="2"/>
+      <path d="M4 9 L36 9 L36 21 L4 21 Z" fill="#ffffff" stroke="#111827" stroke-width="2"/>
+      <path d="M16 15 C16 17.209 14.209 19 12 19 C9.791 19 8 17.209 8 15 C8 12.791 9.791 11 12 11 C14.209 11 16 12.791 16 15 Z" fill="none" stroke="#111827"/>
+      <path d="M19.351 15.792 L24.763 15.792" fill="none" stroke="#000000" stroke-miterlimit="10"/>
+      <path d="M34.763 15.792 L29.351 15.792 L25.1 11.618" fill="none" stroke="#000000" stroke-miterlimit="10"/>
+      <path d="M11.869 12.681 L11.869 15.281 L14.231 15.281" fill="#ffffff" stroke="#000000" stroke-miterlimit="10"/>
+    </g>
   </g>
 </svg>

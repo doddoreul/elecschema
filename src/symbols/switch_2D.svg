@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30" height="30" viewBox="0 0 30 30">
   <title>switch_2D.svg</title>
   <g id="Layer_1" data-name="Layer 1">
-    <path d="M19.977 20.002 L8.214 8.239" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-    <path d="M9.48 8.387 L12.652 5.215" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-    <path d="M19.965 20.03 L31.727 31.793" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-    <path d="M30.461 31.645 L27.289 34.817" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-    <path d="M16.322 20.073 C16.322 18.082 17.936 16.468 19.927 16.468 C21.918 16.468 23.531 18.082 23.531 20.073 C23.531 22.064 21.918 23.677 19.927 23.677 C17.936 23.677 16.322 22.064 16.322 20.073 Z" fill="#ffffff" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+    <g>
+      <path d="M15.006 14.986 L3.244 3.223" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M4.51 3.371 L7.682 0.199" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M14.995 15.014 L26.756 26.777" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M25.491 26.629 L22.319 29.801" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M11.352 15.057 C11.352 13.066 12.966 11.452 14.957 11.452 C16.947 11.452 18.561 13.066 18.561 15.057 C18.561 17.048 16.947 18.661 14.957 18.661 C12.966 18.661 11.352 17.048 11.352 15.057 Z" fill="#ffffff" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+    </g>
   </g>
 </svg>

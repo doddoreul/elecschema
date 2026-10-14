@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30" height="30" viewBox="0 0 30 30">
   <title>socket_switch.svg</title>
   <g id="Layer_1" data-name="Layer 1">
     <g>
-      <path d="M13.962 20 C13.962 23.314 16.648 26 19.962 26 C23.276 26 25.962 23.314 25.962 20" fill="none" stroke="#111827" stroke-width="2"/>
-      <path d="M19.962 26.307 L9.962 36.307" fill="none" stroke="#111827" stroke-width="2" stroke-miterlimit="10"/>
-      <path d="M10.676 36.983 L7.095 33.402" fill="none" stroke="#111827" stroke-width="2" stroke-miterlimit="10"/>
-      <path d="M13.793 33.762 L10.212 30.181" fill="none" stroke="#111827" stroke-width="2" stroke-miterlimit="10"/>
-      <path d="M19.962 26.307 L19.962 40" fill="none" stroke="#111827" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M8.921 10 C8.921 13.314 11.607 16 14.921 16 C18.235 16 20.921 13.314 20.921 10" fill="none" stroke="#111827" stroke-width="2"/>
+      <path d="M14.921 16.307 L4.921 26.307" fill="none" stroke="#111827" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M5.635 26.983 L2.054 23.402" fill="none" stroke="#111827" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M8.752 23.762 L5.171 20.181" fill="none" stroke="#111827" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M14.921 16.307 L14.921 30" fill="none" stroke="#111827" stroke-width="2" stroke-miterlimit="10"/>
     </g>
   </g>
 </svg>

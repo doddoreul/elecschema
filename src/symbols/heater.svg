@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30" height="30" viewBox="0 0 30 30">
   <title>heater.svg</title>
   <g id="Layer_1" data-name="Layer 1">
-    <path d="M20 0 L20 10 M20 30 L20 40" fill="none" stroke="#111827" stroke-width="2"/>
-    <path d="M8 10 L32 10 L32 30 L8 30 Z" fill="#ffffff" stroke="#111827" stroke-width="2"/>
-    <path d="M14 10 L14 30 M20 10 L20 30 M26 10 L26 30" fill="none" stroke="#111827" stroke-width="2"/>
+    <g>
+      <path d="M15 -5 L15 5 M15 25 L15 35" fill="none" stroke="#111827" stroke-width="2"/>
+      <path d="M3 5 L27 5 L27 25 L3 25 Z" fill="#ffffff" stroke="#111827" stroke-width="2"/>
+      <path d="M9 5 L9 25 M15 5 L15 25 M21 5 L21 25" fill="none" stroke="#111827" stroke-width="2"/>
+    </g>
   </g>
 </svg>
