@@ -10,8 +10,9 @@ import { nodeById } from './model.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 
-const CW = 80;          // pas horizontal entre deux cellules
-const CH = 56;          // pas vertical entre deux cellules
+const CW = 40;          // pas horizontal de base entre deux cellules
+const CH = 28;          // pas vertical de base entre deux cellules
+const GAP = 10;         // espace libre minimal (px) entre deux corps adjacents
 const MARGIN = 40;      // marge gauche/droite
 const TOP_PAD = 18;     // petite marge (tete/cartouche hors canvas, dans le PDF)
 const BOTTOM_PAD = 18;  // petite marge (pied hors canvas, dans le PDF)
@@ -52,9 +53,10 @@ function sizeOf(node, span = tabSpan(node)) {
 }
 
 /** Place l'arbre sur une grille : un élément par cellule, **sans chevauchement**.
- *  Le pas de grille (64x56) est plus petit que certains symboles (compteur 88x64,
- *  fil 40x80, board 120x40) : l'occupation est donc testée au pixel près, sur le
- *  rectangle réellement occupé, et non case par case. */
+ *  L'écart le long de la direction suit la taille réelle des deux corps
+ *  (demi-parent + demi-enfant + `GAP`), converti en cellules de `CW`/`CH` px : les
+ *  symboles se resserrent au plus près sans se recouvrir. Le compteur (88x64), le fil
+ *  (40x80) et le tableau restent testés au pixel près, sur le rectangle réellement occupé. */
 /** Disposition complète. Une branche qui bloque un tracé est décalée (latéralement pour une
  *  sortie de tableau, vers l'extérieur sinon) puis tout est recalculé, jusqu'à ce que chaque
  *  fil trouve son passage. Les fils ne se croisent jamais. */
@@ -197,7 +199,13 @@ function layoutOnce(project, bias) {
         // une sortie de tableau part de sa propre colonne (décalée si nécessaire)
         const extra = bias.get(child.id) || 0;
         const P = { x: x + (isOut ? colOf(node, key) : 0), y };
-        const tMin = isOut ? 1 : 1 + extra;
+        // écart minimal le long de la direction : les deux corps ne se chevauchent pas
+        const pitch = dir[0] ? CW : CH;
+        const sp = sizeOf(node, spanOf(node));
+        const sc = sizeOf(child, spanOf(child));
+        const halfP = (dir[0] ? sp.w : sp.h) / 2;
+        const halfC = (dir[0] ? sc.w : sc.h) / 2;
+        const tMin = (halfP + halfC + GAP) / pitch + extra;
         let pts = findRoute(child, P, dir, node.id, tMin, detour);
         if (!pts) {
           if (!detour) { next.push(key); continue; }

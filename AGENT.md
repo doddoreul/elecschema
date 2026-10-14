@@ -371,8 +371,11 @@ CSS d'impression `.plan-*` dans `ui.js`.
 
 Arbre d'ancrage sur une **grille** (1 element / cellule, sans recouvrement) :
 - Compteur racine place en bas a gauche ; le flux va a **droite** puis vers le **haut**.
-- Placement glouton recursif : l'enfant va dans la cellule voisine selon la direction de
-  l'ancrage ; si occupee, on avance tout droit jusqu'a une case libre (conducteur rectiligne).
+- Placement glouton recursif : l'ecart le long de la direction est **calcule d'apres la taille
+  reelle** des deux corps (`sizeOf` : demi-parent + demi-enfant + `GAP` = 10 px), converti en
+  cellules (`CW` = 40 / `CH` = 28 px de base) ; si la case est occupee, on avance tout droit
+  jusqu'a un passage libre (conducteur rectiligne). Les symboles se resserrent donc au plus
+  pres (ecart visuel ~10 px) au lieu d'un pas de grille fixe.
 - Conducteurs = segments entre centres de cellules (horizontal ou vertical).
 - **« + » vert** (`data-anchor="id:dir"`) = ancrage libre -> cliquez puis un symbole.
   **« + » gris** au milieu d'un conducteur (`data-link="id:dir"`) = insérer un node.
