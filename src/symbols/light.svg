@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="20" height="20" viewBox="0 0 20 20">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="16" height="16" viewBox="0 0 16 16">
   <title>light.svg</title>
   <g id="Layer_1" data-name="Layer 1">
     <g>
-      <path d="M3 3 L17 17" fill="none" stroke="#111827" stroke-width="2"/>
-      <path d="M17 3 L3 17" fill="none" stroke="#111827" stroke-width="2"/>
+      <path d="M1 1 L15 15" fill="none" stroke="#111827" stroke-width="2"/>
+      <path d="M15 1 L1 15" fill="none" stroke="#111827" stroke-width="2"/>
     </g>
   </g>
 </svg>

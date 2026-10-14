@@ -61,7 +61,7 @@ const SYMBOLS = {
   },
   push: {
     name: 'Bouton-poussoir', ref: 'E', category: 'interrupteurs', prefix: 'B',
-    w: 20, h: 20, file: 'symbols/push.svg',
+    w: 14, h: 14, file: 'symbols/push.svg',
   },
   timer: {
     name: 'Minuterie', ref: 'E', category: 'interrupteurs', prefix: 'K',
@@ -91,7 +91,7 @@ const SYMBOLS = {
 
   light: {
     name: 'Point lumineux', ref: 'G', category: 'eclairage', prefix: 'E',
-    w: 20, h: 20, file: 'symbols/light.svg',
+    w: 16, h: 16, file: 'symbols/light.svg',
   },
   fluo: {
     name: 'Appareil d’éclairage à fluorescence', ref: 'G', category: 'eclairage', prefix: 'E',
