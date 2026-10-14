@@ -198,7 +198,7 @@ const SYMBOLS = {
   // tableau, aspect file, orientation modifiable.
   node_parallel: {
     name: 'Node parallèle', ref: 'D', prefix: 'D', category: 'cables',
-    w: 64, h: 12, file: 'symbols/node_parallel.svg',
+    w: 30.333, h: 12, file: 'symbols/node_parallel.svg',
   },
 };
 
