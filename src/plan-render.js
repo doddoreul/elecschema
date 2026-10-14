@@ -2,7 +2,7 @@
 // Le zoom/panoramique ne re-rend pas : seul le viewBox change (voir plan-ui.js).
 // Le calque `#plan-overlay` (aperçus, poignées) est redessiné seul.
 import { assetGet } from './plan-assets.js';
-import { symbolOf, symbolUrl } from './symbols.js';
+import { symbolOf, defOf, symbolUrl } from './symbols.js';
 import { symbolHref } from './render.js';
 import { nodeById, circuitStartOf } from './model.js';
 import { symbolSideCm, pointOnWall, wallLength } from './plan-model.js';
@@ -32,7 +32,7 @@ function drawPlacements(parent, project, level, n, selPlace) {
     const node = pl.elementId === project.supply.id ? project.supply : nodeById(project, pl.elementId);
     if (!node) continue;
     const isSupply = node.symbolType === 'compteur';
-    const def = symbolOf(isSupply ? 'kwh' : node.symbolType);
+    const def = isSupply ? symbolOf('kwh') : defOf(node);
     const href = isSupply ? symbolUrl('kwh') : symbolHref(node);
     const h = side * def.h / def.w;
     const g = el('g', {

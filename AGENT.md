@@ -192,7 +192,9 @@ Decisions actees :
   (`socketType`, defaut `earth_childproof`) choisit le fichier SVG parmi `SOCKET_TYPES`
   (`symbols.js`). 10 types : generic, waterproof, earth, childproof, earth_childproof,
   earth_childproof_double, earth_childproof_triple, switch, switch_lock, transformer.
-  Rendu : `socketUrl(node.socketType)`.
+  Rendu : `socketUrl(node.socketType)`. La **taille** (`defOf`, `socketSize`, `symbols.js`) suit le
+  `viewBox` du fichier du type : 30×25 (generic, waterproof, earth_childproof_double, switch,
+  switch_lock, transformer), 30×20 (earth, childproof, earth_childproof), 30×30 (earth_childproof_triple).
   `normalizeSockets()` convertit les anciens types eclates (socket_earth, ...) a l'ouverture.
 - **Interrupteurs** : un seul symbole palette `switch` ; la propriete **type d'interrupteur**
   (`switchType`, defaut `simple`) choisit le fichier SVG parmi `SWITCH_TYPES` (`symbols.js`).
@@ -379,7 +381,8 @@ Arbre d'ancrage sur une **grille** (1 element / cellule, sans recouvrement) :
 - **Les « + » sont dessinés en dernier** (au-dessus des symboles) pour rester cliquables —
   indispensable pour le compteur, plus large qu'une cellule. Leur position dépasse le bord du
   corps de 6 px, d'après la taille réelle du symbole (`halfOf`, **sans plancher**) : compteur
-  44×32 → +50/+38 px du centre, socket 15×15 → +21, carrefour (node) 2,5×2,5 → +8,5 (ses « + »
+  44×32 → +50/+38 px du centre, socket (30×20 ou 30×25 selon le type) → +21 en largeur et +16 à
+  +18,5 en hauteur, carrefour (node) 2,5×2,5 → +8,5 (ses « + »
   restent ainsi collés au petit point). Le « + » gris d'insertion se
   décale vers l'enfant (`t` entre 0,5 et 0,85) pour sortir du corps du parent.
 - **Demi-taille** (`plusMark`) : fond `r=5`, barres ±2,5, zone cliquable `r=7,5` (les

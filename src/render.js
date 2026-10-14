@@ -4,7 +4,7 @@
 //   Un « node » (4 ancrages) peut être inséré entre deux éléments.
 // Aucun rendu classique/développé : uniquement le schéma unifilaire.
 
-import { symbolOf, symbolUrl, socketUrl, switchUrl, filUrl } from './symbols.js';
+import { defOf, symbolUrl, socketUrl, switchUrl, filUrl } from './symbols.js';
 import { anchorKeysOf, baseDir, outputIndex } from './standards.js';
 import { nodeById } from './model.js';
 
@@ -44,7 +44,7 @@ const tabSpan = (node) => (node && node.symbolType === 'tableau' ? (node.outputs
 function sizeOf(node, span = tabSpan(node)) {
   if (!node || node.symbolType === 'compteur') return { w: 88, h: 64 };
   if (node.symbolType === 'tableau') return { w: span * CW + 64, h: 24 };
-  const def = symbolOf(node.symbolType);
+  const def = defOf(node);
   const w = def.w || 40, h = def.h || 40;
   // quart de tour impair => largeur et hauteur échangées
   const quarter = Math.abs(Number(node.orient || 0) / 90) % 2 === 1;
@@ -348,7 +348,7 @@ function plusMark(svg, cx, cy, cls, attrs) {
 function halfOf(project, id) {
   const n = nodeById(project, id);
   if (!n || n.symbolType === 'compteur') return { w: 44, h: 32 };
-  const def = symbolOf(n.symbolType);
+  const def = defOf(n);
   return { w: (def.w || 40) / 2, h: (def.h || 40) / 2 };
 }
 
@@ -462,7 +462,7 @@ export function renderSchema(root, project, opts = {}) {
     const cx = px(c.x), cy = py(c.y);
     const sel = opts.selectedIds ? opts.selectedIds.has(node.id) : opts.selectedId === node.id;
     if (node.symbolType === 'tableau') { drawBar(node, c, sel); continue; }
-    const def = symbolOf(node.symbolType);
+    const def = defOf(node);
     const { g, rot } = symbolGroup(svg, def, symbolHref(node), cx, cy, sel, { 'data-el': node.id }, node.orient || 0);
     placeLabel(rot, node, def);
   }

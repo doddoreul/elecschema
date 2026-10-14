@@ -9,7 +9,7 @@ import {
   planFrame, PLAN_DEFAULT_SCALE, PLAN_MIN_SCALE, PLAN_MAX_SCALE,
 } from './plan-model.js';
 import { PLAN_SCALES } from './standards.js';
-import { symbolName, symbolOf } from './symbols.js';
+import { symbolName, symbolOf, defOf } from './symbols.js';
 import { nodeById, circuitStartOf } from './model.js';
 import { prepareImage, assetSet } from './plan-assets.js';
 import { renderPlanLevel, el, planLabel } from './plan-render.js';
@@ -349,7 +349,7 @@ function drawOverlay() {
     const found = findPlacement(plan(), ui.selPlace);
     if (found) {
       const node = nodeOf(found.placement.elementId);
-      const def = symbolOf(node.symbolType === 'compteur' ? 'kwh' : node.symbolType);
+      const def = node.symbolType === 'compteur' ? symbolOf('kwh') : defOf(node);
       const side = symbolSideCm(ui.n);
       const h = side * def.h / def.w;
       el('rect', { x: found.placement.x - side / 2 - 3, y: found.placement.y - h / 2 - 3, width: side + 6, height: h + 6, class: 'plan-sel-ring' }, g);

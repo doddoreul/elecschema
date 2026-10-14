@@ -61,7 +61,7 @@ const SYMBOLS = {
   },
   push: {
     name: 'Bouton-poussoir', ref: 'E', category: 'interrupteurs', prefix: 'B',
-    w: 30, h: 30, file: 'symbols/push.svg',
+    w: 20, h: 20, file: 'symbols/push.svg',
   },
   timer: {
     name: 'Minuterie', ref: 'E', category: 'interrupteurs', prefix: 'K',
@@ -86,12 +86,12 @@ const SYMBOLS = {
 
   socket: {
     name: 'Prise de courant', ref: 'F', category: 'prises', prefix: 'X',
-    w: 30, h: 30, file: 'symbols/socket_earth_childproof.svg',
+    w: 30, h: 20, file: 'symbols/socket_earth_childproof.svg',
   },
 
   light: {
     name: 'Point lumineux', ref: 'G', category: 'eclairage', prefix: 'E',
-    w: 30, h: 30, file: 'symbols/light.svg',
+    w: 20, h: 20, file: 'symbols/light.svg',
   },
   fluo: {
     name: 'Appareil d’éclairage à fluorescence', ref: 'G', category: 'eclairage', prefix: 'E',
@@ -202,6 +202,12 @@ export function symbolOf(type) {
   return def;
 }
 
+/** Définition d'un symbole pour un élément : la taille d'une prise suit son type. */
+export function defOf(node) {
+  const def = symbolOf(node.symbolType);
+  return node.symbolType === 'socket' ? { ...def, ...socketSize(node.socketType) } : def;
+}
+
 /** Nom d'affichage d'un symbole (pour les listes et le tableau BOM). */
 export function symbolName(type) {
   return symbolOf(type).name;
@@ -213,18 +219,19 @@ export function symbolUrl(type) {
 }
 
 // Types de socle de prise de courant (propriété « type de prise »). Chaque type
-// correspond à un fichier SVG distinct. Le type par défaut est souligné ci-dessous.
+// correspond à un fichier SVG distinct, avec sa propre taille (viewBox). Le type
+// par défaut est souligné ci-dessous.
 export const SOCKET_TYPES = [
-  { key: 'generic', name: 'Générique', file: 'symbols/socket.svg' },
-  { key: 'waterproof', name: 'Etanche ou semi-étanche', file: 'symbols/socket_waterproof.svg' },
-  { key: 'earth', name: 'Avec protection terre', file: 'symbols/socket_earth.svg' },
-  { key: 'childproof', name: 'Avec protection enfant', file: 'symbols/socket_childproof.svg' },
-  { key: 'earth_childproof', name: 'Avec protection terre et enfant (défaut)', file: 'symbols/socket_earth_childproof.svg' },
-  { key: 'earth_childproof_double', name: 'Double avec protection terre et enfant', file: 'symbols/socket_earth_childproof_double.svg' },
-  { key: 'earth_childproof_triple', name: 'Triple avec protection terre et enfant', file: 'symbols/socket_earth_childproof_triple.svg' },
-  { key: 'switch', name: 'Avec interrupteur bipolaire', file: 'symbols/socket_switch.svg' },
-  { key: 'switch_lock', name: 'Avec interrupteur bipolaire de verrouillage', file: 'symbols/socket_switch_lock.svg' },
-  { key: 'transformer', name: 'Avec transformateur de séparation', file: 'symbols/socket_transfo.svg' },
+  { key: 'generic', name: 'Générique', file: 'symbols/socket.svg', w: 30, h: 25 },
+  { key: 'waterproof', name: 'Etanche ou semi-étanche', file: 'symbols/socket_waterproof.svg', w: 30, h: 25 },
+  { key: 'earth', name: 'Avec protection terre', file: 'symbols/socket_earth.svg', w: 30, h: 20 },
+  { key: 'childproof', name: 'Avec protection enfant', file: 'symbols/socket_childproof.svg', w: 30, h: 20 },
+  { key: 'earth_childproof', name: 'Avec protection terre et enfant (défaut)', file: 'symbols/socket_earth_childproof.svg', w: 30, h: 20 },
+  { key: 'earth_childproof_double', name: 'Double avec protection terre et enfant', file: 'symbols/socket_earth_childproof_double.svg', w: 30, h: 25 },
+  { key: 'earth_childproof_triple', name: 'Triple avec protection terre et enfant', file: 'symbols/socket_earth_childproof_triple.svg', w: 30, h: 30 },
+  { key: 'switch', name: 'Avec interrupteur bipolaire', file: 'symbols/socket_switch.svg', w: 30, h: 25 },
+  { key: 'switch_lock', name: 'Avec interrupteur bipolaire de verrouillage', file: 'symbols/socket_switch_lock.svg', w: 30, h: 25 },
+  { key: 'transformer', name: 'Avec transformateur de séparation', file: 'symbols/socket_transfo.svg', w: 30, h: 25 },
 ];
 
 export const DEFAULT_SOCKET_TYPE = 'earth_childproof';
@@ -237,6 +244,12 @@ function socketTypeOf(key) {
 /** URL absolue du fichier SVG correspondant au type de prise. */
 export function socketUrl(key) {
   return new URL(socketTypeOf(key).file, document.baseURI).href;
+}
+
+/** Taille (w/h) du symbole d'une prise, selon son type (repli sur `SYMBOLS.socket`). */
+export function socketSize(key) {
+  const t = socketTypeOf(key);
+  return { w: t.w || SYMBOLS.socket.w, h: t.h || SYMBOLS.socket.h };
 }
 
 // Types d'interrupteur (propriété « type d'interrupteur »). Chaque type correspond

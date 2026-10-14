@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30" height="30" viewBox="0 0 30 30">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30" height="25" viewBox="0 0 30 25">
   <title>socket_transfo.svg</title>
   <g id="Layer_1" data-name="Layer 1">
     <g>
-      <g>
-        <path d="M15 30 L15 16" fill="none" stroke="#111827" stroke-width="2"/>
-        <path d="M20.445 16 C20.445 19.007 18.007 21.445 15 21.445 C11.993 21.445 9.555 19.007 9.555 16 C9.555 12.993 11.993 10.555 15 10.555 C18.007 10.555 20.445 12.993 20.445 16 Z" fill="#ffffff" stroke="#111827" stroke-width="2" stroke-miterlimit="10"/>
-        <path d="M9 8.578 C9 11.892 11.686 14.578 15 14.578 C18.314 14.578 21 11.892 21 8.578" fill="none" stroke="#111827" stroke-width="2"/>
-      </g>
+      <path d="M15 25 L15 11" fill="none" stroke="#111827" stroke-width="2"/>
+      <path d="M20.445 11 C20.445 14.007 18.007 16.445 15 16.445 C11.993 16.445 9.555 14.007 9.555 11 C9.555 7.993 11.993 5.555 15 5.555 C18.007 5.555 20.445 7.993 20.445 11 Z" fill="#ffffff" stroke="#111827" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M9 3.578 C9 6.892 11.686 9.578 15 9.578 C18.314 9.578 21 6.892 21 3.578" fill="none" stroke="#111827" stroke-width="2"/>
     </g>
   </g>
 </svg>
