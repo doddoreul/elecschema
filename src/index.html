@@ -236,13 +236,6 @@
             <button id="plan-level-down" title="Descendre l'étage">▶</button>
             <button id="plan-level-del" title="Supprimer l'étage (les éléments du schéma sont conservés)">Supprimer l'étage</button>
             <span class="spacer"></span>
-            <label class="plan-scale-label">Échelle 1:
-              <input id="plan-scale-input" type="number" min="10" max="1000" step="1" value="100" list="plan-scale-list">
-            </label>
-            <datalist id="plan-scale-list"></datalist>
-            <button id="plan-scale-dec" title="Réduire le numéro d'échelle (1:N plus petit, dessin plus grand)">−</button>
-            <button id="plan-scale-inc" title="Augmenter le numéro d'échelle (1:N plus grand, dessin plus petit)">+</button>
-            <span id="plan-scale-eff" class="count"></span>
           </div>
           <div class="plan-bar-row">
             <button id="plan-tool-select" class="plan-icon-btn" title="Sélectionner et déplacer" aria-label="Sélection"><img class="plan-icon" src="assets/selection.png" alt=""></button>
@@ -296,6 +289,19 @@
             <svg id="plan-canvas" xmlns="http://www.w3.org/2000/svg"></svg>
           </div>
           <aside class="plan-side">
+            <h3>Mise en page</h3>
+            <label class="plan-field">Échelle 1:
+              <input id="plan-scale-input" type="number" min="10" max="1000" step="1" value="100" list="plan-scale-list">
+            </label>
+            <datalist id="plan-scale-list"></datalist>
+            <div class="plan-scale-row">
+              <button id="plan-scale-dec" title="Réduire le numéro d'échelle (1:N plus petit, dessin plus grand)">−</button>
+              <button id="plan-scale-inc" title="Augmenter le numéro d'échelle (1:N plus grand, dessin plus petit)">+</button>
+            </div>
+            <p id="plan-scale-eff" class="plan-scale-eff"></p>
+            <div class="plan-checks">
+              <label><input id="plan-frame-lock" type="checkbox"> Verrouiller la mise en page</label>
+            </div>
             <h3>Fond de plan</h3>
             <p class="count">Image temporaire : tracez par-dessus, puis supprimez-la.</p>
             <button id="plan-bg-import">Importer un fond…</button>

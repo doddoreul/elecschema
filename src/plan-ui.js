@@ -42,6 +42,7 @@ const ui = {
   elementOpacity: 1,    // opacité des éléments du plan (murs, ouvertures, pièces, symboles)
   n: 100,               // échelle effective courante (pour la taille des symboles)
   showFrame: true,      // afficher le cadre A4 (feuille, zones, cartouche) à l'écran
+  lock: false,          // verrouiller la mise en page : échelle et déplacement du cadre A4
 };
 
 function plan() { return deps.getProject().plan; }
@@ -119,6 +120,10 @@ export function initPlan(d) {
   });
   $('#plan-frame-center').addEventListener('click', () => { centerViewOnFrame(currentLevel()); refreshPlan(); });
   $('#plan-fit-drawing').addEventListener('click', fitDrawing);
+
+  const frameLock = $('#plan-frame-lock');
+  frameLock.addEventListener('change', (e) => { ui.lock = e.target.checked; applyLayoutLock(); refreshPlan(); });
+  applyLayoutLock();
 
   $('#plan-tool-select').addEventListener('click', () => setTool('select'));
   $('#plan-tool-wall').addEventListener('click', () => setTool(ui.tool === 'wall' ? 'select' : 'wall'));
@@ -386,6 +391,14 @@ function toggleElements() {
   refreshPlan();
 }
 
+/** « Verrouiller la mise en page » : neutralise l'échelle et le déplacement du cadre A4. */
+function applyLayoutLock() {
+  for (const sel of ['#plan-scale-input', '#plan-scale-dec', '#plan-scale-inc', '#plan-fit-drawing']) {
+    const b = $(sel);
+    if (b) b.disabled = ui.lock;
+  }
+}
+
 function renderScale(lv) {
   const eff = effectiveScale(lv);
   const input = $('#plan-scale-input');
@@ -396,6 +409,7 @@ function renderScale(lv) {
 
 /** Applique une échelle 1:N saisie (bornée), garde le centre et recale la vue sur la feuille. */
 function setScale(raw) {
+  if (ui.lock) return;
   const lv = currentLevel();
   const v = Math.round(Number(raw));
   const n = Number.isFinite(v) ? Math.min(PLAN_MAX_SCALE, Math.max(PLAN_MIN_SCALE, v)) : effectiveScale(lv);
@@ -406,6 +420,7 @@ function setScale(raw) {
 
 /** Change d'échelle par pas de la gamme normalisée. `largerN` : 1:N plus grand (dessin plus petit). */
 function stepScale(largerN) {
+  if (ui.lock) return;
   const lv = currentLevel();
   const s = effectiveScale(lv);
   const idx = PLAN_SCALES.indexOf(s);
@@ -425,6 +440,7 @@ function stepScale(largerN) {
 
 /** « Ajuster au dessin » : choisit l'échelle qui fait tenir le tracé dans la page et centre dessus. */
 function fitDrawing() {
+  if (ui.lock) return;
   const lv = currentLevel();
   const b = fitBounds(lv);
   lv.printScale = b ? fitScale(b).n : PLAN_DEFAULT_SCALE;
@@ -457,7 +473,7 @@ function drawFrame(g, lv) {
   el('line', { x1: f.cartouche.x, y1: f.cartouche.y + f.cartouche.h * 0.42, x2: f.cartouche.x + f.cartouche.w, y2: f.cartouche.y + f.cartouche.h * 0.42, class: 'plan-frame-cartouche ui-only', ...noPointer }, g);
   el('text', { x: f.sheet.x, y: f.sheet.y - fs * 0.3, 'font-size': fs, class: 'plan-frame-label ui-only', 'pointer-events': 'none' }, g)
     .textContent = `${lv.name} — 1:${f.n}`;
-  if (ui.tool === 'select') {
+  if (ui.tool === 'select' && !ui.lock) {
     el('circle', { cx: f.center.x, cy: f.center.y, r: ui.view.w / 120, class: 'plan-frame-handle ui-only', 'pointer-events': 'none' }, g);
     el('circle', { cx: f.center.x, cy: f.center.y, r: ui.view.w / 45, class: 'plan-frame-hit ui-only', 'data-frame-move': '1' }, g);
   }
@@ -677,7 +693,7 @@ function onPointerDown(e) {
   const lv = currentLevel();
 
   // Poignée de déplacement du cadre : déplace le centre d'impression (printCenter).
-  if (ui.tool === 'select' && e.target.closest?.('[data-frame-move]')) {
+  if (ui.tool === 'select' && !ui.lock && e.target.closest?.('[data-frame-move]')) {
     const f = planFrame(lv);
     ui.drag = { kind: 'frame', start: toWorld(e), orig: { x: f.center.x, y: f.center.y }, moved: false };
     svgEl().setPointerCapture(e.pointerId);

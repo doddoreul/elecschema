@@ -285,10 +285,7 @@ clic-armer) ; deplacement (grille 5 cm), rotation (champ + `R`), retrait (`Suppr
 element schema conserve) ; selection partagee (clic symbole plan -> `selectElement` schema).
 Etages : ajout / renommage (double-clic) / monter / descendre / suppression.
 
-Barre d'outils du plan sur **trois lignes** (`.plan-bar-row`) : (1) etages + **echelle 1:N**
-(champ numerique `#plan-scale-input`, bornes 10…1000, suggestions `PLAN_SCALES` via
-`#plan-scale-list`, boutons `#plan-scale-dec`/`#plan-scale-inc` ; changer N recale la vue sur
-la feuille) ; (2) outils (Selection, Mur, Porte, Fenetre, Texte) + reglages d'ouverture
+Barre d'outils du plan sur **trois lignes** (`.plan-bar-row`) : (1) etages ; (2) outils (Selection, Mur, Porte, Fenetre, Texte) + reglages d'ouverture
 (largeur, miroirs : boutons a icone `assets/flip.png`, `aria-label` Miroir horizontal /
 vertical ; l'icone du miroir horizontal est pivotee de 90° via `#plan-opening-hinge .plan-icon`) ;
 (3) bouton **Afficher / masquer le dessin** (ne garde que
@@ -304,12 +301,20 @@ boutons **zoom − / +** de la vue (`zoomCenter()`) et curseur **opacite des ele
 le retrecissent autour de son centre (`scaleBg()`) ; ces boutons ne sont actifs que fond
 **deverrouille**.
 
+**Panneau de droite « Mise en page »** : l'**echelle 1:N** (champ numerique `#plan-scale-input`,
+bornes 10…1000, suggestions `PLAN_SCALES` via `#plan-scale-list`, boutons
+`#plan-scale-dec`/`#plan-scale-inc` ; changer N recale la vue sur la feuille) et la case
+**« Verrouiller la mise en page »** (`#plan-frame-lock`). Verrouillee : l'echelle (champ et
+boutons desactives), « Ajuster au dessin » et le **deplacement du cadre A4** (poignee masquee) ;
+les commandes de vue (Recentrer, Centrer le cadre, zoom) restent actives. Verrou en memoire
+(pas dans le projet, non memorise).
+
 **Cadre A4 a l'ecran** (`drawFrame`, `planFrame`) : feuille blanche, zones imprimable / de
 trace, cartouche, etiquette « {etage} — 1:N », **voile** grisant tout ce qui est hors zone de
 trace (non imprime) et **poignee** au centre de la zone de trace qui regle `printCenter`
-(glisser = le cadre suit le curseur). Traits en `vector-effect: non-scaling-stroke` (epaisseur
-constante au zoom) ; calque d'ecran marque `ui-only`. WYSIWYG avec le PDF (hors zone : attenue
-a l'ecran, coupe dans le PDF).
+(glisser = le cadre suit le curseur ; masquee si la mise en page est verrouillee). Traits en
+`vector-effect: non-scaling-stroke` (epaisseur constante au zoom) ; calque d'ecran marque
+`ui-only`. WYSIWYG avec le PDF (hors zone : attenue a l'ecran, coupe dans le PDF).
 
 Origine/licence des icones `src/assets/*.png` (selection, firewall, opened-door-aperture,
 window, text, flip) : **telechargees d'une source libre**, mais la **reference exacte

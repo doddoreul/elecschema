@@ -140,7 +140,7 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T10.26 | Cliquer un symbole posé (fond présent, verrouillé **ou** déverrouillé) | Sélection + anneau de sélection, **sans erreur console** ; les autres éléments restent sélectionnables même fond déverrouillé |
 | T10.27 | Fond **déverrouillé** : boutons « − » / « + » (panneau « Fond de plan ») | L'arrière-plan rétrécit / s'agrandit autour de son centre (définir la taille) ; boutons **désactivés** quand le fond est verrouillé |
 | T10.28 | Volet « Non placés » | La liste est dans un **volet à gauche** de la zone de travail (elle n'est plus dans le panneau de droite) ; glisser-déposer / clic-armer inchangés |
-| T10.29 | Barre d'outils du plan | **Trois lignes** : (1) étages + **échelle 1:N** (champ + `−`/`+`) ; (2) outils Sélection / Mur / Porte / Fenêtre / **Texte** ; (3) Afficher-masquer / **Afficher le cadre A4** / Recentrer / Centrer le cadre / Ajuster au dessin / zoom − + / opacité |
+| T10.29 | Barre d'outils du plan | **Trois lignes** : (1) étages ; (2) outils Sélection / Mur / Porte / Fenêtre / **Texte** ; (3) Afficher-masquer / **Afficher le cadre A4** / Recentrer / Centrer le cadre / Ajuster au dessin / zoom − + / opacité |
 | T10.30 | Boutons **zoom − / +** (barre d'outils) | Le dessin se dézoome / zoome autour du **centre de la zone de travail** (le curseur d'opacité et « Recentrer » restent inchangés) |
 | T10.31 | Barre dédiée « Texte » (taille, **G**, *I*, <u>S</u>) | N'apparaît **que** quand un texte est sélectionné ; disparaît à la désélection |
 | T10.32 | Réglages de la barre « Texte » | « Taille » (Petite / Normale / Grande / Très grande) change la taille du texte ; G / I / S activent/désactivent gras / italique / souligné (bouton surligné si actif) |
@@ -149,7 +149,7 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T10.35 | Suggestions du champ échelle | Les échelles `PLAN_SCALES` (20, 25, 50, 75, 100, 125, 150, 200, 250, 500) sont proposées |
 | T10.36 | Case « Afficher le cadre A4 » | Affiche / masque feuille, zone imprimable, zone de tracé, cartouche et étiquette « {étage} — 1:N » ; l'état survit à un rechargement (`localStorage 'elexio.planFrame'`) |
 | T10.37 | Élément hors de la zone de tracé | **Atténué à l'écran** par un voile ; **coupé dans le PDF** (WYSIWYG) |
-| T10.38 | Poignée au centre de la zone de tracé (outil Sélection) | Glisser déplace le cadre (réglage `printCenter`, enregistré dans le projet) ; le cadre suit le curseur |
+| T10.38 | Poignée au centre de la zone de tracé (outil Sélection) | Glisser déplace le cadre (réglage `printCenter`, enregistré dans le projet) ; le cadre suit le curseur ; la poignée est **masquée** si la mise en page est verrouillée |
 | T10.39 | Bouton « Centrer le cadre » | Recentre la vue sur le cadre **sans** changer le zoom |
 | T10.40 | Bouton « Ajuster au dessin » | Choisit l'échelle entière qui fait tenir le tracé à la page, puis recentre |
 | T10.41 | Exporter en PDF alors qu'un tracé déborde de la zone | Une **confirmation** prévient du débordement avant l'export |
@@ -157,3 +157,5 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T10.43 | Ouvrir un projet par **dialogue** (« Ouvrir… ») | Le projet apparaît dans **Récents** (l'export PDF, lui, n'ajoute aucun chemin) |
 | T10.44 | Ancien `localStorage` (`elecschema.*`) présent | Au 1er chargement, `autosave`, `tab`, `printPreview` et `favorites` sont **repris** dans `elexio.*` ; les clés d'origine sont **conservées** (rien supprimé) |
 | T10.45 | Ouvrir un projet 0.3.0 / 0.4.0 (échelle `'auto'`) | Ouvre sans perte ; `'auto'` devient l'échelle entière qui cadre le dessin ; réenregistrer reste au format `.elx` v5 |
+| T10.46 | Panneau de droite du plan → section « **Mise en page** » | L'**échelle 1:N** (champ + `−`/`+`) et l'indicateur d'échelle sont dans le **panneau de droite** (plus dans la barre du haut) ; la modifier recale la vue sur la feuille |
+| T10.47 | Case « **Verrouiller la mise en page** » (cochée) | Le champ d'échelle, `−`/`+` et « Ajuster au dessin » sont **désactivés** ; la **poignée de déplacement du cadre A4 disparaît** ; décocher rétablit tout (le verrou n'est pas mémorisé) |

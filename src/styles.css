@@ -328,7 +328,10 @@ tbody tr:hover { background: #f9fafb; }
 .plan-levels { display: flex; gap: 2px; }
 .plan-level { background: none; color: var(--muted); font-weight: 500; }
 .plan-level.active { background: var(--accent); border-color: #1d4ed8; color: #fff; }
-.plan-scale-label { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.plan-scale-row { display: flex; align-items: center; gap: 6px; margin: 6px 0; }
+.plan-side .plan-scale-row button { display: inline-block; width: 34px; margin: 0; }
+.plan-side .plan-scale-row button:disabled { opacity: .45; }
+.plan-scale-eff { margin: 0 0 6px; }
 .plan-bar-field { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
 .plan-bar-field[hidden] { display: none; }
 .plan-bar-field input[type=number] { width: 68px; }
@@ -388,7 +391,7 @@ button.active .plan-icon { filter: invert(1); }
 #plan-toggle-elements[aria-pressed="true"] { background: var(--accent); border-color: #1d4ed8; color: #fff; }
 /* Cadre A4 (écran) : feuille, voile hors zone de tracé, bords des zones, poignée. */
 .plan-bar-check { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 5px; }
-.plan-scale-label input[type=number] { width: 72px; }
+#plan-scale-input { width: 72px; }
 .plan-sheet { fill: #fff; }
 .plan-veil { fill: rgba(107, 114, 128, 0.3); }
 .plan-frame-sheet { stroke: #9ca3af; stroke-width: 1.5; }
