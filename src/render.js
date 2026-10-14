@@ -65,14 +65,21 @@ function txt(parent, x, y, content, cls = 'lbl', anchor = 'start') {
 
 /** Dimensions réelles (px) d'un élément, orientation comprise : un symbole
  *  pivoté (ex. fil 40x80 à l'horizontale) occupe plus que sa cellule. */
-/** Tableau : la barre couvre une colonne par sortie (une entrée à gauche). */
-const tabSpan = (node) => (node && isBarType(node.symbolType) ? (node.outputs || 2) - 1 : 0);
+/** Tableau : la barre couvre une colonne par sortie (une entrée à gauche).
+ *  Node parallèle : colonne 0 = entrée, puis une colonne par sortie. */
+const tabSpan = (node) => {
+  if (!node) return 0;
+  if (node.symbolType === 'node_parallel') return node.outputs || 2;
+  if (node.symbolType === 'tableau') return (node.outputs || 2) - 1;
+  return 0;
+};
 
 function sizeOf(node, span = tabSpan(node)) {
   if (!node || node.symbolType === 'compteur') return { w: 88, h: 64 };
   if (node.symbolType === 'tableau') return { w: span * CW + 64, h: 24 };
   if (node.symbolType === 'node_parallel') {
-    const len = span * BAR_PITCH + 2 * NP_END;
+    // colonne 0 = point d'entrée : la barre part de là, sans débord avant lui
+    const len = span * BAR_PITCH + NP_END;
     return barVertical(node) ? { w: NP_THICK, h: len } : { w: len, h: NP_THICK };
   }
   const def = defOf(node);
@@ -114,7 +121,8 @@ function layoutOnce(project, bias) {
   const wires = [];               // { a, b } : tronçons de fil occupés (cellules)
   let bump = null;                // branche à décaler pour débloquer un tracé
 
-  // colonne (décalée) d'une sortie de tableau : un décalage pousse aussi les sorties suivantes
+  // colonne (décalée) d'une sortie de barre : un décalage pousse aussi les sorties suivantes.
+  // node parallèle : la colonne 0 est réservée à l'entrée, les sorties commencent en 1.
   const colOf = (node, key) => {
     const k = outputIndex(key);
     // sortie terre (bottom) : au milieu de la barre
@@ -124,7 +132,7 @@ function layoutOnce(project, bias) {
       const cid = (node.children || {})['top-' + (i + 1)];
       if (cid != null) shift += bias.get(cid) || 0;
     }
-    return k + shift;
+    return (node?.symbolType === 'node_parallel' ? 1 : 0) + k + shift;
   };
   // largeur (en colonnes) d'un tableau : jusqu'à sa dernière sortie vierge
   const spanOf = (node) => (isBarType(node?.symbolType) ? colOf(node, 'top-' + (node.outputs || 2)) : 0);
@@ -136,8 +144,13 @@ function layoutOnce(project, bias) {
     let cx = x * CW + CW / 2, cy = y * CH + CH / 2;
     if (isBarType(node?.symbolType)) {
       const u = barAxis(node);
-      cx += u.x * (span / 2) * BAR_PITCH;
-      cy += u.y * (span / 2) * BAR_PITCH;
+      // tableau : barre centrée sur la première colonne + NP_END de chaque côté ;
+      // node_parallel : barre qui part de l'entrée (aucun débord avant elle)
+      const half = node.symbolType === 'node_parallel'
+        ? (span * BAR_PITCH + NP_END) / 2
+        : (span / 2) * BAR_PITCH + NP_END;
+      cx += u.x * half;
+      cy += u.y * half;
     }
     return { x0: cx - s.w / 2, x1: cx + s.w / 2, y0: cy - s.h / 2, y1: cy + s.h / 2 };
   };
@@ -454,12 +467,14 @@ function drawNodeParallel(node, L, svg, c, sel, px, py) {
   // point de la barre : d = décalage le long de l'axe (px), o = décalage côté sorties (px)
   const pt = (d, o) => ({ x: rx + u.x * d + wx * o, y: ry + u.y * d + wy * o });
   const g = el('g', { class: 'sym-wrap' + (sel ? ' selected' : ''), 'data-el': node.id }, svg);
-  // barre fine, de la racine (décalée de NP_END) jusqu'au-delà de la dernière colonne
-  const a = pt(-NP_END, 0), b = pt(span * BAR_PITCH + NP_END, 0);
+  // barre fine : du point d'entrée (colonne 0, arrivée du parent) jusqu'au-delà de la
+  // dernière colonne. Aucun débord avant l'entrée (sinon un « tiret » rebique vers le fil).
+  const a = pt(0, 0), b = pt(span * BAR_PITCH + NP_END, 0);
   el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'bus' }, g);
-  // une petite barre par sortie (axe de la barre -> côté des sorties)
+  // une petite barre par sortie (axe de la barre -> côté des sorties) ;
+  // les sorties sont en colonnes 1..N : la colonne 0 reste l'entrée, sans tiret
   for (let i = 0; i < nout; i++) {
-    const p0 = pt(i * BAR_PITCH, 0), p1 = pt(i * BAR_PITCH, 6);
+    const p0 = pt((i + 1) * BAR_PITCH, 0), p1 = pt((i + 1) * BAR_PITCH, 6);
     el('line', { x1: p0.x, y1: p0.y, x2: p1.x, y2: p1.y, class: 'bus' }, g);
   }
   // zone cliquable : enveloppe de la barre et de ses sorties

@@ -243,6 +243,7 @@ Decisions actees :
   - Palette uniquement (catégorie « Câbles »). Clé `node_parallel`, fichier `symbols/node_parallel.svg` (vignette).
   - Comportement comme le tableau : `anchorKeysOf` (sorties `top-1…top-N` **sans `bottom`** : pas de « + » sous la barre), `canAccept` (Accepte **tout** type sur n'importe quelle sortie, comme un point de dérivation), `removeOutput`, `outputs` recalculés. Exclu de la **BOM**, des **circuits**, du **plan d'implantation** et des règles BE (`PLAN_EXCLUDED`, liste skip `renumberCircuits`).
    - **Croissance des colonnes** (`barAxis` dans `render.js`) : horizontale -> **a droite** ; verticale -> **vers le haut** (colonne 0 = point d arrivee du parent, dessin ancre la). Les sorties partent perpendiculairement (`anchorDir` pivote la direction logique : haut -> droite a 90). Les « + » d ancrage inoccupes se posent **au-dela de la derniere colonne, dans le sens de la barre** : **a droite** (horizontale) ou **au-dessus** (verticale), decalage de 18 px le long de l axe.
+   - **Colonnes** : colonne 0 = entree (arrivee du parent, sans tiret), puis une colonne par sortie (colOf renvoie  + k) ; longueur de barre = outputs * BAR_PITCH + NP_END (une sortie vierge en fin de barre, syncOutputs).
    - Dessin : `drawNodeParallel` (barre thin + ticks par sortie, ancres sur le point d arrivee). `halfOf` passe par `sizeOf` : la taille reelle d une barre (dependante du nombre de sorties) sert au « + » d insertion sur les fils.
   - Aucun repère auto (`NO_AUTO_LABEL`) ; champ Orientation éditable, autres propriétés masquées.
 
