@@ -32,7 +32,7 @@ export const ANCHOR_DIRECTIONS = ['right', 'top', 'left', 'bottom'];
 
 /* ---------- plan d'implantation ---------- */
 /** Éléments jamais posés sur le plan (liaisons de schéma, pas d'appareillage). */
-export const PLAN_EXCLUDED = ['node', 'fil', 'breaker', 'rcd', 'fuse', 'sectionneur'];
+export const PLAN_EXCLUDED = ['node', 'node_parallel', 'fil', 'breaker', 'rcd', 'fuse', 'sectionneur'];
 /** Échelles normalisées 1:N, de la plus grande (1:20) à la plus petite (1:500). */
 export const PLAN_SCALES = [20, 25, 50, 75, 100, 125, 150, 200, 250, 500];
 /** Taille d'un symbole sur papier, en mm (constante quelle que soit l'échelle). */
@@ -45,7 +45,7 @@ export const TABLEAU_OUTPUT_TYPES = ['rcd', 'breaker', 'sectionneur', 'fil'];
 
 /** Clés d'ancrage utilisables d'un élément (clés de `children`). */
 export function anchorKeysOf(node) {
-  if (node.symbolType === 'tableau') {
+  if (node.symbolType === 'tableau' || node.symbolType === 'node_parallel') {
     const tops = Array.from({ length: node.outputs || TABLEAU_OUTPUTS }, (_, i) => 'top-' + (i + 1));
     return [...tops, 'bottom'];
   }

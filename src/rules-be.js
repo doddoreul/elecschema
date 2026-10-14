@@ -92,7 +92,7 @@ export const RULES_BE = [
     source: 'Convention de repérage',
     verified: false,
     check: (p) => (p.elements || [])
-      .filter((e) => e.symbolType !== 'node' && e.symbolType !== 'fil')
+      .filter((e) => e.symbolType !== 'node' && e.symbolType !== 'node_parallel' && e.symbolType !== 'fil')
       .filter((e) => !(e.label || '').trim())
       .map((e) => ({ elementId: e.id, message: `${symbolName(e.symbolType)} sans repère.` })),
   },

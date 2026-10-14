@@ -49,7 +49,7 @@ const escHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').re
 const TYPE_LABELS = {
   compteur: 'Compteur', rcd: 'Différentiel', breaker: 'Disjoncteur', fuse: 'Fusible',
   sectionneur: 'Sectionneur', tableau: 'Tableau',
-  node: 'Dérivation', socket: 'Prise', light: 'Éclairage', fluo: 'Éclairage',
+  node: 'Dérivation', node_parallel: 'Dérivation', socket: 'Prise', light: 'Éclairage', fluo: 'Éclairage',
   projector: 'Éclairage', emergency: 'Éclairage de sécurité', switch: 'Interrupteur',
   push: 'Bouton', heater: 'Chauffage', boiler: 'Chauffe-eau', fan: 'Ventilateur',
   bell: 'Sonnerie', motor: 'Moteur', kwh: 'Compteur', appliance: 'Appareil',
@@ -365,7 +365,7 @@ function freeAnchorDirs(node) {
   const hasChild = node.children && Object.values(node.children).some((v) => v != null);
   // Le compteur n'a qu'un seul point d'ancrage : a droite.
   if (node.symbolType === 'compteur') return (node.children || {}).right == null ? ['right'] : [];
-  const ramifiable = node.symbolType === 'node' || node.symbolType === 'tableau';
+  const ramifiable = node.symbolType === 'node' || node.symbolType === 'tableau' || node.symbolType === 'node_parallel';
   if (hasChild && !ramifiable) return [];
   return anchorKeysOf(node).filter((d) => (node.children || {})[d] == null);
 }
@@ -392,7 +392,7 @@ function orientForDir(dir) {
 
 /** Types sans repère automatique : leur repère reste vide tant que l'utilisateur
  *  ne le saisit pas (le schéma n'affiche alors que la description). */
-const NO_AUTO_LABEL = ['node', 'socket'];
+const NO_AUTO_LABEL = ['node', 'node_parallel', 'socket'];
 
 /* --------------------------------------------------------- règles de composition */
 
@@ -423,20 +423,20 @@ function removeOutput(node, key) {
 /** Toujours une sortie vierge après la dernière occupée : le tableau s'élargit ou se réduit. */
 function syncOutputs() {
   for (const e of project.elements) {
-    if (e.symbolType !== 'tableau') continue;
+    if (e.symbolType !== 'tableau' && e.symbolType !== 'node_parallel') continue;
     const used = Object.keys(e.children || {}).filter((k) => e.children[k] != null).map(outputIndex);
     e.outputs = Math.max(TABLEAU_OUTPUTS, ...used.map((i) => i + 2));
   }
 }
 
 function canAccept(parentType, childType, dir) {
-  // tableau : seulement différentiels, disjoncteurs et sectionneurs en sortie
-  if (parentType === 'tableau') {
+  // tableau / node_parallel : seulement différentiels, disjoncteurs et sectionneurs en sortie
+  if (parentType === 'tableau' || parentType === 'node_parallel') {
     if (dir === 'bottom') return childType === 'earth';
     return TABLEAU_OUTPUT_TYPES.includes(childType);
   }
   // point de derivation, cable, sectionneur et barre de tableau : hors regles
-  if (childType === 'node' || childType === 'fil' || childType === 'sectionneur' || childType === 'tableau') return true;
+  if (childType === 'node' || childType === 'fil' || childType === 'sectionneur' || childType === 'tableau' || childType === 'node_parallel') return true;
   const allowed = ACCEPT_RULES[parentType];
   return allowed == null ? true : allowed.includes(childType);
 }
@@ -554,7 +554,7 @@ function addElement(symbolType, parentId, dir, props = null) {
   if (isCircuitStart(project, e)) e.showLabel = true;
   applyProps(e, props);
   // une barre de tableau reste horizontale par defaut (hors sens de pose)
-  e.orient = symbolType === 'tableau' ? 0 : orientForDir(dir);
+  e.orient = (symbolType === 'tableau' || symbolType === 'node_parallel') ? 0 : orientForDir(dir);
   parent.children = parent.children || {};
   parent.children[dir] = e.id;
   project.elements.push(e);
@@ -588,7 +588,7 @@ function insertNode(parentId, dir, type = 'node', props = null) {
   if (!canAccept(parent.symbolType, type, dir)) { status(`Un ${symbolName(parent.symbolType)} ne peut pas recevoir un ${symbolName(type)}.`); return; }
   if (old && !canAccept(type, old.symbolType, baseDir(dir))) { status(`Un ${symbolName(type)} ne peut pas recevoir un ${symbolName(old.symbolType)}.`); return; }
   const c = createElement(type, parentId, dir);
-  c.orient = type === 'tableau' ? 0 : orientForDir(dir);
+  c.orient = (type === 'tableau' || type === 'node_parallel') ? 0 : orientForDir(dir);
   c.label = NO_AUTO_LABEL.includes(type) ? '' : nextGlobalLabel(type);
   if (isCircuitStart(project, c)) c.showLabel = true;
   applyProps(c, props);
@@ -596,7 +596,7 @@ function insertNode(parentId, dir, type = 'node', props = null) {
   parent.children[dir] = c.id;
   project.elements.push(c);
   if (old) {
-    const keep = type === 'tableau' ? 'top-1' : baseDir(dir);
+    const keep = (type === 'tableau' || type === 'node_parallel') ? 'top-1' : baseDir(dir);
     c.children[keep] = old.id; old.parent = c.id; old.dir = keep;
   }
   selectedId = c.id;
@@ -623,7 +623,7 @@ function deleteElement(id) {
     if (cid != null) { const k = nodeOf(cid); if (k) kids.push({ child: k, dir }); }
   }
   // tableau : le point d'ancrage disparaît avec son élément ; les sorties suivantes remontent
-  if (parent.symbolType === 'tableau') {
+  if (parent.symbolType === 'tableau' || parent.symbolType === 'node_parallel') {
     removeOutput(parent, myDir);
     for (const k of kids) {
       if (!canAccept('tableau', k.child.symbolType, k.dir)) { removeSubtree(k.child.id); continue; }
@@ -643,7 +643,7 @@ function deleteElement(id) {
 
   let promoted = null;
   const same = kids.find((k) => k.dir === myDir);
-  if (same && parentAnchors.includes(myDir) && (parent.symbolType !== 'tableau' || canAccept('tableau', same.child.symbolType, myDir))) {
+  if (same && parentAnchors.includes(myDir) && (parent.symbolType !== 'tableau' && parent.symbolType !== 'node_parallel' || canAccept(parent.symbolType, same.child.symbolType, myDir))) {
     parent.children[myDir] = same.child.id;
     same.child.parent = parent.id; same.child.dir = myDir;
     promoted = same.child;
@@ -652,7 +652,7 @@ function deleteElement(id) {
 
   for (const k of kids) {
     let target = null, tdir = null;
-    const pf = parent.symbolType === 'tableau' && !canAccept('tableau', k.child.symbolType, k.dir) ? [] : freeAnchorDirs(parent);
+    const pf = (parent.symbolType === 'tableau' || parent.symbolType === 'node_parallel') && !canAccept(parent.symbolType, k.child.symbolType, k.dir) ? [] : freeAnchorDirs(parent);
     if (pf.length) {
       target = parent;
       tdir = pf.includes(k.dir) ? k.dir : pf[0];
@@ -717,7 +717,7 @@ function symbolLabel(node) {
 
 function renderBom() {
   const tbody = $('#bom-table tbody');
-  const nodes = treeOrder(project).filter((n) => n.symbolType !== 'node');
+  const nodes = treeOrder(project).filter((n) => n.symbolType !== 'node' && n.symbolType !== 'node_parallel');
   const rows = nodes.map((node) => {
     const parent = nodeOf(node.parent);
     const parentLabel = parent ? (parent.label || (parent.symbolType === 'compteur' ? 'W1' : '—')) : '—';
@@ -1083,7 +1083,7 @@ ${protections.map((n) => {
   // 5. liste des matériaux, regroupés par désignation et caractéristique
   const groups = new Map();
   for (const n of treeOrder(project)) {
-    if (n.symbolType === 'node') continue;
+    if (n.symbolType === 'node' || n.symbolType === 'node_parallel') continue;
     const name = symbolLabel(n);
     const det = n.symbolType === 'compteur' ? (n.detail || 'Compteur') : (deviceDetail(n) || '—');
     const key = name + '||' + det;
@@ -1687,6 +1687,7 @@ function renderProps() {
   const supply = node.symbolType === 'compteur';
   const isNode = node.symbolType === 'node';
   const tableau = node.symbolType === 'tableau';
+const isParallel = node.symbolType === 'node_parallel';
   const isSocket = node.symbolType === 'socket';
   const typeSel = $('#e-type');
   // Type : modifiable pour une prise (type de prise), sinon readonly (nom du symbole)
@@ -1698,11 +1699,11 @@ function renderProps() {
     typeSel.disabled = true;
     typeSel.innerHTML = `<option>${escHtml(supply ? 'Compteur (arrivée)' : (isNode ? 'Node' : symbolName(node.symbolType)))}</option>`;
   }
-  $('#e-label-lbl').hidden = isNode;
-  $('#e-locked-lbl').hidden = isNode;
+  $('#e-label-lbl').hidden = isNode || isParallel;
+  $('#e-locked-lbl').hidden = isNode || isParallel;
   $('#e-label').value = node.label || '';
   $('#e-locked').checked = !!node.labelLocked;
-  $('#e-showlabel-lbl').hidden = isNode;
+  $('#e-showlabel-lbl').hidden = isNode || isParallel;
   $('#e-showlabel').checked = node.showLabel === true;
   $('#e-count-lbl').hidden = !isSocket;
   if (isSocket) {
@@ -1715,7 +1716,7 @@ function renderProps() {
   // le texte d'un tableau est toujours en bas, horizontal : pas de position ni d'orientation
   $('#e-labelpos-lbl').hidden = supply || isNode || tableau;
   $('#e-labelpos').value = node.labelPos || 'bottom';
-  $('#e-labeloffset-lbl').hidden = isNode;
+  $('#e-labeloffset-lbl').hidden = isNode || isParallel;
   const off = node.labelOffset == null ? -5 : Number(node.labelOffset);
   $('#e-labeloffset').value = String(off);
   $('#e-labeloffset-val').value = off + ' px';

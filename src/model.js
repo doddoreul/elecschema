@@ -21,7 +21,7 @@ const PREFIXES = {
   kwh: 'W', appliance: 'AP', transformer: 'T', solar: 'PV', earth: 'PE',
   fridge: 'FR', freezer: 'CG', oven: 'FO', microwave: 'MO', dishwasher: 'LV',
   washing_machine: 'LL', dryer: 'SL', kitchenette: 'KT',
-  node: 'D', fil: 'C', tableau: 'TB',
+  node: 'D', fil: 'C', tableau: 'TB', node_parallel: 'D',
 };
 
 function today() { return new Date().toISOString().slice(0, 10); }
@@ -92,7 +92,7 @@ export function createElement(symbolType, parentId, dir) {
     e.poles = symbolType === 'rcd' ? '2P' : '1P';
   }
   // un tableau doit toujours afficher son repère (libellé de la barre)
-  if (symbolType === 'tableau') { e.showLabel = true; e.outputs = TABLEAU_OUTPUTS; }
+  if (symbolType === 'tableau' || symbolType === 'node_parallel') { e.showLabel = true; e.outputs = TABLEAU_OUTPUTS; }
   if (symbolType === 'socket') { e.count = 1; e.socketType = DEFAULT_SOCKET_TYPE; }
   if (symbolType === 'switch') e.switchType = DEFAULT_SWITCH_TYPE;
   if (symbolType === 'fil') e.cable = { ...DEFAULT_CABLE };
@@ -221,8 +221,8 @@ export function normalizeTypes(p) {
       delete e.labelPos; delete e.showLabel; delete e.poles;
     }
     // Tableau : sorties nommées top-1, top-2… ; anciens ancrages (top, right…) convertis.
-    if (e.symbolType === 'tableau') {
-      e.orient = 0;
+    if (e.symbolType === 'tableau' || e.symbolType === 'node_parallel') {
+      if (e.symbolType === 'tableau') e.orient = 0;
       const kids = Object.entries(e.children || {}).filter(([, v]) => v != null);
       e.children = {};
       const taken = new Set();
@@ -256,7 +256,7 @@ export function letterOf(i) {
 }
 
 /** Types pouvant porter le début d'un circuit. */
-const CIRCUIT_PARENTS = ['tableau', 'rcd', 'compteur', 'node'];
+const CIRCUIT_PARENTS = ['tableau', 'rcd', 'compteur', 'node', 'node_parallel'];
 
 /** Début de circuit : disjoncteur/fusible posé directement sous un tableau, un
  *  différentiel, le compteur ou un node. */

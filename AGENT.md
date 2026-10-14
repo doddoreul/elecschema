@@ -238,7 +238,12 @@ Decisions actees :
   - Accepte `rcd`, `breaker`, `sectionneur` et `fil` (`TABLEAU_OUTPUT_TYPES`, en tête de `canAccept`).
   - Disposition (`computeLayout` dans `render.js`) : routage orthogonal. Chaque enfant part de son port (de préférence dans sa direction, sinon de biais avec pénalité), puis tourne au besoin. Un tracé est refusé s'il touche un élément ou un autre fil (`routeFree`, `segHit`). Les branches rectilignes sont posées avant les détours. Quand un détour est nécessaire, la branche bloquante est décalée (`bias`, `blockerOf`) et tout est recalculé (plafonné à 6 décalages par branche, 30 itérations). Résultat mis en cache (`layoutMemo`).
   - **Limite connue** : dans les configurations très denses (élément entouré de ses propres enfants sur ses 4 ancrages), le plafond peut laisser un passage forcé. Cas rares, pas de garantie formelle. Le layout renvoie `bump != null` quand le plafond est atteint ; `layoutForced()` l'expose et `ui.js` (panneau Controles) affiche alors un **avertissement « trace contraint »**.
-  - Migration à l'ouverture (`normalizeTypes`) : clé `top` → `top-1`, autres clés renumérotées.
+  - **Node parallèle** (`node_parallel`) :
+  - Barre fine (épaisseur de fil, 2 px), orientable comme tout autre élément ; même mécanique de sorties qu'un tableau : 2 sorties par défaut (`top-1`, `top-2` … ), toujours une sortie vierge après la dernière occupée (`syncOutputs`).
+  - Palette uniquement (catégorie « Câbles »). Clé `node_parallel`, fichier `symbols/node_parallel.svg` (vignette).
+  - Comportement comme le tableau : `anchorKeysOf`, `canAccept` (sorties : `rcd`, `breaker`, `sectionneur`, `fil` ; `bottom` : terre), `removeOutput`, `outputs` recalculés. Exclu de la **BOM**, des **circuits**, du **plan d'implantation** et des règles BE (`PLAN_EXCLUDED`, liste skip `renumberCircuits`).
+  - Moteur de layout (`render.js`) : `isBarType` inclut `node_parallel` ; les colonnes (`colOf`, `spanOf`), `rectAt`, `sizeOf` et `place` tiennent compte de **l'orientation** (barre horizontale / verticale, sens direct ou inversé) ; `anchorDir` pivote la direction logique (`top`/`bottom`) → direction écran. Dessin : `drawNodeParallel` (barre thin + ticks par sortie, pivotée selon `orient`).
+  - Aucun repère auto (`NO_AUTO_LABEL`) ; champ Orientation éditable, autres propriétés masquées.
 
 ## Plan d'implantation (plan-*.js)
 

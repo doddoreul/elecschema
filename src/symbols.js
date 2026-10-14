@@ -193,6 +193,13 @@ const SYMBOLS = {
     name: 'Node (point de dérivation)', ref: 'D', prefix: 'D', category: 'cables',
     w: 5, h: 5, file: 'symbols/carrefour.svg',
   },
+  // « Node parallèle » = barre fine (filt de câble) dont les sorties se répartissent le long
+  // de la barre : 2 sorties par défaut, une nouvelle à chaque ajout. Comportement comme le
+  // tableau, aspect file, orientation modifiable.
+  node_parallel: {
+    name: 'Node parallèle', ref: 'D', prefix: 'D', category: 'cables',
+    w: 64, h: 12, file: 'symbols/node_parallel.svg',
+  },
 };
 
 /** Définition d'un symbole par clé. Lève une erreur explicite si inconnu. */
