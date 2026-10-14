@@ -40,6 +40,20 @@ const anchorDir = (node, key) => {
   return i < 0 ? d : CARD_CLOCK[(i + t) % 4];
 };
 
+/** Colonnes couvertes par la barre d'un node parallèle : jusqu'à la dernière sortie
+ *  OCCUPÉE (au moins 1 colonne). La barre s'arrête là : l'emplacement libre est au-delà.
+ *  `col` = L.col (colonne réelle d'une sortie, décalages compris). */
+const npBarCols = (node, col) => {
+  let k = 0;
+  for (const key of Object.keys(node.children || {})) {
+    if (node.children[key] == null || outputIndex(key) < 0) continue;
+    k = Math.max(k, col(node, key));
+  }
+  return Math.max(1, k);
+};
+/** Rang d'un emplacement libre parmi les emplacements libres d'un élément (0, 1, …). */
+const freeRank = (node, dir) => anchorKeysOf(node).filter((d) => (node.children || {})[d] == null).indexOf(dir);
+
 /** Sens de croissance des colonnes d'une barre (unitaire, écran y vers le bas) :
  *  horizontale -> a droite (gauche si 180°), verticale -> en haut (bas si 270°).
  *  C'est le cote ou apparaissent les nouvelles sorties (« + » de fin de barre). */
@@ -47,8 +61,6 @@ const barAxis = (node) => {
   const rev = barReversed(node) ? -1 : 1;
   return barVertical(node) ? { x: 0, y: -rev } : { x: rev, y: 0 };
 };
-/** Direction cardinale d'un vecteur unitaire (barAxis). */
-const cardOf = (u) => (u.x > 0 ? 'right' : u.x < 0 ? 'left' : u.y < 0 ? 'top' : 'bottom');
 
 /** Format de page de mise en page : A4 paysage (297 x 210 mm à 2 px/mm), pages côte à côte. */
 export const PAGE = { w: 594, h: 420, gap: 0 };
@@ -464,15 +476,15 @@ export function drawCartouche(parent, project, ox) {
 }
 
 function drawNodeParallel(node, L, svg, c, sel, px, py) {
-  const span = L.span(node);
+  const span = npBarCols(node, L.col);                        // jusqu'à la dernière sortie occupée
   const u = barAxis(node);                                    // sens de la barre (colonnes)
   const [wx, wy] = DIR[anchorDir(node, 'top-1')];             // cote des sorties
   const rx = px(c.x), ry = py(c.y);                          // racine = colonne 0 (arrivée du parent)
   // point de la barre : d = décalage le long de l'axe (px), o = décalage côté sorties (px)
   const pt = (d, o) => ({ x: rx + u.x * d + wx * o, y: ry + u.y * d + wy * o });
   const g = el('g', { class: 'sym-wrap' + (sel ? ' selected' : ''), 'data-el': node.id }, svg);
-  // barre fine : du point d'entrée (colonne 0, arrivée du parent) jusqu'au-delà de la
-  // dernière colonne. Aucun débord avant l'entrée (sinon un « tiret » rebique vers le fil).
+  // barre fine : du point d'entrée (colonne 0, arrivée du parent) jusqu'à la dernière
+  // sortie occupée. Aucun débord avant l'entrée ni après la clôture.
   const a = pt(0, 0), b = pt(span * BAR_PITCH + NP_END, 0);
   el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'bus' }, g);
   // une petite barre par sortie OCCUPÉE seulement : un emplacement libre n'a que son « + »
@@ -610,20 +622,19 @@ export function renderSchema(root, project, opts = {}) {
     for (const dir of dirs) {
       if ((node.children || {})[dir] != null) continue;
       if (isBarType(node.symbolType)) {
-        let anchorSide, off;
-        if (node.symbolType === 'node_parallel') {
-          anchorSide = cardOf(barAxis(node));
-          off = NP_PLUS;                 // dans le sens de la barre, juste après son bout
-        } else {
-          anchorSide = anchorDir(node, dir);
-          off = 18;                      // perpendiculaire à la barre (au-dessus)
-        }
-        const [dx, dy] = DIR[anchorSide];
-        const colIndex = L.col(node, dir);
         const u = barAxis(node);
-        const step = { x: u.x * colIndex * (BAR_PITCH / CW), y: u.y * colIndex * (BAR_PITCH / CH) };
-        const ax = px(c.x + step.x) + dx * off;
-        const ay = py(c.y + step.y) + dy * off;
+        const pitch = barVertical(node) ? CH : CW;
+        let along, side = null;               // along = cellules le long de la barre
+        if (node.symbolType === 'node_parallel') {
+          // juste après le bout de la barre (qui s'arrête à la dernière sortie occupée),
+          // puis un cran par emplacement libre supplémentaire
+          along = npBarCols(node, L.col) * (BAR_PITCH / pitch) + (NP_PLUS / pitch) + freeRank(node, dir) * (BAR_PITCH / pitch);
+        } else {
+          along = L.col(node, dir) * (BAR_PITCH / pitch);
+          side = DIR[anchorDir(node, dir)];   // perpendiculaire à la barre (au-dessus)
+        }
+        const ax = px(c.x + u.x * along) + (side ? side[0] * 18 : 0);
+        const ay = py(c.y + u.y * along) + (side ? side[1] * 18 : 0);
         plusMark(svg, ax, ay, 'ui-only anchor', { 'data-anchor': `${node.id}:${dir}` });
         continue;
       }
