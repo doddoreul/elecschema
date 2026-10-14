@@ -148,9 +148,10 @@ function drawOpenings(parent, level, selOpening) {
   }
 }
 
-/** Textes libres : taille (multiple de la taille de base) et style (gras/italique/souligne). */
+/** Textes libres : « Normale » = côté d'un symbole (4 mm sur papier à 1:N) ; le multiple et les
+ *  styles (gras/italique/souligné) viennent du texte. */
 function drawRooms(parent, level, n, selRoom) {
-  const base = symbolSideCm(n) * 0.5;
+  const base = symbolSideCm(n);
   for (const r of level.rooms) {
     const t = el('text', {
       x: r.x, y: r.y, 'font-size': base * (r.size > 0 ? r.size : 1),

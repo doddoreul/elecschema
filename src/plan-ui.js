@@ -511,6 +511,8 @@ function renderOpeningPanel(lv) {
   $('#plan-opening-w-wrap').hidden = !o;
   // Les miroirs ne concernent que les portes : masqués hors sélection et pour une fenêtre.
   $('#plan-door-panel').hidden = !o || o.kind !== 'door';
+  // La ligne « options » ne sert qu'aux réglages d'ouverture : masquée (sinon vide) sans sélection.
+  $('#plan-options-row').hidden = !o;
   if (!o) return;
   const nom = o.kind === 'door' ? 'Porte' : 'Fenêtre';
   const w = lv.walls.find((x) => x.id === o.wall);

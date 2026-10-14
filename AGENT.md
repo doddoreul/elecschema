@@ -278,7 +278,8 @@ L'outil
 se saisit par le dialogue commun (`askValue`, boite « Contenu ») a la pose et au **double-clic**
 pour modification ; la mise en forme (taille, gras, italique, souligne) se fait dans une barre
 **dediee** (`.plan-text-bar`, `#plan-text-bar`) qui n'apparait **que** lorsqu'un texte est
-selectionne ; champs `size` (multiple de la taille de base), `bold`, `italic`, `underline`.
+selectionne ; champs `size` (« Normale » = cote d'un symbole, 4 mm sur papier a 1:N ;
+multiples 0.75 / 1 / 1.5 / 2), `bold`, `italic`, `underline`.
 
 Zoom molette, pan milieu ou espace ; volet **gauche** **« Non places »** (glisser-deposer ou
 clic-armer) ; deplacement (grille 5 cm), rotation (champ + `R`), retrait (`Suppr`/bouton ;
@@ -286,8 +287,9 @@ element schema conserve) ; selection partagee (clic symbole plan -> `selectEleme
 Etages : ajout / renommage (double-clic) / monter / descendre / suppression.
 
 Barre d'outils du plan sur **trois lignes** (`.plan-bar-row`) : (1) etages puis, apres un
-**separateur** (`.plan-sep`), les outils **Selection / Mur / Porte / Fenetre** ; (2) outil
-**Texte** + reglages d'ouverture
+**separateur** (`.plan-sep`), les outils **Selection / Mur / Porte / Fenetre / Texte** ;
+(2) reglages d'ouverture — ligne `#plan-options-row`, **masquee** quand aucune ouverture n'est
+selectionnee
 (largeur, miroirs : boutons a icone `assets/flip.png`, `aria-label` Miroir horizontal /
 vertical ; l'icone du miroir horizontal est pivotee de 90° via `#plan-opening-hinge .plan-icon`) ;
 (3) bouton **Afficher / masquer le dessin** (ne garde que
