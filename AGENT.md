@@ -149,6 +149,9 @@ Decisions actees :
   **Un node n'a aucune propriété** : pas de repère (aucun label auto), pas de désignation,
   pas d'orientation ni position de texte dans le panneau (seuls « Node » et « Supprimer »
   restent affichés), aucun texte dessiné sur le schéma, exclu du BOM.
+  Le fichier `symbols/carrefour.svg` est un simple **point de dérivation** dans un carré **5×5**
+  (viewBox `0 0 5 5`), centré sur le conducteur : sa définition `SYMBOLS.node` (`w: 5, h: 5`)
+  reprend cette taille réelle, qui pilote la place réservée (grille), la hitbox et les « + ».
   `normalizeTypes` nettoie les anciens champs hérités (label, labelPos, showLabel, poles…).
 - Suppression d'un element : le **parent** est sélectionné ensuite (`selectOnly`). Ses enfants remontent au parent (1er ancrage libre), sinon au
   frere promu, sinon le sous-arbre est supprime.
@@ -367,7 +370,9 @@ Arbre d'ancrage sur une **grille** (1 element / cellule, sans recouvrement) :
   (pendant un glisser-déposer depuis la palette : sur tous les éléments pour pouvoir déposer).
 - **Les « + » sont dessinés en dernier** (au-dessus des symboles) pour rester cliquables —
   indispensable pour le compteur, plus large qu'une cellule. Leur position dépasse le bord du
-  corps (`halfOf` : compteur 44×32 → +50/+38 px du centre). Le « + » gris d'insertion se
+  corps de 6 px, d'après la taille réelle du symbole (`halfOf`, **sans plancher**) : compteur
+  44×32 → +50/+38 px du centre, socket 20×20 → +26, carrefour (node) 2,5×2,5 → +8,5 (ses « + »
+  restent ainsi collés au petit point). Le « + » gris d'insertion se
   décale vers l'enfant (`t` entre 0,5 et 0,85) pour sortir du corps du parent.
 - **Demi-taille** (`plusMark`) : fond `r=5`, barres ±2,5, zone cliquable `r=7,5` (les
   épaisseurs de trait sont réduites d'autant).

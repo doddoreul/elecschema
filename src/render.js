@@ -523,9 +523,10 @@ export function renderSchema(root, project, opts = {}) {
         continue;
       }
       const [dx, dy] = DIR[dir];
-      // juste au-delà du bord du symbole (le compteur est plus large qu'une cellule)
-      const ox = Math.max(CW * 0.3, half.w + 6);
-      const oy = Math.max(CH * 0.3, half.h + 6);
+      // juste au-delà du bord du symbole, d'après sa taille réelle (compteur 44×32 -> +50/+38).
+      // Aucun plancher : un petit élément (carrefour 5×5) garde ses « + » contre lui.
+      const ox = half.w + 6;
+      const oy = half.h + 6;
       plusMark(svg, px(c.x) + dx * ox, py(c.y) + dy * oy, 'ui-only anchor', { 'data-anchor': `${node.id}:${dir}` });
     }
   };

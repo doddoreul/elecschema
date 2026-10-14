@@ -148,9 +148,11 @@ const SYMBOLS = {
   },
 
   // Pseudo-symbole inséré entre deux éléments (pas dans la palette).
+  // « Carrefour » = simple point de dérivation : petit carré 5x5 (viewBox 5 5), centré sur
+  // le conducteur. Sa taille réelle pilote la place réservée, la hitbox et les « + ».
   node: {
     name: 'Node (point de dérivation)', ref: 'D', prefix: 'D', category: 'cables',
-    w: 20, h: 20, file: 'symbols/carrefour.svg',
+    w: 5, h: 5, file: 'symbols/carrefour.svg',
   },
 };
 

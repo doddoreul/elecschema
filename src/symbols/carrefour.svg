@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="5" height="5" viewBox="0 0 5 5">
   <title>carrefour.svg</title>
   <g id="Layer_1" data-name="Layer 1">
-    <path d="M21.807 20 C21.807 20.998 20.998 21.807 20 21.807 C19.002 21.807 18.193 20.998 18.193 20 C18.193 19.002 19.002 18.193 20 18.193 C20.998 18.193 21.807 19.002 21.807 20 Z" fill="#111827"/>
+    <path d="M4.307 2.5 C4.307 3.498 3.498 4.307 2.5 4.307 C1.502 4.307 0.693 3.498 0.693 2.5 C0.693 1.502 1.502 0.693 2.5 0.693 C3.498 0.693 4.307 1.502 4.307 2.5 Z" fill="#111827"/>
   </g>
 </svg>
