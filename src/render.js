@@ -341,10 +341,10 @@ function symbolGroup(svg, def, href, cx, cy, selected, attrs, orient = 0) {
 /** Petite croix cliquable (« + ») pour un point d'ancrage ou une insertion. */
 function plusMark(svg, cx, cy, cls, attrs) {
   const g = el('g', { class: 'plus ' + cls, transform: `translate(${cx},${cy})`, ...attrs }, svg);
-  el('circle', { r: 15, class: 'plus-hit', fill: 'transparent' }, g);
-  el('circle', { r: 10, class: 'plus-bg' }, g);
-  el('line', { x1: -5, y1: 0, x2: 5, y2: 0, class: 'plus-bar' }, g);
-  el('line', { x1: 0, y1: -5, x2: 0, y2: 5, class: 'plus-bar' }, g);
+  el('circle', { r: 7.5, class: 'plus-hit', fill: 'transparent' }, g);
+  el('circle', { r: 5, class: 'plus-bg' }, g);
+  el('line', { x1: -2.5, y1: 0, x2: 2.5, y2: 0, class: 'plus-bar' }, g);
+  el('line', { x1: 0, y1: -2.5, x2: 0, y2: 2.5, class: 'plus-bar' }, g);
   return g;
 }
 

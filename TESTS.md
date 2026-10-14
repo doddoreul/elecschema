@@ -45,6 +45,7 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T3.10 | « Recentrer » (barre de zoom) | Le schéma se recentre dans la fenêtre **sans changer le zoom** |
 | T3.11 | `Ctrl+A` (focus hors champ de saisie) | Le texte de la page n'est **plus** sélectionné ; dans un champ de saisie, `Ctrl+A` sélectionne toujours le contenu du champ |
 | T3.12 | Ouvrir un onglet, puis **actualiser la page** (`F5`) et « Reprendre » | On revient sur l'onglet qui était ouvert (Informations / Schéma unifilaire / Implantation / Composants) |
+| T3.13 | Taille des « + » (ancrage **vert** et insertion **gris**) | **Demi-taille** : cercle de rayon 5 (au lieu de 10), barres ±2,5, zone cliquable 7,5 |
 
 ## T4 — Propriétés
 

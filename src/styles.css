@@ -267,18 +267,18 @@ tbody tr:hover { background: #f9fafb; }
 /* ---- points d'ancrage et insertion de node ---- */
 .plus { cursor: pointer; }
 .plus .plus-hit { fill: transparent; pointer-events: all; }
-.plus .plus-bg { fill: #fff; stroke: #94a3b8; stroke-width: 1.4; }
-.plus .plus-bar { stroke: #2563eb; stroke-width: 2; }
+.plus .plus-bg { fill: #fff; stroke: #94a3b8; stroke-width: 0.7; }
+.plus .plus-bar { stroke: #2563eb; stroke-width: 1; }
 .plus:hover .plus-bg { fill: #dbeafe; stroke: #2563eb; }
-.plus.anchor .plus-bar { stroke: #15803d; stroke-width: 2.4; }
-.plus.anchor .plus-bg { stroke: #16a34a; stroke-width: 1.8; }
+.plus.anchor .plus-bar { stroke: #15803d; stroke-width: 1.2; }
+.plus.anchor .plus-bg { stroke: #16a34a; stroke-width: 0.9; }
 .plus.anchor:hover .plus-bg { fill: #dcfce7; stroke: #16a34a; }
 .plus.link-add { opacity: .75; }
 .plus.link-add:hover { opacity: 1; }
 .plus.link-add .plus-bar { stroke: #475569; }
 
 /* ---- point d'ancrage survolé pendant un glisser-déposer ---- */
-.plus.drop-hover .plus-bg { fill: #dcfce7; stroke: #16a34a; stroke-width: 2; }
+.plus.drop-hover .plus-bg { fill: #dcfce7; stroke: #16a34a; stroke-width: 1; }
 .plus.drop-hover .plus-bar { stroke: #16a34a; }
 
 /* ---- arbre d'éléments dans la palette ---- */

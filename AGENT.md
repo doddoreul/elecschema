@@ -369,6 +369,8 @@ Arbre d'ancrage sur une **grille** (1 element / cellule, sans recouvrement) :
   indispensable pour le compteur, plus large qu'une cellule. Leur position dépasse le bord du
   corps (`halfOf` : compteur 44×32 → +50/+38 px du centre). Le « + » gris d'insertion se
   décale vers l'enfant (`t` entre 0,5 et 0,85) pour sortir du corps du parent.
+- **Demi-taille** (`plusMark`) : fond `r=5`, barres ±2,5, zone cliquable `r=7,5` (les
+  épaisseurs de trait sont réduites d'autant).
 - Glisser-déposer : accepte **uniquement** sur un point d'ancrage (« + » vert), jamais sur
   le corps d'un élément ni sur le fond.
 - **Sélection multiple** : `selectedIds` (Set) + `selectedId` (élément primaire = dernier cliqué).
