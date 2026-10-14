@@ -35,6 +35,16 @@ const anchorDir = (node, key) => {
   return i < 0 ? d : CARD_CLOCK[(i + t) % 4];
 };
 
+/** Sens de croissance des colonnes d'une barre (unitaire, écran y vers le bas) :
+ *  horizontale -> a droite (gauche si 180°), verticale -> en haut (bas si 270°).
+ *  C'est le cote ou apparaissent les nouvelles sorties (« + » de fin de barre). */
+const barAxis = (node) => {
+  const rev = barReversed(node) ? -1 : 1;
+  return barVertical(node) ? { x: 0, y: -rev } : { x: rev, y: 0 };
+};
+/** Direction cardinale d'un vecteur unitaire (barAxis). */
+const cardOf = (u) => (u.x > 0 ? 'right' : u.x < 0 ? 'left' : u.y < 0 ? 'top' : 'bottom');
+
 /** Format de page de mise en page : A4 paysage (297 x 210 mm à 2 px/mm), pages côte à côte. */
 export const PAGE = { w: 594, h: 420, gap: 0 };
 
@@ -125,10 +135,9 @@ function layoutOnce(project, bias) {
     const s = sizeOf(node, span);
     let cx = x * CW + CW / 2, cy = y * CH + CH / 2;
     if (isBarType(node?.symbolType)) {
-      const sign = barReversed(node) ? -1 : 1;
-      const shift = sign * (span / 2) * BAR_PITCH;
-      if (barVertical(node)) cy += shift;
-      else cx += shift;
+      const u = barAxis(node);
+      cx += u.x * (span / 2) * BAR_PITCH;
+      cy += u.y * (span / 2) * BAR_PITCH;
     }
     return { x0: cx - s.w / 2, x1: cx + s.w / 2, y0: cy - s.h / 2, y1: cy + s.h / 2 };
   };
@@ -224,11 +233,11 @@ function layoutOnce(project, bias) {
         // une sortie de tableau/barre parallèle part de sa propre colonne (décalée si nécessaire),
         // selon son orientation (axe horizontal ou vertical, sens direct ou inversé)
         const extra = bias.get(child.id) || 0;
-        const P = isOut
-          ? (barVertical(node)
-              ? { x, y: y + (barReversed(node) ? -1 : 1) * colOf(node, key) * (BAR_PITCH / CH) }
-              : { x: x + (barReversed(node) ? -1 : 1) * colOf(node, key) * (BAR_PITCH / CW), y })
-          : { x, y };
+        const P = isOut ? (() => {
+          const k = colOf(node, key);
+          const u = barAxis(node);
+          return { x: x + u.x * k * (BAR_PITCH / CW), y: y + u.y * k * (BAR_PITCH / CH) };
+        })() : { x, y };
         const dir = DIR[anchorDir(node, key)];
         // écart minimal le long de la direction : les deux corps ne se chevauchent pas
         const pitch = dir[0] ? CW : CH;
@@ -383,12 +392,14 @@ function plusMark(svg, cx, cy, cls, attrs) {
   return g;
 }
 
-/** Demi-dimensions du corps d'un symbole (le compteur est plus large qu'une cellule). */
+/** Demi-dimensions du corps d'un symbole (le compteur est plus large qu'une cellule).
+ *  Passe par `sizeOf` : suit l'orientation ET la taille réelle d'une barre
+ *  (tableau / node parallèle), dont la largeur grandit avec ses sorties. */
 function halfOf(project, id) {
   const n = nodeById(project, id);
   if (!n || n.symbolType === 'compteur') return { w: 44, h: 32 };
-  const def = defOf(n);
-  return { w: (def.w || 40) / 2, h: (def.h || 40) / 2 };
+  const s = sizeOf(n);
+  return { w: s.w / 2, h: s.h / 2 };
 }
 
 /** Mise en page : cadres A4 paysage (2 px/mm), alignés à droite, + cartouche par page.
@@ -437,18 +448,26 @@ export function drawCartouche(parent, project, ox) {
 function drawNodeParallel(node, L, svg, c, sel, px, py) {
   const span = L.span(node);
   const nout = node.outputs || 2;
-  const orient = node.orient || 0;
-  const len = span * BAR_PITCH + 2 * NP_END;
-  const half = len / 2;
-  const g = el('g', { transform: `translate(${px(c.x)},${py(c.y)}) rotate(${orient})`, class: 'sym-wrap' + (sel ? ' selected' : ''), 'data-el': node.id }, svg);
-  el('rect', { class: 'outline', x: -half, y: -NP_THICK / 2 - 4, width: len, height: NP_THICK + 8, fill: 'transparent', stroke: 'transparent' }, g);
-  el('line', { x1: -half, y1: 0, x2: half, y2: 0, class: 'bus' }, g);
+  const u = barAxis(node);                                    // sens de la barre (colonnes)
+  const [wx, wy] = DIR[anchorDir(node, 'top-1')];             // cote des sorties
+  const rx = px(c.x), ry = py(c.y);                          // racine = colonne 0 (arrivée du parent)
+  // point de la barre : d = décalage le long de l'axe (px), o = décalage côté sorties (px)
+  const pt = (d, o) => ({ x: rx + u.x * d + wx * o, y: ry + u.y * d + wy * o });
+  const g = el('g', { class: 'sym-wrap' + (sel ? ' selected' : ''), 'data-el': node.id }, svg);
+  // barre fine, de la racine (décalée de NP_END) jusqu'au-delà de la dernière colonne
+  const a = pt(-NP_END, 0), b = pt(span * BAR_PITCH + NP_END, 0);
+  el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'bus' }, g);
+  // une petite barre par sortie (axe de la barre -> côté des sorties)
   for (let i = 0; i < nout; i++) {
-    const k = i;
-    const xk = k * BAR_PITCH - (span * BAR_PITCH) / 2;
-    el('line', { x1: xk, y1: -6, x2: xk, y2: 0, class: 'bus' }, g);
+    const p0 = pt(i * BAR_PITCH, 0), p1 = pt(i * BAR_PITCH, 6);
+    el('line', { x1: p0.x, y1: p0.y, x2: p1.x, y2: p1.y, class: 'bus' }, g);
   }
-  placeLabel(g, { ...node, labelPos: 'bottom', labelRot: 0, labelOffset: node.labelOffset ?? 8 }, { w: len, h: NP_THICK });
+  // zone cliquable : enveloppe de la barre et de ses sorties
+  const pts = [a, b, pt(0, 6), pt(span * BAR_PITCH, 6)];
+  const x0 = Math.min(...pts.map((p) => p.x)), x1 = Math.max(...pts.map((p) => p.x));
+  const y0 = Math.min(...pts.map((p) => p.y)), y1 = Math.max(...pts.map((p) => p.y));
+  el('rect', { class: 'outline', x: x0 - 4, y: y0 - 4, width: x1 - x0 + 8, height: y1 - y0 + 8, fill: 'transparent', stroke: 'transparent' }, g);
+  placeLabel(g, { ...node, labelPos: 'bottom', labelRot: 0, labelOffset: node.labelOffset ?? 8 }, { w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) });
 }
 
 export function renderSchema(root, project, opts = {}) {
@@ -570,15 +589,18 @@ export function renderSchema(root, project, opts = {}) {
     for (const dir of dirs) {
       if ((node.children || {})[dir] != null) continue;
       if (isBarType(node.symbolType)) {
-        const anchorSide = anchorDir(node, dir);
+        let anchorSide;
+        if (node.symbolType === 'node_parallel') {
+          anchorSide = cardOf(barAxis(node));
+        } else {
+          anchorSide = anchorDir(node, dir);
+        }
         const [dx, dy] = DIR[anchorSide];
         const colIndex = L.col(node, dir);
-        const sign = barReversed(node) ? -1 : 1;
-        const stepCells = barVertical(node) ? BAR_PITCH / CH : BAR_PITCH / CW;
-        const ccx = barVertical(node) ? 0 : sign * colIndex * stepCells;
-        const ccy = barVertical(node) ? sign * colIndex * stepCells : 0;
-        const ax = px(c.x + ccx) + dx * 18;
-        const ay = py(c.y + ccy) + dy * 18;
+        const u = barAxis(node);
+        const step = { x: u.x * colIndex * (BAR_PITCH / CW), y: u.y * colIndex * (BAR_PITCH / CH) };
+        const ax = px(c.x + step.x) + dx * 18;
+        const ay = py(c.y + step.y) + dy * 18;
         plusMark(svg, ax, ay, 'ui-only anchor', { 'data-anchor': `${node.id}:${dir}` });
         continue;
       }
