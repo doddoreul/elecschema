@@ -45,7 +45,11 @@ export const TABLEAU_OUTPUT_TYPES = ['rcd', 'breaker', 'sectionneur', 'fil'];
 
 /** Clés d'ancrage utilisables d'un élément (clés de `children`). */
 export function anchorKeysOf(node) {
-  if (node.symbolType === 'tableau' || node.symbolType === 'node_parallel') {
+  if (node.symbolType === 'node_parallel') {
+    const tops = Array.from({ length: node.outputs || TABLEAU_OUTPUTS }, (_, i) => 'top-' + (i + 1));
+    return [...tops];
+  }
+  if (node.symbolType === 'tableau') {
     const tops = Array.from({ length: node.outputs || TABLEAU_OUTPUTS }, (_, i) => 'top-' + (i + 1));
     return [...tops, 'bottom'];
   }
