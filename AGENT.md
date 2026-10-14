@@ -245,6 +245,7 @@ Decisions actees :
    - **Croissance des colonnes** (`barAxis` dans `render.js`) : horizontale -> **a droite** ; verticale -> **vers le haut** (colonne 0 = point d arrivee du parent, dessin ancre la). Les sorties partent perpendiculairement (`anchorDir` pivote la direction logique : haut -> droite a 90). Les « + » d ancrage inoccupes se posent **au-dela de la derniere colonne, dans le sens de la barre** : **a droite** (horizontale) ou **au-dessus** (verticale), decalage de 18 px le long de l axe.
    - **Colonnes** : colonne 0 = entree (arrivee du parent, sans tiret), puis une colonne par sortie (colOf renvoie  + k) ; longueur de barre = outputs * BAR_PITCH + NP_END (une sortie vierge en fin de barre, syncOutputs).
    - **Tirets** : un tiret nest dessine que pour une sortie **occupee** (il est recouvert par le fil de lenfant) ; un emplacement libre na que son « + ».
+   - **Proportions** reprises de symbols/node_parallel.svg (viewBox 30.333 x 12 : barre 26, tirets de 4 tous les 24) : NP_TICK = pas*4/24 (~7 px), NP_END = pas*1/24 (~2 px, debord apres la derniere colonne).
    - Dessin : `drawNodeParallel` (barre thin + ticks par sortie, ancres sur le point d arrivee). `halfOf` passe par `sizeOf` : la taille reelle d une barre (dependante du nombre de sorties) sert au « + » d insertion sur les fils.
   - Aucun repère auto (`NO_AUTO_LABEL`) ; champ Orientation éditable, autres propriétés masquées.
 

@@ -19,8 +19,13 @@ const BOTTOM_PAD = 18;  // petite marge (pied hors canvas, dans le PDF)
 
 const DIR = { right: [1, 0], left: [-1, 0], top: [0, -1], bottom: [0, 1] };
 const BAR_PITCH = CW;                                    // pas d'une colonne de barre, horizontal ou vertical
-const NP_END = 20;                                      // débord de barre au-delà de la première/dernière colonne
-const NP_THICK = 12;                                    // épaisseur réservée (hitbox + espacement) d'un node parallèle
+// Node parallèle : proportions reprises de `symbols/node_parallel.svg`
+// (viewBox 30.333 x 12 ; barre 26, tirets de 4 tous les 24, épaisseur 2) :
+//   tiret = pas * 4/24, débord de barre = pas * 1/24.
+const NP_TICK = Math.round((BAR_PITCH * 4) / 24);        // longueur d'un tiret de sortie (px)
+const NP_END = Math.round((BAR_PITCH * 1) / 24);         // débord de barre après la dernière colonne (px)
+const NP_PLUS = 12;                                      // décalage du « + » libre, dans le sens de la barre (px)
+const NP_THICK = 12;                                     // épaisseur réservée (hitbox + espacement) d'un node parallèle
 const isBarType = (t) => t === 'tableau' || t === 'node_parallel';
 const quarterTurns = (node) => { const n = Math.round(Number(node?.orient || 0) / 90); return ((n % 4) + 4) % 4; };
 const barVertical = (node) => quarterTurns(node) % 2 === 1;
@@ -475,11 +480,11 @@ function drawNodeParallel(node, L, svg, c, sel, px, py) {
   for (const key of Object.keys(node.children || {})) {
     if (node.children[key] == null || outputIndex(key) < 0) continue;
     const d = L.col(node, key) * BAR_PITCH;
-    const p0 = pt(d, 0), p1 = pt(d, 6);
+    const p0 = pt(d, 0), p1 = pt(d, NP_TICK);
     el('line', { x1: p0.x, y1: p0.y, x2: p1.x, y2: p1.y, class: 'bus' }, g);
   }
   // zone cliquable : enveloppe de la barre et de ses sorties
-  const pts = [a, b, pt(0, 6), pt(span * BAR_PITCH, 6)];
+  const pts = [a, b, pt(0, NP_TICK), pt(span * BAR_PITCH, NP_TICK)];
   const x0 = Math.min(...pts.map((p) => p.x)), x1 = Math.max(...pts.map((p) => p.x));
   const y0 = Math.min(...pts.map((p) => p.y)), y1 = Math.max(...pts.map((p) => p.y));
   el('rect', { class: 'outline', x: x0 - 4, y: y0 - 4, width: x1 - x0 + 8, height: y1 - y0 + 8, fill: 'transparent', stroke: 'transparent' }, g);
@@ -605,18 +610,20 @@ export function renderSchema(root, project, opts = {}) {
     for (const dir of dirs) {
       if ((node.children || {})[dir] != null) continue;
       if (isBarType(node.symbolType)) {
-        let anchorSide;
+        let anchorSide, off;
         if (node.symbolType === 'node_parallel') {
           anchorSide = cardOf(barAxis(node));
+          off = NP_PLUS;                 // dans le sens de la barre, juste après son bout
         } else {
           anchorSide = anchorDir(node, dir);
+          off = 18;                      // perpendiculaire à la barre (au-dessus)
         }
         const [dx, dy] = DIR[anchorSide];
         const colIndex = L.col(node, dir);
         const u = barAxis(node);
         const step = { x: u.x * colIndex * (BAR_PITCH / CW), y: u.y * colIndex * (BAR_PITCH / CH) };
-        const ax = px(c.x + step.x) + dx * 18;
-        const ay = py(c.y + step.y) + dy * 18;
+        const ax = px(c.x + step.x) + dx * off;
+        const ay = py(c.y + step.y) + dy * off;
         plusMark(svg, ax, ay, 'ui-only anchor', { 'data-anchor': `${node.id}:${dir}` });
         continue;
       }
