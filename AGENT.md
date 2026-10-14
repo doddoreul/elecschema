@@ -153,6 +153,14 @@ Decisions actees :
   (viewBox `0 0 5 5`), centré sur le conducteur : sa définition `SYMBOLS.node` (`w: 5, h: 5`)
   reprend cette taille réelle, qui pilote la place réservée (grille), la hitbox et les « + ».
   `normalizeTypes` nettoie les anciens champs hérités (label, labelPos, showLabel, poles…).
+- **Catégories & sous-catégories de la palette** : `SYMBOL_CATEGORIES` (`symbols.js`) liste les
+  groupes affichés (`<h4>`) ; un groupe peut porter des `subs` (sous-groupes `<h5>` avec leur
+  propre `id`). `renderPalette` répartit les symboles par `s.category === id` (`symItemsHtml`).
+  La sous-catégorie **« Électroménager »** (id `electromenager`, sous « Appareils d’utilisation (G) »)
+  regroupe 8 appareils dessinés en **40 × 40** : `fridge` (FR), `freezer` (CG), `oven` (FO),
+  `microwave` (MO), `dishwasher` (LV), `washinmachine` (LL — nom de fichier fourni tel quel),
+  `dryer` (SL), `kitchenette` (KT). Repères auto (`PREFIXES`, `model.js`) et libellé BOM
+  (`TYPE_LABELS`, `ui.js`) ajoutés pour chacun.
 - Suppression d'un element : le **parent** est sélectionné ensuite (`selectOnly`). Ses enfants remontent au parent (1er ancrage libre), sinon au
   frere promu, sinon le sous-arbre est supprime.
 - Compteur = racine, unique, **en bas a gauche**, editable au clic.

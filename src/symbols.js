@@ -10,7 +10,11 @@ export const SYMBOL_CATEGORIES = [
   { id: 'interrupteurs', name: 'Interrupteurs (E)' },
   { id: 'prises', name: 'Socles de prise (F)' },
   { id: 'eclairage', name: 'Éclairage (G)' },
-  { id: 'appareils', name: 'Appareils d’utilisation (G)' },
+  {
+    id: 'appareils', name: 'Appareils d’utilisation (G)',
+    // Sous-catégories affichées sous le titre, après les symboles de la catégorie.
+    subs: [{ id: 'electromenager', name: 'Électroménager' }],
+  },
   { id: 'sources', name: 'Sources (H)' },
   { id: 'cables', name: 'Câbles (lignes)' },
 ];
@@ -129,6 +133,42 @@ const SYMBOLS = {
   appliance: {
     name: 'Appareil électrodomestique fixe', ref: 'G', category: 'appareils', prefix: 'AP',
     w: 40, h: 40, file: 'symbols/appliance.svg',
+  },
+
+  // Électroménager : sous-catégorie palette de « Appareils d’utilisation ». Mêmes
+  // dimensions que `appliance` (boîte 40 x 40), un dessin distinct par appareil.
+  fridge: {
+    name: 'Réfrigérateur', ref: 'G', category: 'electromenager', prefix: 'FR',
+    w: 40, h: 40, file: 'symbols/fridge.svg',
+  },
+  freezer: {
+    name: 'Congélateur', ref: 'G', category: 'electromenager', prefix: 'CG',
+    w: 40, h: 40, file: 'symbols/freezer.svg',
+  },
+  oven: {
+    name: 'Four', ref: 'G', category: 'electromenager', prefix: 'FO',
+    w: 40, h: 40, file: 'symbols/oven.svg',
+  },
+  microwave: {
+    name: 'Four à micro-ondes', ref: 'G', category: 'electromenager', prefix: 'MO',
+    w: 40, h: 40, file: 'symbols/microwave.svg',
+  },
+  dishwasher: {
+    name: 'Lave-vaisselle', ref: 'G', category: 'electromenager', prefix: 'LV',
+    w: 40, h: 40, file: 'symbols/dishwasher.svg',
+  },
+  // Nom de fichier tel que fourni (orthographe conservée) : symbols/washinmachine.svg.
+  washinmachine: {
+    name: 'Lave-linge', ref: 'G', category: 'electromenager', prefix: 'LL',
+    w: 40, h: 40, file: 'symbols/washinmachine.svg',
+  },
+  dryer: {
+    name: 'Sèche-linge', ref: 'G', category: 'electromenager', prefix: 'SL',
+    w: 40, h: 40, file: 'symbols/dryer.svg',
+  },
+  kitchenette: {
+    name: 'Kitchenette', ref: 'G', category: 'electromenager', prefix: 'KT',
+    w: 40, h: 40, file: 'symbols/kitchenette.svg',
   },
 
   transformer: {

@@ -48,6 +48,7 @@ App : `npm start` (bureau) ou `node tools/serve-browser.js` (navigateur local).
 | T3.13 | Taille des « + » (ancrage **vert** et insertion **gris**) | **Demi-taille** : cercle de rayon 5 (au lieu de 10), barres ±2,5, zone cliquable 7,5 |
 | T3.14 | Repère d'un **fil** vertical (orienté 0°) | Le texte longe le conducteur, **centré** sur sa longueur et **resserré** contre lui (plus de décalage vers le haut ni de grand écart) |
 | T3.15 | **Carrefour** (node) redessiné en **5×5** | Le point de dérivation est rendu à sa taille réelle (plus d'étirement ×4) ; la place réservée (grille), la hitbox et les « + » d'ancrage suivent la nouvelle taille (≈ +8,5 px du centre, collés au point) |
+| T3.16 | Palette, catégorie **Appareils d'utilisation (G)** | Sous le titre apparaît la sous-catégorie **Électroménager** (`<h5>`) avec 8 symboles : Réfrigérateur, Congélateur, Four, Four à micro-ondes, Lave-vaisselle, Lave-linge, Sèche-linge, Kitchenette (vignettes chargées, repères FR/CG/FO/MO/LV/LL/SL/KT, libellé BOM « Électroménager ») |
 
 ## T4 — Propriétés
 

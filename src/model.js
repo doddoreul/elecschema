@@ -19,6 +19,8 @@ const PREFIXES = {
   socket: 'X', light: 'E', fluo: 'E', projector: 'E', emergency: 'E',
   heater: 'R', boiler: 'CE', fan: 'V', bell: 'SO', motor: 'M',
   kwh: 'W', appliance: 'AP', transformer: 'T', solar: 'PV', earth: 'PE',
+  fridge: 'FR', freezer: 'CG', oven: 'FO', microwave: 'MO', dishwasher: 'LV',
+  washinmachine: 'LL', dryer: 'SL', kitchenette: 'KT',
   node: 'D', fil: 'C', tableau: 'TB',
 };
 

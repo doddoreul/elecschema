@@ -53,6 +53,9 @@ const TYPE_LABELS = {
   projector: 'Éclairage', emergency: 'Éclairage de sécurité', switch: 'Interrupteur',
   push: 'Bouton', heater: 'Chauffage', boiler: 'Chauffe-eau', fan: 'Ventilateur',
   bell: 'Sonnerie', motor: 'Moteur', kwh: 'Compteur', appliance: 'Appareil',
+  fridge: 'Électroménager', freezer: 'Électroménager', oven: 'Électroménager',
+  microwave: 'Électroménager', dishwasher: 'Électroménager', washinmachine: 'Électroménager',
+  dryer: 'Électroménager', kitchenette: 'Électroménager',
   transformer: 'Transformateur', solar: 'Source', earth: 'Terre',
   fil: 'Fil / câble',
 };
@@ -1146,17 +1149,24 @@ function renderPalette() {
   const host = $('#palette-groups');
   host.innerHTML = '<h4>Favoris</h4><div id="palette-favs" class="palette-favs"></div>' +
     SYMBOL_CATEGORIES.map((cat) => {
-    const items = Object.entries(SYMBOLS)
-      .filter(([, s]) => s.category === cat.id)
-      .map(([key]) => symBtnHtml(key, true))
-      .join('');
-    return `<h4>${escHtml(cat.name)}</h4>${items}`;
-  }).join('');
+      const subs = (cat.subs || [])
+        .map((sub) => `<h5>${escHtml(sub.name)}</h5>${symItemsHtml(sub.id)}`)
+        .join('');
+      return `<h4>${escHtml(cat.name)}</h4>${symItemsHtml(cat.id)}${subs}`;
+    }).join('');
 
   host.querySelectorAll('.sym-btn').forEach(bindSymBtn);
   host.querySelectorAll('.fav-star').forEach(bindStar);
   renderFavorites();
   refreshPaletteAccept();
+}
+
+/** Boutons de tous les symboles d'une catégorie (ou sous-catégorie), avec étoile. */
+function symItemsHtml(categoryId) {
+  return Object.entries(SYMBOLS)
+    .filter(([, s]) => s.category === categoryId)
+    .map(([key]) => symBtnHtml(key, true))
+    .join('');
 }
 
 /** HTML d'un bouton de symbole (palette, favoris, menu contextuel).

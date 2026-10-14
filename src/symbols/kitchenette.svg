@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 40 40">
+  <defs>
+    <style>
+      .cls-1{fill:none;stroke:#111827;stroke-width:2}
+      .cls-2{fill:#ffffff;stroke:#111827;stroke-width:2}
+      .cls-3{fill:#000000}
+    </style>
+  </defs>
+  <title>appliance.svg</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <path d="M20 0 L20 6 M20 34 L20 40" class="cls-1"/>
+    <path d="M6 6 L34 6 L34 34 L6 34 Z" class="cls-2"/>
+    <path d="M6 6 L34 6 L34 34 L6 34 Z" class="cls-2"/>
+    <g>
+      <path d="M9.247 14 C9.247 11.651 11.151 9.747 13.5 9.747 C15.849 9.747 17.753 11.651 17.753 14 C17.753 16.349 15.849 18.253 13.5 18.253 C11.151 18.253 9.247 16.349 9.247 14 Z" class="cls-3"/>
+      <path d="M22.247 14 C22.247 11.651 24.151 9.747 26.5 9.747 C28.849 9.747 30.753 11.651 30.753 14 C30.753 16.349 28.849 18.253 26.5 18.253 C24.151 18.253 22.247 16.349 22.247 14 Z" class="cls-3"/>
+      <path d="M22.247 26 C22.247 23.651 24.151 21.747 26.5 21.747 C28.849 21.747 30.753 23.651 30.753 26 C30.753 28.349 28.849 30.253 26.5 30.253 C24.151 30.253 22.247 28.349 22.247 26 Z" class="cls-3"/>
+    </g>
+  </g>
+</svg>

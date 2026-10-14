@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 40 40">
+  <defs>
+    <style>
+      .cls-1{fill:none;stroke:#111827;stroke-width:2}
+      .cls-2{fill:#ffffff;stroke:#111827;stroke-width:2}
+      .cls-3{fill:#000000}
+      .cls-4{fill:none;stroke:#000000;stroke-miterlimit:10}
+    </style>
+  </defs>
+  <title>appliance.svg</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <path d="M20 0 L20 6 M20 34 L20 40" class="cls-1"/>
+    <path d="M6 6 L34 6 L34 34 L6 34 Z" class="cls-2"/>
+    <path d="M6 6 L34 6 L34 34 L6 34 Z" class="cls-2"/>
+    <path d="M15.471 26 C15.471 23.499 17.499 21.471 20 21.471 C22.501 21.471 24.529 23.499 24.529 26 C24.529 28.501 22.501 30.529 20 30.529 C17.499 30.529 15.471 28.501 15.471 26 Z" class="cls-3"/>
+    <g>
+      <path d="M10.971 15 C10.971 12.499 12.999 10.471 15.5 10.471 C18.001 10.471 20.029 12.499 20.029 15 C20.029 17.501 18.001 19.529 15.5 19.529 C12.999 19.529 10.971 17.501 10.971 15 Z" class="cls-4"/>
+      <path d="M19.971 15 C19.971 12.499 21.999 10.471 24.5 10.471 C27.001 10.471 29.029 12.499 29.029 15 C29.029 17.501 27.001 19.529 24.5 19.529 C21.999 19.529 19.971 17.501 19.971 15 Z" class="cls-4"/>
+    </g>
+  </g>
+</svg>
