@@ -27,6 +27,7 @@
 | 14 | Format de fichier `.elx` (versionne, base64) | LIVREE |
 | 15 | Schema d'implantation (plan, murs, ouvertures, symboles, PDF) | LIVREE |
 | 16 | Audit 0.4.0 (PDF exact, cadre A4, zoom 1:N, correctifs D1-D6) | LIVREE |
+| 17 | Node parallele + resserrage du layout + symboles redimensionnes | LIVREE |
 
 ---
 
@@ -193,6 +194,21 @@ lieu d'une URL `data:` plafonnee par Chromium) ; ouverture par dialogue **ajoute
 recents** ; `APP_VERSION` alignee sur `package.json` (test de coherence) ; CI declenchee
 sur **toutes les branches** ; messages **BE-06/BE-09 lisibles** ; cles `localStorage`
 renommees `elexio.*` avec reprise (sans suppression) des anciennes `elecschema.*`.
+
+---
+
+### Etape 17 - Node parallele (0.5.0)
+
+Nouveau pseudo-symbole **node parallele** (`node_parallel`, palette « Cables ») :
+barre fine a l'epaisseur d'un fil, **orientable**, avec 2 sorties par defaut et une
+sortie vierge ajoutee a chaque element (comme le tableau, mais sans sortie bas et
+en acceptant **tout** type). Barre qui s'arrete a la derniere sortie occupee
+(son tiret cloture le node), « + » vert juste apres le bout ; proportions reprises
+de `symbols/node_parallel.svg`.
+
+Layout : les elements sont **nettement resserres** (ecart = demi-parent + demi-enfant
++ 10 px, au lieu d'un pas fixe) ; les symboles redessines suivent leur `viewBox`
+(prises par type via `defOf`/`socketSize`).
 
 ---
 

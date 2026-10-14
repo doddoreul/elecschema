@@ -25,7 +25,7 @@ import { SCHEMA_VERSION } from './model.js';
 
 export const FORMAT = 'elexio';
 export const FORMAT_VERSION = 1;
-export const APP_VERSION = '0.4.0';
+export const APP_VERSION = '0.5.0';
 export const FILE_EXT = 'elx';
 
 /* ------------------------------------------------------- base64 / UTF-8 (Web + Node) */

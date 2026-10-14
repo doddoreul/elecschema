@@ -477,7 +477,7 @@ non signes -> SmartScreen "Editeur inconnu" au 1er lancement. Normal.
 
 Commandes :
 ```
-npm run build          # NSIS (dist/Elexio-Setup-0.4.0.exe) + portable (dist/Elexio-portable-0.4.0.exe)
+npm run build          # NSIS (dist/Elexio-Setup-0.5.0.exe) + portable (dist/Elexio-portable-0.5.0.exe)
 npm run build:portable # portable seul
 npm run build:dir      # version decompressee dist/win-unpacked (test rapide)
 ```
@@ -516,10 +516,10 @@ valide de `win` (schéma `WindowsConfiguration`).
   panoramique a la barre d'espace (curseur main).
 - **Refonte ancrages** : modele en arbre d'elements + points d'ancrage ; nodes ;
   compteur en bas a gauche. Remplace circuits/difs. Legacy migre a l'ouverture.
-- Nom : **Elexio** (ex-ElecSchema). Version 0.4.0.
+- Nom : **Elexio** (ex-ElecSchema). Version 0.5.0.
 - Electron **44** (supportee) + electron-builder **26** ; build NSIS + portable avec
-  icone `build/icon.ico`. Releases publiees : `v0.3.0` et `v0.4.0` (2 .exe, hors du
-  depot git).
+  icone `build/icon.ico`. Releases publiees : `v0.3.0`, `v0.4.0` et `v0.5.0` (2 .exe,
+  hors du depot git).
 - Depot : https://github.com/doddoreul/elexio (public). Pages :
   https://doddoreul.github.io/elexio/
 - Credential GitHub stocke via Git Credential Manager (chiffre, pas dans .git/config).
