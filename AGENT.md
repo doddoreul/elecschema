@@ -285,7 +285,9 @@ clic-armer) ; deplacement (grille 5 cm), rotation (champ + `R`), retrait (`Suppr
 element schema conserve) ; selection partagee (clic symbole plan -> `selectElement` schema).
 Etages : ajout / renommage (double-clic) / monter / descendre / suppression.
 
-Barre d'outils du plan sur **trois lignes** (`.plan-bar-row`) : (1) etages ; (2) outils (Selection, Mur, Porte, Fenetre, Texte) + reglages d'ouverture
+Barre d'outils du plan sur **trois lignes** (`.plan-bar-row`) : (1) etages puis, apres un
+**separateur** (`.plan-sep`), les outils **Selection / Mur / Porte / Fenetre** ; (2) outil
+**Texte** + reglages d'ouverture
 (largeur, miroirs : boutons a icone `assets/flip.png`, `aria-label` Miroir horizontal /
 vertical ; l'icone du miroir horizontal est pivotee de 90° via `#plan-opening-hinge .plan-icon`) ;
 (3) bouton **Afficher / masquer le dessin** (ne garde que
