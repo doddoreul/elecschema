@@ -387,6 +387,7 @@ Arbre d'ancrage sur une **grille** (1 element / cellule, sans recouvrement) :
   - Défaut `labelPos = 'bottom'` (bas local → droite écran à 0°). Les textes sont toujours ancrés `middle`.
   - `showLabel` : false par défaut pour **breaker/rcd**, true pour les autres (case à cocher dans les propriétés). `poles` : `1P|2P|3P|4P` pour disjoncteurs (`1P`) et différentiels (`2P`).
   - **Distance réglable** `labelOffset` (px, défaut **-5**) : champ « Distance du texte » (`#e-labeloffset`, range −24…60) dans les propriétés, **un seul axe** (la normale au bord du symbole). Une valeur négative rapproche/chevauche l'élément. Masqué pour un node ; le compteur l'applique sur son axe vertical.
+  - **Fil** (`fil`, 40×80) : le libellé court le long du conducteur et se resserre contre lui. La distance perpendiculaire se prend sur la demi-largeur (`w2`, 20) et non `h2` (40) — qui l'écarterait de 20 px — et le texte est **centré sur la longueur** du fil (`placeLabel` : `across`).
   - **Prises** : aucun repère auto (`NO_AUTO_LABEL = ['node','socket']`) et aucun détail affiché (`deviceDetail` renvoie `''`) → le schéma reste muet ; un libellé n'apparaît que si l'utilisateur saisit le champ repère. `normalizeTypes` vide les anciens repères auto `^X\d+$`. Le BOM affiche « — » en détail.
   - Détail (`deviceDetail`) : breaker = `poles - courbe+calibre` (ex. « 2P - C16A »), rcd = **3 lignes** « ΔxmA », « 2P - 40A », « Type AC » (`.lbl-sm` en `white-space: pre-line`, tourne avec le bloc).
 - Canvas : svg plein cadre (CSS), zoom/pan = viewBox seulement (pas de re-rendu).

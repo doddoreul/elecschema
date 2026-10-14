@@ -302,18 +302,14 @@ function placeLabel(g, node, def, cls = 'lbl') {
   const manuel = node.labelRot != null && node.labelRot !== 'auto';
   if (manuel) rot = Number(node.labelRot);
   else { rot = orient - 90; if (rot < -90) rot += 180; }
-  // un fil : le libellé est remonté de 15 px vers le haut de l'écran
-  // (le bloc est pivoté de `rot` : on convertit le décalage écran en coordonnées locales)
-  let liftX = 0, liftY = 0;
-  if (node.symbolType === 'fil') {
-    const a = rot * Math.PI / 180;
-    liftX = -30 * Math.sin(a);
-    liftY = -30 * Math.cos(a);
-  }
+  // Un fil est bien plus long que large : son libellé court le long du conducteur et se
+  // resserre contre lui. La distance perpendiculaire se prend donc sur la demi-largeur `w2`
+  // (et non `h2`, qui l'écarterait de 20 px), et rien n'est décalé le long du fil.
+  const across = node.symbolType === 'fil' ? w2 : h2;
   let lx, ly, dx, dy;
-  if (pos === 'left') { lx = -(w2 + off) + liftX; ly = liftY; dx = lx; dy = liftY + 14; }
-  else if (pos === 'top') { lx = liftX; ly = -(h2 + off) + liftY; dx = liftX; dy = -(h2 + off) - 14 + liftY; }
-  else { lx = liftX; ly = h2 + off + liftY; dx = liftX; dy = h2 + off + 14 + liftY; }
+  if (pos === 'left') { lx = -(w2 + off); ly = 0; dx = lx; dy = 14; }
+  else if (pos === 'top') { lx = 0; ly = -(across + off); dx = 0; dy = -(across + off) - 14; }
+  else { lx = 0; ly = across + off; dx = 0; dy = across + off + 14; }
   const spinRot = rot - orient;
   const spin = el('g', { transform: 'rotate(' + spinRot + ')' }, g);
   if (lab) txt(spin, lx, ly, lab, cls, 'middle');
