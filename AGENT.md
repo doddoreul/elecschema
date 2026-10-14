@@ -519,7 +519,7 @@ valide de `win` (schéma `WindowsConfiguration`).
 - Nom : **Elexio** (ex-ElecSchema). Version 0.5.0.
 - Electron **44** (supportee) + electron-builder **26** ; build NSIS + portable avec
   icone `build/icon.ico`. Releases publiees : `v0.3.0`, `v0.4.0` et `v0.5.0` (2 .exe,
-  hors du depot git).
+  hors du depot git). Release actuelle 0.5.0 : https://github.com/doddoreul/elexio/releases/tag/v0.5.0 (latest, tag `v0.5.0` → commit `fa36074`) ; artefacts locaux dans `dist/` (`Elexio-Setup-0.5.0.exe`, `Elexio-portable-0.5.0.exe`).
 - Depot : https://github.com/doddoreul/elexio (public). Pages :
   https://doddoreul.github.io/elexio/
 - Credential GitHub stocke via Git Credential Manager (chiffre, pas dans .git/config).
