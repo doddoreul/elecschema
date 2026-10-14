@@ -241,7 +241,7 @@ Decisions actees :
   - **Node parallèle** (`node_parallel`) :
   - Barre fine (épaisseur de fil, 2 px), orientable comme tout autre élément ; même mécanique de sorties qu'un tableau : 2 sorties par défaut (`top-1`, `top-2` … ), toujours une sortie vierge après la dernière occupée (`syncOutputs`).
   - Palette uniquement (catégorie « Câbles »). Clé `node_parallel`, fichier `symbols/node_parallel.svg` (vignette).
-  - Comportement comme le tableau : `anchorKeysOf`, `canAccept` (sorties : `rcd`, `breaker`, `sectionneur`, `fil` ; `bottom` : terre), `removeOutput`, `outputs` recalculés. Exclu de la **BOM**, des **circuits**, du **plan d'implantation** et des règles BE (`PLAN_EXCLUDED`, liste skip `renumberCircuits`).
+  - Comportement comme le tableau : `anchorKeysOf`, `canAccept` (Accepte **tout** type sur n'importe quelle sortie ou le bottom, comme un point de dérivation), `removeOutput`, `outputs` recalculés. Exclu de la **BOM**, des **circuits**, du **plan d'implantation** et des règles BE (`PLAN_EXCLUDED`, liste skip `renumberCircuits`).
   - Moteur de layout (`render.js`) : `isBarType` inclut `node_parallel` ; les colonnes (`colOf`, `spanOf`), `rectAt`, `sizeOf` et `place` tiennent compte de **l'orientation** (barre horizontale / verticale, sens direct ou inversé) ; `anchorDir` pivote la direction logique (`top`/`bottom`) → direction écran. Dessin : `drawNodeParallel` (barre thin + ticks par sortie, pivotée selon `orient`).
   - Aucun repère auto (`NO_AUTO_LABEL`) ; champ Orientation éditable, autres propriétés masquées.
 

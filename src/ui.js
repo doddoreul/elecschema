@@ -431,10 +431,11 @@ function syncOutputs() {
 
 function canAccept(parentType, childType, dir) {
   // tableau / node_parallel : seulement différentiels, disjoncteurs et sectionneurs en sortie
-  if (parentType === 'tableau' || parentType === 'node_parallel') {
+  if (parentType === 'tableau') {
     if (dir === 'bottom') return childType === 'earth';
     return TABLEAU_OUTPUT_TYPES.includes(childType);
   }
+  if (parentType === 'node_parallel') return true;
   // point de derivation, cable, sectionneur et barre de tableau : hors regles
   if (childType === 'node' || childType === 'fil' || childType === 'sectionneur' || childType === 'tableau' || childType === 'node_parallel') return true;
   const allowed = ACCEPT_RULES[parentType];
