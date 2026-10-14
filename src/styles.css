@@ -243,9 +243,9 @@ tbody tr:hover { background: #f9fafb; }
 .cartouche .cart-line { font-size: 6.5px; fill: #4b5563; }
 .sym-wrap { cursor: grab; }
 .sym-wrap:active { cursor: grabbing; }
-.sym-wrap text { font-size: 11px; fill: var(--ink); font-family: sans-serif; }
-.lbl { font-size: 11px; fill: #374151; }
-.lbl-sm { font-size: 10px; fill: #4b5563; white-space: pre-line; }
+.sym-wrap text { font-size: 6.6px; fill: var(--ink); font-family: sans-serif; }
+.lbl { font-size: 6.6px; fill: #374151; }
+.lbl-sm { font-size: 6px; fill: #4b5563; white-space: pre-line; }
 .sym-wrap.selected rect.outline { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 4 3; }
 
 /* ---- canvas plein ecran, zoom/pan via viewBox ---- */

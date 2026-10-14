@@ -53,6 +53,19 @@ export function anchorKeysOf(node) {
     const tops = Array.from({ length: node.outputs || TABLEAU_OUTPUTS }, (_, i) => 'top-' + (i + 1));
     return [...tops, 'bottom'];
   }
+  // Aucun point d'ancrage.
+  const NONE = ['earth', 'light', 'fridge', 'freezer', 'oven', 'microwave', 'dishwasher',
+    'washing_machine', 'dryer', 'kitchenette', 'heater', 'boiler', 'fan', 'bell', 'appliance'];
+  if (NONE.includes(node.symbolType)) return [];
+  // Un seul point d'ancrage fixe.
+  if (node.symbolType === 'fuse') return ['top'];
+  if (['timer', 'clock_switch', 'contactor', 'thermostat', 'motion'].includes(node.symbolType)) return ['top'];
+  // Un seul point d'ancrage, en face du point d'entree.
+  const SINGLE = ['socket', 'switch', 'switch_pilot', 'push', 'motor', 'sectionneur'];
+  if (SINGLE.includes(node.symbolType)) {
+    const d = node.dir ? baseDir(node.dir) : 'bottom';
+    return ANCHOR_DIRECTIONS.includes(d) ? [d] : ['bottom'];
+  }
   return ANCHOR_DIRECTIONS;
 }
 

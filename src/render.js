@@ -371,7 +371,8 @@ function placeLabel(g, node, def, cls = 'lbl') {
   if (!lab && !det) return;
   const pos = node.labelPos || 'bottom';
   // Distance réglable du bloc de texte au bord du symbole, sur un seul axe (pixels).
-  const off = node.labelOffset == null ? -5 : Number(node.labelOffset);
+  const off = node.labelOffset == null ? (node.symbolType === 'fil' ? -24 : node.symbolType === 'rcd' ? -16 : -5) : Number(node.labelOffset);
+  const detailOff = node.detailOffset == null ? off + 14 : Number(node.detailOffset);
   const w2 = def.w / 2, h2 = def.h / 2;
   // Orientation du bloc de texte : la position suit l'element, la rotation est normale.
   // Automatique : orient - 90°, normalise pour ne jamais 'retourner' le texte.
@@ -386,8 +387,15 @@ function placeLabel(g, node, def, cls = 'lbl') {
   const across = node.symbolType === 'fil' ? w2 : h2;
   let lx, ly, dx, dy;
   if (pos === 'left') { lx = -(w2 + off); ly = 0; dx = lx; dy = 14; }
-  else if (pos === 'top') { lx = 0; ly = -(across + off); dx = 0; dy = -(across + off) - 14; }
-  else { lx = 0; ly = across + off; dx = 0; dy = across + off + 14; }
+  else if (pos === 'top') { lx = 0; ly = -(across + off); dx = 0; dy = -(across + detailOff); }
+  else { lx = 0; ly = across + off; dx = 0; dy = across + detailOff; }
+  // disjoncteur circuit : lettre un peu a gauche et au-dessus, libelle en bas.
+  if (node.symbolType === 'breaker' && node.circuit !== false) {
+    lx = -6;
+    ly = -(h2 + off);
+    dx = 0;
+    dy = h2 + detailOff;
+  }
   const spinRot = rot - orient;
   const spin = el('g', { transform: 'rotate(' + spinRot + ')' }, g);
   if (lab) txt(spin, lx, ly, lab, cls, 'middle');

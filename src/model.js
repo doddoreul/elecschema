@@ -91,8 +91,9 @@ export function createElement(symbolType, parentId, dir) {
   if (symbolType === 'breaker' || symbolType === 'rcd') {
     e.poles = symbolType === 'rcd' ? '2P' : '1P';
   }
+  if (symbolType === 'breaker') e.circuit = true;
   // un tableau doit toujours afficher son repère (libellé de la barre)
-  if (symbolType === 'tableau' || symbolType === 'node_parallel') { e.showLabel = true; e.outputs = TABLEAU_OUTPUTS; }
+  if (symbolType === 'tableau' || symbolType === 'node_parallel') { if (e.showLabel == null) e.showLabel = true; e.outputs = TABLEAU_OUTPUTS; }
   if (symbolType === 'socket') { e.count = 1; e.socketType = DEFAULT_SOCKET_TYPE; }
   if (symbolType === 'switch') e.switchType = DEFAULT_SWITCH_TYPE;
   if (symbolType === 'fil') e.cable = { ...DEFAULT_CABLE };
@@ -215,6 +216,7 @@ export function normalizeTypes(p) {
       if (/^X\d+$/.test(e.label || '')) e.label = '';
     }
     if (e.symbolType === 'switch' && !e.switchType) e.switchType = DEFAULT_SWITCH_TYPE;
+    if (e.symbolType === 'breaker' && e.circuit == null) e.circuit = true;
     // Un node n'a aucune propriété : on nettoie les anciens champs hérités.
     if (e.symbolType === 'node') {
       e.label = ''; e.labelLocked = false; e.detail = '';
@@ -262,6 +264,7 @@ const CIRCUIT_PARENTS = ['tableau', 'rcd', 'compteur', 'node', 'node_parallel'];
  *  différentiel, le compteur ou un node. */
 export function isCircuitStart(project, e) {
   if (!e || !['breaker', 'fuse'].includes(e.symbolType)) return false;
+  if (e.symbolType === 'breaker' && e.circuit === false) return false;
   const p = e.parent != null ? nodeById(project, e.parent) : null;
   return !!p && CIRCUIT_PARENTS.includes(p.symbolType);
 }
@@ -278,6 +281,9 @@ export function circuitStartOf(project, e) {
  *  pour les symboles du circuit. Un repère saisi à la main (verrouillé) est conservé. */
 export function renumberCircuits(project) {
   const all = treeOrder(project);
+  for (const e of all) {
+    if (e.symbolType === 'breaker' && e.circuit === false && !e.labelLocked && /^[A-Z]{1,2}$/.test(e.label || '')) e.label = '';
+  }
   const starts = all.filter((e) => isCircuitStart(project, e));
   const reserved = new Set(starts.filter((s) => s.labelLocked && /^[A-Z]{1,2}$/.test(s.label || '')).map((s) => s.label));
   let i = 0;
@@ -286,6 +292,8 @@ export function renumberCircuits(project) {
     let l;
     do { l = letterOf(++i); } while (reserved.has(l));
     s.label = l;
+    s.labelPos = 'top';
+    s.showLabel = true;
   }
   const counts = new Map();
   for (const e of all) {

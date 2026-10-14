@@ -1,7 +1,7 @@
 // Contrôleur d'interface : onglets, informations, palette, arbre d'éléments, BOM.
 // Toute mutation du projet passe par markDirty() + refreshAll() pour rester synchronisé.
 
-import { emptyProject, createElement, syncIdCounter, nodeById, treeOrder, nextId, PREFIXES, migrateProject, normalizeTypes, isCircuitStart, renumberCircuits, ensurePlan } from './model.js';
+import { emptyProject, createElement, syncIdCounter, nodeById, treeOrder, nextId, PREFIXES, migrateProject, normalizeTypes, isCircuitStart, circuitStartOf, renumberCircuits, ensurePlan } from './model.js';
 import { encodeElx, decodeElx, checkCompatibility, FILE_EXT, APP_VERSION, referencedAssets } from './format.js';
 import { initPlan, refreshPlan, resetPlanView } from './plan-ui.js';
 import { assetsObject, assetsReplace, saveAssetsIdb, loadAssetsIdb } from './plan-assets.js';
@@ -399,8 +399,8 @@ const NO_AUTO_LABEL = ['node', 'node_parallel', 'socket'];
 /** Quels types d'élément chaque type peut recevoir en enfant.
  *  `null` = tout est accepté. Le node (dérivation) et le fil/câble sont hors règles. */
 const ACCEPT_RULES = {
-  compteur: ['rcd'],
-  rcd: ['breaker', 'rcd'],
+  compteur: [],
+  rcd: [],
   breaker: null,
 };
 
@@ -431,6 +431,12 @@ function syncOutputs() {
 
 function canAccept(parentType, childType, dir) {
   // tableau / node_parallel : seulement différentiels, disjoncteurs et sectionneurs en sortie
+  // Un disjoncteur ou differentiel ne peut etre installe que sur un tableau.
+  if (childType === 'breaker' || childType === 'rcd') {
+    if (parentType !== 'tableau') return false;
+    if (dir === 'bottom') return false;
+    return TABLEAU_OUTPUT_TYPES.includes(childType);
+  }
   if (parentType === 'tableau') {
     if (dir === 'bottom') return childType === 'earth';
     return TABLEAU_OUTPUT_TYPES.includes(childType);
@@ -552,7 +558,7 @@ function addElement(symbolType, parentId, dir, props = null) {
   }
   const e = createElement(symbolType, parentId, dir);
   e.label = NO_AUTO_LABEL.includes(symbolType) ? '' : nextGlobalLabel(symbolType);
-  if (isCircuitStart(project, e)) e.showLabel = true;
+  if (isCircuitStart(project, e)) { e.showLabel = true; if (e.symbolType === 'breaker') e.labelPos = 'top'; }
   applyProps(e, props);
   // une barre de tableau reste horizontale par defaut (hors sens de pose)
   e.orient = (symbolType === 'tableau' || symbolType === 'node_parallel') ? 0 : orientForDir(dir);
@@ -591,7 +597,7 @@ function insertNode(parentId, dir, type = 'node', props = null) {
   const c = createElement(type, parentId, dir);
   c.orient = (type === 'tableau' || type === 'node_parallel') ? 0 : orientForDir(dir);
   c.label = NO_AUTO_LABEL.includes(type) ? '' : nextGlobalLabel(type);
-  if (isCircuitStart(project, c)) c.showLabel = true;
+  if (isCircuitStart(project, c)) { c.showLabel = true; if (c.symbolType === 'breaker') c.labelPos = 'top'; }
   applyProps(c, props);
   parent.children = parent.children || {};
   parent.children[dir] = c.id;
@@ -717,7 +723,6 @@ function symbolLabel(node) {
 }
 
 function renderBom() {
-  const tbody = $('#bom-table tbody');
   const nodes = treeOrder(project).filter((n) => n.symbolType !== 'node' && n.symbolType !== 'node_parallel');
   const rows = nodes.map((node) => {
     const parent = nodeOf(node.parent);
@@ -732,13 +737,32 @@ function renderBom() {
   });
   rows.sort((a, b) => String(a.label).localeCompare(String(b.label), 'fr', { numeric: true }));
 
-  tbody.innerHTML = rows
-    .map((r) => `<tr><td>${escHtml(r.label)}</td><td>${escHtml(r.place)}</td><td>${escHtml(r.symbol)}</td>` +
-      `<td>${escHtml(r.detail)}</td><td>${escHtml(r.type)}</td></tr>`)
+
+  // Liste des circuits
+  const circuitTbody = $('#bom-circuits tbody');
+  const starts = treeOrder(project).filter((e) => isCircuitStart(project, e));
+  const circuitRows = starts.map((start) => {
+    const parent = nodeOf(start.parent);
+    const parentLabel = parent ? (parent.label || (parent.symbolType === 'compteur' ? 'W1' : (parent.symbolType === 'tableau' ? 'Tableau' : '-'))) : '-';
+    const childLabels = treeOrder(project)
+      .filter((e) => e !== start && circuitStartOf(project, e) === start
+        && !['node', 'node_parallel', 'fil', 'tableau'].includes(e.symbolType))
+      .map((e) => {
+        const lbl = e.label || symbolLabel(e);
+        const typ = symbolLabel(e);
+        return lbl && lbl !== typ ? `${lbl} (${typ})` : typ;
+      });
+    return {
+      letter: start.label || '?',
+      parent: parentLabel,
+      children: childLabels.length ? childLabels.join(', ') : '-',
+    };
+  });
+  circuitTbody.innerHTML = circuitRows
+    .map((r) => `<tr><td>${escHtml(r.letter)}</td><td>${escHtml(r.parent)}</td><td>${escHtml(r.children)}</td></tr>`)
     .join('');
-  $('#bom-empty').hidden = rows.length > 0;
-  $('#bom-table').hidden = rows.length === 0;
-  $('#bom-count').textContent = rows.length ? `${rows.length} éléments` : '';
+  $('#bom-circuits-empty').hidden = circuitRows.length > 0;
+  $('#bom-circuits').hidden = circuitRows.length === 0;
 
   const groups = new Map();
   for (const r of rows) {
@@ -1082,6 +1106,7 @@ ${protections.map((n) => {
 </tbody></table></section>`;
 
   // 5. liste des matériaux, regroupés par désignation et caractéristique
+  // Liste des circuits
   const groups = new Map();
   for (const n of treeOrder(project)) {
     if (n.symbolType === 'node' || n.symbolType === 'node_parallel') continue;
@@ -1121,8 +1146,8 @@ ${mats.map((g) => `<tr><td>${escHtml(g.name)}</td><td>${escHtml(g.det)}</td><td>
   .wire { stroke:#111827; stroke-width:1.6; fill:none; }
   .bus { stroke:#111827; stroke-width:2; fill:none; }
   text { font-family: sans-serif; }
-  .lbl { font-size:9px; fill:#374151; }
-  .lbl-sm { font-size:8px; fill:#4b5563; white-space: pre-line; }
+  .lbl { font-size:5.4px; fill:#374151; }
+  .lbl-sm { font-size:4.8px; fill:#4b5563; white-space: pre-line; }
   .cart-title { font-size:8px; font-weight:600; fill:#111827; }
   .cart-line { font-size:6.5px; fill:#4b5563; }
   .plan-title { font-size:13px; font-weight:600; fill:#111827; }
@@ -1706,6 +1731,9 @@ const isParallel = node.symbolType === 'node_parallel';
   $('#e-locked').checked = !!node.labelLocked;
   $('#e-showlabel-lbl').hidden = isNode || isParallel;
   $('#e-showlabel').checked = node.showLabel === true;
+  const isBreaker = node.symbolType === 'breaker';
+  $('#e-circuit-lbl').hidden = !isBreaker;
+  if (isBreaker) $('#e-circuit').checked = node.circuit !== false;
   $('#e-count-lbl').hidden = !isSocket;
   if (isSocket) {
     $('#e-count').value = node.count || 1;
@@ -1715,15 +1743,15 @@ const isParallel = node.symbolType === 'node_parallel';
   $('#e-orient-lbl').hidden = isNode || tableau;
   $('#e-orient').value = String(node.orient || 0);
   // le texte d'un tableau est toujours en bas, horizontal : pas de position ni d'orientation
-  $('#e-labelpos-lbl').hidden = supply || isNode || tableau;
-  $('#e-labelpos').value = node.labelPos || 'bottom';
   $('#e-labeloffset-lbl').hidden = isNode || isParallel;
   const off = node.labelOffset == null ? -5 : Number(node.labelOffset);
   $('#e-labeloffset').value = String(off);
   $('#e-labeloffset-val').value = off + ' px';
+  $('#e-detailoffset-lbl').hidden = isNode || isParallel || tableau;
+  const doff = node.detailOffset == null ? off + 14 : Number(node.detailOffset);
+  $('#e-detailoffset').value = String(doff);
+  $('#e-detailoffset-val').value = doff + ' px';
   // orientation du texte : masquee pour un node et pour le compteur (texte fixe)
-  $('#e-labelrot-lbl').hidden = supply || isNode || tableau;
-  $('#e-labelrot').value = node.labelRot || 'auto';
   $('#e-detail-lbl').hidden = !supply;
   $('#e-detail').value = node.detail || '';
 
@@ -1800,29 +1828,34 @@ $('#e-orient').addEventListener('change', (e) => {
   const n = selectedNode(); if (!n) return;
   n.orient = n.symbolType === 'tableau' ? 0 : Number(e.target.value); markDirty(); refreshAll();
 });
-$('#e-labelpos').addEventListener('change', (e) => {
-  const n = selectedNode(); if (!n) return;
-  n.labelPos = e.target.value; markDirty(); refreshAll();
-});
+
 $('#e-labeloffset').addEventListener('input', (e) => {
   const n = selectedNode(); if (!n) return;
   n.labelOffset = Number(e.target.value);
   $('#e-labeloffset-val').value = n.labelOffset + ' px';
   markDirty(); refreshAll();
 });
+$('#e-detailoffset').addEventListener('input', (e) => {
+  const n = selectedNode(); if (!n) return;
+  n.detailOffset = Number(e.target.value);
+  $('#e-detailoffset-val').value = n.detailOffset + ' px';
+  markDirty(); refreshAll();
+});
 $('#e-poles').addEventListener('change', (e) => {
   const n = selectedNode(); if (!n) return;
   n.poles = e.target.value; markDirty(); refreshAll();
 });
-$('#e-labelrot').addEventListener('change', (e) => {
-  const n = selectedNode(); if (!n) return;
-  n.labelRot = e.target.value; markDirty(); refreshAll();
-});
+
 $('#e-showlabel').addEventListener('change', (e) => {
   const n = selectedNode(); if (!n) return;
   n.showLabel = e.target.checked;
   // si aucun repere n'existe encore, on en genere un pour que la case ait un effet visible
   if (n.showLabel && !(n.label || '').trim()) n.label = nextGlobalLabel(n.symbolType);
+  markDirty(); refreshAll();
+});
+$('#e-circuit').addEventListener('change', (e) => {
+  const n = selectedNode(); if (!n || n.symbolType !== 'breaker') return;
+  n.circuit = e.target.checked;
   markDirty(); refreshAll();
 });
 $('#e-rating').addEventListener('change', (e) => {

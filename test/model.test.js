@@ -89,10 +89,10 @@ test('letterOf : 1 -> A, 26 -> Z, 27 -> AA', () => {
 test('renumberCircuits : une lettre par circuit, puis 1, 2… par symbole', () => {
   const p = emptyProject();
   const add = (type, parent, dir) => { const e = createElement(type, parent.id, dir); parent.children[dir] = e.id; p.elements.push(e); return e; };
-  const diff = add('rcd', p.supply, 'right');
-  const b1 = add('breaker', diff, 'top');
+  const tb = add('tableau', p.supply, 'right');
+  const b1 = add('breaker', tb, 'top-1');
   const s1 = add('socket', b1, 'top');
-  const b2 = add('breaker', diff, 'bottom');
+  const b2 = add('breaker', tb, 'top-2');
   const s2 = add('socket', b2, 'top');
   renumberCircuits(p);
   assert.equal(b1.label, 'A');
