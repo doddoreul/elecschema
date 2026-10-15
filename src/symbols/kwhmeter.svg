@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30" height="30" viewBox="0 0 30 30">
+  <title>kwhmeter.svg</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <g>
+      <path d="M15 -5 L15 1 M15 29 L15 35" fill="#ffffff" stroke="#111827" stroke-width="2"/>
+      <path d="M1 1 L29 1 L29 29 L1 29 Z" fill="#ffffff" stroke="#111827" stroke-width="2"/>
+    </g>
+    <text transform="matrix(1 0 0 1 4.05 19.044)" x="0" y="0" xml:space="preserve" font-family="&apos;Source Sans 3&apos;" font-size="12" fill="#000000"><tspan x="0" y="0">kWh</tspan></text>
+  </g>
+</svg>

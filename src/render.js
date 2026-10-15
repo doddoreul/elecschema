@@ -571,7 +571,7 @@ export function renderSchema(root, project, opts = {}) {
     // distance réglable du libellé, sur l'axe vertical
     const so = sup.labelOffset == null ? -5 : Number(sup.labelOffset);
     if (sup.showLabel === true && (sup.label || '').trim()) txt(g, 0, -4 - so, sup.label, 'lbl', 'middle');
-    txt(g, 0, 12 + so, sup.detail || 'Compteur kWh', 'lbl-sm', 'middle');
+    // texte du compteur retiré : le symbole SVG porte son propre libellé
   }
 
   // ---- éléments ----
