@@ -5,7 +5,7 @@ import { emptyProject, createElement, syncIdCounter, nodeById, treeOrder, nextId
 import { encodeElx, decodeElx, checkCompatibility, FILE_EXT, APP_VERSION, referencedAssets } from './format.js';
 import { initPlan, refreshPlan, resetPlanView } from './plan-ui.js';
 import { assetsObject, assetsReplace, saveAssetsIdb, loadAssetsIdb } from './plan-assets.js';
-import { renderSchema, sheetSize, deviceDetail, PAGE, layoutForced, drawCartouche } from './render.js';
+import { renderSchema, sheetSize, deviceDetail, PAGE, layoutForced, drawCartouche, computeLayout } from './render.js';
 import { buildPlanPages, planOverflowLevels } from './plan-print.js';
 import { SYMBOLS, SYMBOL_CATEGORIES, symbolName, symbolUrl, SOCKET_TYPES, SWITCH_TYPES, DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
 import { validate, RULES_BE, rulesFor, RULE_SEVERITY } from './rules-be.js';
@@ -1450,8 +1450,13 @@ function fitView() {
 
 /** Recentre le schéma dans la fenêtre en conservant le zoom courant. */
 function centerView() {
-  const s = baseSize();
-  setView({ x: (s.w - view.w) / 2, y: (s.h - view.h) / 2, w: view.w, h: view.h });
+  const L = computeLayout(project);
+  const rects = L.rects || [];
+  const x0 = rects.length ? Math.min(...rects.map((r) => r.r.x0)) : 0;
+  const x1 = rects.length ? Math.max(...rects.map((r) => r.r.x1)) : baseSize().w;
+  const y0 = rects.length ? Math.min(...rects.map((r) => r.r.y0)) : 0;
+  const y1 = rects.length ? Math.max(...rects.map((r) => r.r.y1)) : baseSize().h;
+  setView({ x: (x0 + x1) / 2 - view.w / 2, y: (y0 + y1) / 2 - view.h / 2, w: view.w, h: view.h });
 }
 
 function zoomAt(f, p = { x: view.x + view.w / 2, y: view.y + view.h / 2 }) {
