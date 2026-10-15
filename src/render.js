@@ -566,11 +566,12 @@ export function renderSchema(root, project, opts = {}) {
     const g = el('g', { class: 'sym-wrap' + ((opts.selectedIds ? opts.selectedIds.has(sup.id) : opts.selectedId === sup.id) ? ' selected' : ''), transform: `translate(${cx},${cy})`, 'data-el': sup.id }, svg);
     const srot = el('g', { transform: `rotate(${sup.orient || 0})`, class: 'sym-rot' }, g);
     el('rect', { class: 'outline', x: -44, y: -32, width: 88, height: 64, fill: 'transparent', stroke: 'transparent' }, srot);
-    srot.appendChild(el('rect', { x: -38, y: -26, width: 76, height: 52, rx: 4, fill: '#fff', stroke: '#111827', 'stroke-width': 1.6 }));
+    const __img = el('image', { href: symbolUrl('kwh'), x: -44, y: -32, width: 88, height: 64, class: 'sym-img' }, srot);
+    __img.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     // distance réglable du libellé, sur l'axe vertical
     const so = sup.labelOffset == null ? -5 : Number(sup.labelOffset);
     if (sup.showLabel === true && (sup.label || '').trim()) txt(g, 0, -4 - so, sup.label, 'lbl', 'middle');
-    txt(g, 0, 12 + so, sup.detail || '', 'lbl-sm', 'middle');
+    txt(g, 0, 12 + so, sup.detail || 'Compteur kWh', 'lbl-sm', 'middle');
   }
 
   // ---- éléments ----
