@@ -21,6 +21,7 @@ let currentFile = null;
 let activeTab = 'info';
 let dirty = false;
 let selectedIds = new Set();  // sélection multiple (Maj + clic)
+let clipNodes = null;  // sous-circuit copi� (tableau de noeuds clon�s)
 let selectedId = null;       // id d'élément (ou du compteur)
 let pendingAnchor = null;    // { parentId, dir } en attente de symbole
 let armedSymbol = null;      // symbole choisi dans la bibliothèque, posé sur chaque « + » cliqué
@@ -406,7 +407,7 @@ function orientForDir(dir) {
 
 /** Types sans repère automatique : leur repère reste vide tant que l'utilisateur
  *  ne le saisit pas (le schéma n'affiche alors que la description). */
-const NO_AUTO_LABEL = ['node', 'node_parallel', 'socket', 'fil'];
+const NO_AUTO_LABEL = ['node', 'node_parallel', 'socket', 'fil', 'kwh'];
 
 /* --------------------------------------------------------- règles de composition */
 
@@ -455,6 +456,7 @@ function canAccept(parentType, childType, dir) {
     }
     if (parentType === 'rcd') return childType === 'breaker' || childType === 'rcd';
     if (parentType === 'breaker') return true;
+  if (parentType === 'fil') return childType === 'breaker' || childType === 'rcd';
     return false;
   }
   if (parentType === 'tableau') {
@@ -1432,6 +1434,9 @@ document.addEventListener('pointerdown', (e) => {
 /* ------------------------------------------------------- dépôt sur le canvas */
 
 const canvasHost = $('#canvas-host');
+const selBox = document.createElement('div');
+selBox.style.cssText = 'position:absolute;border:2px dashed #2563eb;background:rgba(37,99,235,0.12);pointer-events:none;display:none;z-index:999;';
+canvasHost.appendChild(selBox);
 const svgEl = $('#canvas');
 const zoomLabel = $('#zoom-label');
 
@@ -1568,13 +1573,36 @@ svgEl.addEventListener('pointerdown', (e) => {
     const elId = Number(hit.dataset.el);
     if (e.shiftKey) toggleElement(elId);      // Maj + clic : sélection multiple
     else selectElement(elId);
-  } else { if (e.button === 0 && !hit) deselect(); return; }
+  } else if (e.button === 0 && !hit) {
+    // glisser-déplacer sur le fond : rectangle de sélection
+    const hr = canvasHost.getBoundingClientRect();
+    gesture = { select: true, x: e.clientX, y: e.clientY, moved: false, hr };
+    selBox.style.left = (e.clientX - hr.left) + 'px';
+    selBox.style.top = (e.clientY - hr.top) + 'px';
+    selBox.style.width = '0px';
+    selBox.style.height = '0px';
+    selBox.style.display = 'block';
+    svgEl.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    return;
+  } else { return; }
 
   svgEl.setPointerCapture(e.pointerId);
   e.preventDefault();
 });
 
 svgEl.addEventListener('pointermove', (e) => {
+  if (gesture && gesture.select) {
+    if (Math.abs(e.clientX - gesture.x) + Math.abs(e.clientY - gesture.y) > 4) gesture.moved = true;
+    const x1 = Math.min(gesture.x, e.clientX), y1 = Math.min(gesture.y, e.clientY);
+    const x2 = Math.max(gesture.x, e.clientX), y2 = Math.max(gesture.y, e.clientY);
+    const hr = canvasHost.getBoundingClientRect();
+    selBox.style.left = (x1 - hr.left) + 'px';
+    selBox.style.top = (y1 - hr.top) + 'px';
+    selBox.style.width = (x2 - x1) + 'px';
+    selBox.style.height = (y2 - y1) + 'px';
+    return;
+  }
   if (gesture && gesture.move) {
     const k = Math.max(view.w / svgEl.clientWidth, view.h / svgEl.clientHeight);
     const dx = (e.clientX - gesture.x) * k, dy = (e.clientY - gesture.y) * k;
@@ -1595,6 +1623,34 @@ svgEl.addEventListener('pointermove', (e) => {
 
 svgEl.addEventListener('pointerup', (e) => {
   canvasHost.classList.remove('panning');
+  if (gesture && gesture.select) {
+    selBox.style.display = 'none';
+    if (gesture.moved) {
+      const x1 = Math.min(gesture.x, e.clientX), y1 = Math.min(gesture.y, e.clientY);
+      const x2 = Math.max(gesture.x, e.clientX), y2 = Math.max(gesture.y, e.clientY);
+      const box = { left: x1, top: y1, right: x2, bottom: y2 };
+      const ids = [...new Set(Array.from(svgEl.querySelectorAll('[data-el]')).map((n) => Number(n.dataset.el)))];
+      const hitIds = ids.filter((id) => {
+        const nodeEl = svgEl.querySelector(`[data-el="${id}"]`);
+        if (!nodeEl) return false;
+        const r = nodeEl.getBoundingClientRect();
+        return !(r.right < box.left || r.left > box.right || r.bottom < box.top || r.top > box.bottom);
+      });
+      if (e.shiftKey) {
+        for (const id of hitIds) selectedIds.add(id);
+      } else {
+        selectedIds = new Set(hitIds);
+      }
+      if (selectedIds.size) selectedId = [...selectedIds][selectedIds.size - 1];
+      else selectedId = null;
+      refreshAll();
+    } else {
+      if (!e.shiftKey) deselect();
+    }
+    gesture = null;
+    if (svgEl.hasPointerCapture(e.pointerId)) svgEl.releasePointerCapture(e.pointerId);
+    return;
+  }
   if (gesture && gesture.move) {
     if (gesture.moved) markDirty();
     gesture = null;
@@ -1701,6 +1757,13 @@ document.addEventListener('keydown', (e) => {
   if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
   if (mod && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) { e.preventDefault(); redo(); return; }
   if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); saveLocal(); return; }
+  if (mod && e.key.toLowerCase() === 'c' && !isTyping(e.target)) {
+    const ids = [...selectedIds].filter((id) => !isSupplyId(id));
+    if (ids.length) { e.preventDefault(); copySelection(ids); return; }
+  }
+  if (mod && e.key.toLowerCase() === 'v' && !isTyping(e.target)) {
+    e.preventDefault(); pasteSelection(); return;
+  }
   if (mod && e.key.toLowerCase() === 'n') { e.preventDefault(); $('#btn-new').click(); return; }
 
   // Ctrl/Cmd + A : ne plus sélectionner tout le texte de la page (le comportement
@@ -1725,6 +1788,75 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* ------------------------------------ sélection + panneau propriétés */
+
+function copySelection(ids) {
+  const idSet = new Set(ids);
+  const actualRoots = ids.filter((id) => {
+    let p = nodeOf(id)?.parent;
+    while (p && p !== 1) { if (idSet.has(p)) return false; p = nodeOf(p)?.parent; }
+    return true;
+  });
+  const seen = new Set();
+  const snap = [];
+  function walk(id) {
+    if (seen.has(id)) return;
+    const n = nodeOf(id);
+    if (!n || isSupplyId(id)) return;
+    seen.add(id);
+    snap.push(JSON.parse(JSON.stringify(n)));
+    for (const dir of Object.keys(n.children || {})) {
+      const cid = n.children[dir];
+      if (cid != null) walk(cid);
+    }
+  }
+  actualRoots.forEach(walk);
+  clipNodes = snap.length ? snap : null;
+  status(clipNodes ? `${clipNodes.length} élément(s) copié(s).` : 'Aucun élément à copier.');
+}
+
+function pasteSelection() {
+  if (!clipNodes || !clipNodes.length) { status('Rien à coller.'); return; }
+  const target = selectedNode() || (project && project.supply ? project.supply : null);
+  if (!target) { status('Sélectionnez un parent pour coller.'); return; }
+  const originRoots = clipNodes.filter((n) => !clipNodes.some((x) => x.id === n.parent));
+  const mapping = {};
+  for (const n of clipNodes) mapping[n.id] = nextId();
+  const newNodes = clipNodes.map((n) => {
+    const c = JSON.parse(JSON.stringify(n));
+    c.id = mapping[n.id];
+    c.parent = (n.parent != null && mapping[n.parent]) ? mapping[n.parent] : target.id;
+    const nc = {};
+    for (const [dir, cid] of Object.entries(n.children || {})) {
+      if (cid != null && mapping[cid] != null) nc[dir] = mapping[cid];
+    }
+    c.children = nc;
+    return c;
+  });
+  const rootNewIds = originRoots.map((r) => mapping[r.id]);
+  for (const rid of rootNewIds) {
+    const n = newNodes.find((x) => x.id === rid);
+    if (!n) continue;
+    const dirs = freeAnchorDirs(target);
+    const dir = dirs.includes(n.dir) ? n.dir : (dirs[0] || n.dir);
+    if (!dir) { status('Aucun point d’ancrage libre pour coller.'); return; }
+    n.dir = dir;
+    target.children = target.children || {};
+    target.children[dir] = rid;
+    n.parent = target.id;
+  }
+  const firstRoot = originRoots[0];
+  if (firstRoot && !canAccept(target.symbolType, firstRoot.symbolType, (newNodes.find((x) => x.id === mapping[firstRoot.id]) || {}).dir)) {
+    status(`Un ${symbolName(target.symbolType)} ne peut pas recevoir un ${symbolName(firstRoot.symbolType)}.`);
+    return;
+  }
+  project.elements.push(...newNodes);
+  selectedIds = new Set(rootNewIds);
+  selectedId = rootNewIds[0] || null;
+  try { renumberCircuits(project); } catch (_) {}
+  markDirty();
+  refreshAll();
+  status(`${newNodes.length} élément(s) collé(s).`);
+}
 
 function selectElement(id) {
   selectedIds = new Set(id == null ? [] : [id]);

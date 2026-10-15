@@ -1,187 +1,74 @@
 # Elexio
 
-Éditeur de **schémas unifilaires** pour installations **domestiques** belges.
+Single-line diagram editor for Belgian domestic electrical installations.
 
-- Norme visée : **RGIE / AREI** (symboles selon le tableau 2.23, Livre 1 Partie 2)
-- Domaine : **habitation uniquement** — mono **et** triphasé
-- **100 % local** : aucun cloud, aucune licence, aucune télémétrie
-- Application **Windows** (Electron) + **version navigateur** (GitHub Pages)
+- Target standard: RGIE / AREI (symbols from table 2.23, Book 1 Part 2)
+- Scope: home installations, mono and triphasic
+- **100% local**: no cloud, no license, no telemetry
+- Desktop app (Windows, Electron) plus browser version (GitHub Pages)
 
-> Projet à usage personnel. Ce n'est pas une référence réglementaire : voir la section
-> [Avertissement](#avertissement).
+> Personal-use project. Not a regulatory reference. See the [warning](#warning).
 
----
+Available languages: [Read README in French](README_FR.md) | [Read README in Dutch](README_NL.md)
 
-## Démarrage rapide (débutant)
+Current version: **0.5.3** (`v0.5.3`)
 
-### Lancer l'application
+## Quick start
 
-**Version bureau (Windows)** : `npm install` puis `npm start`.
+### Desktop (Windows)
 
-**Version navigateur** : ouvrir <https://doddoreul.github.io/elexio/> — rien à installer.
+`npm install` then `npm start`.
 
-### Créer un schéma en 5 minutes
+### Browser
 
-1. **Informations** : à l'ouverture, l'onglet *Informations sur l'installation* s'ouvre.
-   Remplissez chantier, occupant, installateur. Elles apparaîtront dans le cartouche du PDF.
+Open https://doddoreul.github.io/elexio/ — nothing to install.
 
-2. **Schéma** : allez à l'onglet *Schéma unifilaire*. Le compteur (⚡) est posé en bas à gauche.
-   Cliquez le « + » à sa droite : le menu propose un **différentiel** — choisissez-le,
-   remplissez la boîte de dialogue (sensibilité 30 mA, intensité 63 A par défaut).
+### Create a diagram in 5 minutes
 
-3. **Ajouter un circuit** : cliquez le « + » à droite du différentiel, choisissez un
-   **disjoncteur** (calibre 16 A ou 20 A selon le circuit). La boîte « Type de prise » /
-   « Type d'interrupteur » n'apparaît que pour les prises et interrupteurs.
+1. **Informations tab**: fill site details, occupant, installer. They appear in the PDF cartouche.
+2. **Schema tab**: the supply counter is at the bottom-left. Click the `+` to its right and choose a differential.
+3. **Add a circuit**: click `+` right of the differential, choose a breaker (16A or 20A).
+4. **Cable**: click `+` after a load/protection and choose cable. Fill conductors, section, type, mounting.
+5. **Board**: add a distribution board when several circuits are needed.
+6. **Plan and print**: switch to the Plan tab to place equipment and print.
 
-4. **Poser les équipements** : chaque « + » orange accepte un symbole. La palette à gauche
-   regroupe les symboles par famille. Glissez-déposez ou cliquez un symbole puis un « + ».
-   Une prise accepte jusqu'à 12 prises (champ « Nombre de prises »).
+Useful shortcuts:
 
-5. **Mise en page** : cochez *Activer la mise en page* (en haut). Le schéma se montre dans
-   un cadre A4 avec un cartouche. Glissez le dessin pour le placer, réglez sa taille avec
-   le curseur du panneau de droite, ajoutez des pages à droite. La barre d'espace + glisser
-   déplace la vue.
+- `Ctrl+S`: save
+- `Ctrl+N`: new
+- `Ctrl+Z / Ctrl+Y`: undo / redo
+- `Ctrl+C / Ctrl+V`: copy / paste selected sub-circuit
+- `Delete`: remove selection
+- Mouse wheel: zoom
+- Drag background: pan or rectangle selection
 
-6. **Enregistrer / Exporter**
-   - `Ctrl+S` ou **Enregistrer** : sauvegarde locale (retrouvée à la prochaine ouverture).
-   - **Exporter…** : télécharge le schéma au format **`.elx`** (JSON enveloppé + base64 ; voir ci-dessous).
-   - **PDF…** : dossier d'impression (cartouche général, schéma sur une page A4 par page
-     de mise en page, **plan d'implantation** — une page par étage non vide —, liste des
-     circuits, liste des matériaux).
+More details: [English tutorial](TUTORIAL_EN.md).
 
-### Raccourcis
+## Main features
 
-| Touche | Effet |
-|---|---|
-| `Ctrl+N` / `Ctrl+S` | Nouveau projet / sauvegarde locale |
-| `Ctrl+Z` / `Ctrl+Y` | Annuler / rétablir |
-| `Maj + clic` | sélection multiple |
-| `Suppr` / `Retour` | supprimer la sélection |
-| `Échap` | désarmer / désélectionner |
-| molette | zoom curseur |
-| clic milieu ou `espace` + glisser | déplacer la vue |
+- Tree-based single-line diagram: RCD, breaker, fuse, fil/cable, node, tableau.
+- Cable prompt: conductors, section, type, mounting.
+- Belgian rules checked in the Audit panel.
+- Automatic circuit letters and equipment numbers.
+- Distribution boards with several outputs.
+- Layout with routing and overlap detection.
+- Multilingual interface: FR / NL / EN.
+- Plan tab with walls, openings, equipment placement and print.
+- PDF export and page layout.
+- Local `.elx` files, no cloud.
 
----
-
-## Fonctionnalités
-
-**Schéma unifilaire**
-- Arbre d'éléments ancrés : compteur → protections → appareils, points d'ancrage
-- **Node** (dérivation), **tableau** avec sorties en haut et sortie de terre en bas
-- **Sectionneur** (coupe à vide), posable n'importe où
-- Zoom / panoramique, sélection multiple, annuler-rétablir (150 pas)
-
-**Symboles**
-- **31 symboles** RGIE en 8 familles (tableaux, protections, interrupteurs, prises,
-  éclairage, appareils, sources, câbles)
-- Prises : 10 types (générique, étanche, terre, enfant, interrupteur, **double**, **triple**…)
-- Interrupteurs : 7 types (simple, bi/tripolaire, double, va-et-vient, inverseur)
-- Fils : type de câble, section, montage, conducteurs `1X…7X` / `2G…7G`
-- Repères automatiques par préfixe (`Q`, `X`, `E`, `F`…), verrouillables
-- Lettres de circuit automatiques (A, B… Z, AA…)
-
-**Valeurs normalisées** (standards.js)
-- Calibres 1 à 63 A · courbes B/C/D · sensibilités 10 à 1000 mA
-- Sections 0,75 à 70 mm² · câbles EXVB, XVB, XGB, VOB, EXAVB, XFVB
-- Montages : apparent, encastré (± conduit), enterré, aérien
-
-**Contrôle**
-- 7 règles de cohérence (`src/rules-be.js`), panneau cliquable
-
-**Schéma d'implantation**
-- Dessin par **étage** (coordonnées en cm, Y vers le bas), calques fond / murs / ouvertures /
-  pièces / symboles
-- **Murs** : polyligne, orthogonal par défaut (`Alt` = angle libre), épaisseur 20 cm
-- **Portes / fenêtres** posées sur le mur le plus proche, déplaçables le long du mur, largeur réglable
-- **Pièces** : libellés libres (renommables, déplaçables)
-- **Symboles** : instances des éléments du schéma (aucun nouvel équipement), glisser-déposer ou
-  clic-armer ; **tableau** et **compteur** placeables
-- **Fond de plan** : image importée, calibrable, jamais incluse dans le projet (fichier `.elx` : images référencées seulement)
-- **Échelle 1:N** : champ réglable (`+` / `−`, suggestions) ; **cadre A4 à l'écran** fidèle au PDF (feuille, zone imprimable, zone de tracé, cartouche, hors zone atténué) ; règle **BE-09** (appareillage non placé)
-
-**Dossier PDF**
-1. cartouche général (chantier, occupant, installateur, contrôle, projet)
-2. schéma unifilaire (une page A4 par page de mise en page)
-3. plan d'implantation (une page A4 paysage par étage non vide : titre, échelle **exacte** + barre graphique, légende, cartouche)
-4. liste des circuits
-5. liste des matériaux (regroupée)
-
----
-
-## Développement
+## Tests and quality
 
 ```bash
-npm install
-npm start            # bureau (Electron)
-node tools/serve-browser.js   # navigateur local (http://127.0.0.1:8791)
+npm run check
+npm test
+npm run build
 ```
 
-```bash
-npm run build          # installeur NSIS + portable, dans dist/
-npm run build:portable # portable seul
-npm run build:dir       # version décompressée (test rapide)
-```
+## Warning
 
-Le build produit `dist/Elexio-Setup-<version>.exe` (installable) et
-`dist/Elexio-portable-<version>.exe`. Icône de l'app : `build/icon.ico` (+ source
-`build/icon.png`) — à remplacer par ta propre icône quand tu veux. Electron 44
-(supporté) + electron-builder 26. Pas de signature : SmartScreen « Éditeur inconnu »
-au premier lancement, normal.
+Elexio is a personal-use editor. Validate every installation with the applicable official standard and competent inspector.
 
-Vérification de la syntaxe : `npm run check` — Tests automatiques : `npm test`
+## License
 
-```
-main.js           processus principal (fenêtres, fichiers, export PDF)
-preload.js        pont isolé rendu <-> principal (window.elexio)
-print-assets.js   inlining des SVG du PDF (file: -> data:)
-index.html        redirection vers src/ (GitHub Pages)
-src/
-  index.html      onglets + panneaux
-  styles.css
-  model.js        modèle de données (arbre d'éléments) + migrations
-  format.js       format de fichier `.elx` (JSON enveloppé + base64, versionné)
-  default-schema.js  schéma pré-rempli à la création
-  symbols.js      31 symboles RGIE + types de prise/interrupteur + SVG des montages
-  symbols/        fichiers SVG autonomes
-  standards.js    valeurs normalisées (calibres, sections, ancrages, pages A4)
-  render.js       rendu SVG (grille, mise en page, cartouche)
-  plan-model.js   modèle du plan d'implantation (pur) + migration v5
-  plan-render.js  rendu SVG du plan (écran)
-  plan-ui.js      interactions de l'onglet implantation
-  plan-assets.js  magasin d'images de fond (hors projet, IndexedDB)
-  plan-print.js   pages A4 du plan dans le dossier PDF
-  rules-be.js     7 règles de validation
-  ui.js           onglets, formulaires, interactions
-  platform.js     shim web de window.elexio (version navigateur : PDF/ouverture)
-tools/serve-browser.js  serveur local de test (navigateur)
-test/             tests automatiques (node:test)
-```
-
-Le fichier de projet est un **`.elx`** : un JSON enveloppé puis **encodé en base64**.
-L'enveloppe note le numéro de version (`format`, `formatVersion`, `schemaVersion`, `app`,
-`exportedAt`) avant le projet. À l'import, le fichier est décodé puis sa version est
-vérifiée : même version → chargement direct ; plus ancienne → **migration automatique** ;
-plus récente → avertissement. L'import reste tolérant aux anciens `.json` en clair.
-L'autosave reste **local** (stockage du navigateur ; en bureau, un miroir disque
-`autosave.json` est écrit en plus dans le dossier de données).
-
----
-
-## Avertissement
-
-Les dessins de symboles sont des refontes à partir des descriptions du tableau 2.23,
-**pas** des images officielles. À comparer au document du SPF Économie
-(*Installations électriques — Symboles graphiques*) avant tout usage.
-
-Les règles de `src/rules-be.js` sont des garde-fous de dessin, pas une référence
-réglementaire. Chacune porte `verified: false` : aucune n'a été confrontée au texte
-officiel du RGIE. Une validation par un professionnel est nécessaire avant tout usage réel.
-
-Projet indépendant, sans lien avec l'éditeur Trikker (Bluebits BV / Anchr).
-
-## Licence et ressources
-
-Le **code** du projet est sous licence MIT (voir `LICENSE`). Les **icônes** de
-`src/assets/` (outils du plan, `flip.png`) proviennent d'une **source libre** dont la
-référence exacte n'a pas été conservée : elles ne sont donc **pas** explicitement
-couvertes par la licence MIT. Voir `src/assets/README.md`.
+MIT.

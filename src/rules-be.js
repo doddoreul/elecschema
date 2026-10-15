@@ -165,14 +165,20 @@ export const RULES_BE = [
     source: 'RGIE Tableau 4.11 / NF C 15-100',
     verified: false,
     check: (p) => {
-      const MAX = { 1.5: 16, 2.5: 20, 4: 25, 6: 40, 10: 63 };
+      // Tableau RGIE/AREI (Belgique) : limites en ampères selon la section.
+      const LIMITS_BY_PROTECTION = {
+        rcd:     { 0.75: 10, 1.5: 16, 2.5: 20,   4: 25,   6: 40,  10: 63,  16: 80,  25: 100,  35: 125 },
+        breaker: { 0.75: 10, 1.5: 16, 2.5: 20,   4: 25,   6: 40,  10: 63,  16: 80,  25: 100,  35: 125 },
+        fuse:    { 0.75: 6, 1.5: 10, 2.5: 16,   4: 20,   6: 32,  10: 50,  16: 63,  25: 80,  35: 100 },
+      };
       const out = [];
       for (const f of (p.elements || []).filter((e) => e.symbolType === 'fil')) {
         const parent = nodeById(p, f.parent);
-        if (!parent || !['breaker', 'rcd'].includes(parent.symbolType)) continue;
+        if (!parent || !(parent.symbolType in LIMITS_BY_PROTECTION)) continue;
         const cal = Number(parent.params?.rating);
         const sec = Number(f.cable?.section);
-        const lim = MAX[sec];
+        const table = LIMITS_BY_PROTECTION[parent.symbolType];
+        const lim = table[sec];
         if (lim != null && cal > lim) out.push({ elementId: f.id, key: 'Fil {label} ({section} mm² pour {rating} A) : section insuffisante (max. {limit} A).', params: { label: f.label || f.id, section: sec, rating: cal, limit: lim } });
       }
       return out;

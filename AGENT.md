@@ -516,10 +516,10 @@ valide de `win` (schéma `WindowsConfiguration`).
   panoramique a la barre d'espace (curseur main).
 - **Refonte ancrages** : modele en arbre d'elements + points d'ancrage ; nodes ;
   compteur en bas a gauche. Remplace circuits/difs. Legacy migre a l'ouverture.
-- Nom : **Elexio** (ex-ElecSchema). Version 0.5.1 (tag v0.5.1, branche schema-implantation).
+- Nom : **Elexio** (ex-ElecSchema). Version 0.5.3 (tag v0.5.3, branche main).
 - Electron **44** (supportee) + electron-builder **26** ; build NSIS + portable avec
-  icone `build/icon.ico`. Derniere release publiee : v0.5.0 ; travail en cours : v0.5.1 (2 .exe,
-  hors du depot git). Release actuelle 0.5.0 : https://github.com/doddoreul/elexio/releases/tag/v0.5.0 (latest, tag `v0.5.0` → commit `fa36074`) ; artefacts locaux dans `dist/` (`Elexio-Setup-0.5.0.exe`, `Elexio-portable-0.5.0.exe`).
+  icone `build/icon.ico`. Derniere release publiee : v0.5.3 (tag v0.5.3, commit b7065ab) ;
+  release GitHub : https://github.com/doddoreul/elexio/releases/tag/v0.5.3 ; artefacts locaux dans `dist/` (`Elexio-Setup-0.5.3.exe`, `Elexio-portable-0.5.3.exe`).
 - Depot : https://github.com/doddoreul/elexio (public). Pages :
   https://doddoreul.github.io/elexio/
 - Credential GitHub stocke via Git Credential Manager (chiffre, pas dans .git/config).

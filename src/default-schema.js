@@ -1,47 +1,332 @@
 // Schéma pré-rempli ouvert par « Nouveau ». Format identique à un fichier exporté (JSON).
 export const DEFAULT_SCHEMA = {
-  schemaVersion: 3,
-  supply: {
-    id: 1,
-    symbolType: 'compteur',
-    label: 'W1',
-    detail: 'Compteur kWh',
-    parent: null,
-    dir: null,
-    children: { right: 6 },
-    orient: 0,
-    showLabel: false,
-  },
-  info: {
-    chantier: { denomination: '', adresse: '', codePostal: '', localite: '', dateTravaux: '' },
-    occupant: { nom: '', prenom: '', telephone: '', email: '' },
-    installateur: { societe: '', numeroTVA: '', adresse: '', contact: '', telephone: '', email: '' },
-    dessinateur: { nom: '', societe: '', telephone: '', email: '' },
-    controle: { organisme: '', contact: '', datePrevue: '' },
-    projet: {
-      version: '1',
-      dateCreation: '2026-10-12',
-      dateModification: '2026-10-12',
-      domaine: 'DOMESTIQUE',
-      pays: 'BE',
-      typeAlim: 'MONO',
-      norme: 'RGIE',
+  "schemaVersion": 5,
+  "supply": {
+    "id": 1,
+    "symbolType": "compteur",
+    "label": "W1",
+    "detail": "Compteur kWh",
+    "parent": null,
+    "dir": null,
+    "children": {
+      "right": 6
     },
-    remarques: '',
+    "orient": 0,
+    "showLabel": false
   },
-  elements: [
-    { id: 6, symbolType: 'fil', parent: 1, dir: 'right', label: 'C1', labelLocked: false, detail: '', children: { right: 7 }, orient: 90, labelPos: 'bottom', showLabel: false, cable: { n: '4X', terre: false, section: 16, type: 'XVB', montage: 'encastre_conduit' } },
-    { id: 7, symbolType: 'node', parent: 6, dir: 'right', label: '', labelLocked: false, detail: '', children: { top: 28 }, orient: 90 },
-    { id: 8, symbolType: 'tableau', parent: 28, dir: 'top', label: 'TB1', labelLocked: false, detail: '', children: { 'top-1': 9, 'top-2': 10, 'top-3': 11, bottom: 27 }, orient: 0, labelPos: 'bottom', showLabel: true, outputs: 4 },
-    { id: 9, symbolType: 'breaker', parent: 8, dir: 'top-1', label: 'A', labelLocked: false, detail: '', children: { top: 22 }, orient: 0, labelPos: 'bottom', showLabel: true, params: { rating: 20, curve: 'C', icb: 3000 }, poles: '2P' },
-    { id: 10, symbolType: 'breaker', parent: 8, dir: 'top-2', label: 'B', labelLocked: false, detail: '', children: { top: 23 }, orient: 0, labelPos: 'bottom', showLabel: true, params: { rating: 16, curve: 'C', icb: 3000 }, poles: '2P' },
-    { id: 11, symbolType: 'breaker', parent: 8, dir: 'top-3', label: 'C', labelLocked: false, detail: '', children: { top: 25 }, orient: 0, labelPos: 'bottom', showLabel: true, params: { rating: 16, curve: 'C', icb: 3000 }, poles: '2P' },
-    { id: 22, symbolType: 'socket', parent: 9, dir: 'top', label: 'A1', labelLocked: false, detail: '', children: {}, orient: 0, labelPos: 'bottom', showLabel: false, count: 1, socketType: 'earth_childproof' },
-    { id: 23, symbolType: 'switch', parent: 10, dir: 'top', label: 'B1', labelLocked: false, detail: '', children: { top: 24 }, orient: 0, labelPos: 'bottom', showLabel: false, switchType: 'simple' },
-    { id: 24, symbolType: 'light', parent: 23, dir: 'top', label: 'B2', labelLocked: false, detail: '', children: {}, orient: 0, labelPos: 'bottom', showLabel: false },
-    { id: 25, symbolType: 'switch', parent: 11, dir: 'top', label: 'C1', labelLocked: false, detail: '', children: { top: 26 }, orient: 0, labelPos: 'bottom', showLabel: false, switchType: 'simple' },
-    { id: 26, symbolType: 'light', parent: 25, dir: 'top', label: 'C2', labelLocked: false, detail: '', children: {}, orient: 0, labelPos: 'bottom', showLabel: false },
-    { id: 27, symbolType: 'earth', parent: 8, dir: 'bottom', label: 'PE1', labelLocked: false, detail: '', children: {}, orient: 180, labelPos: 'bottom', showLabel: false },
-    { id: 28, symbolType: 'rcd', parent: 7, dir: 'top', label: 'Q1', labelLocked: false, detail: '', children: { top: 8 }, orient: 0, labelPos: 'bottom', showLabel: false, params: { rating: 63, diff: 300, type: 'A' }, poles: '2P' },
+  "info": {
+    "chantier": {
+      "denomination": "",
+      "adresse": "",
+      "codePostal": "",
+      "localite": "",
+      "dateTravaux": ""
+    },
+    "occupant": {
+      "nom": "",
+      "prenom": "",
+      "telephone": "",
+      "email": ""
+    },
+    "installateur": {
+      "societe": "",
+      "numeroTVA": "",
+      "adresse": "",
+      "contact": "",
+      "telephone": "",
+      "email": ""
+    },
+    "dessinateur": {
+      "nom": "",
+      "societe": "",
+      "telephone": "",
+      "email": ""
+    },
+    "controle": {
+      "organisme": "",
+      "contact": "",
+      "datePrevue": ""
+    },
+    "projet": {
+      "version": "1",
+      "dateCreation": "2026-10-15",
+      "dateModification": "2026-10-15",
+      "domaine": "DOMESTIQUE",
+      "pays": "BE",
+      "typeAlim": "MONO",
+      "norme": "RGIE"
+    },
+    "remarques": ""
+  },
+  "elements": [
+    {
+      "id": 6,
+      "symbolType": "fil",
+      "parent": 1,
+      "dir": "right",
+      "label": "",
+      "labelLocked": true,
+      "detail": "",
+      "children": {
+        "right": 7
+      },
+      "orient": 90,
+      "labelPos": "bottom",
+      "showLabel": false,
+      "cable": {
+        "n": "4X",
+        "terre": false,
+        "section": 16,
+        "type": "XVB",
+        "montage": "encastre_conduit"
+      }
+    },
+    {
+      "id": 7,
+      "symbolType": "node",
+      "parent": 6,
+      "dir": "right",
+      "label": "",
+      "labelLocked": false,
+      "detail": "",
+      "children": {
+        "top": 28
+      },
+      "orient": 90
+    },
+    {
+      "id": 8,
+      "symbolType": "tableau",
+      "parent": 29,
+      "dir": "top",
+      "label": "TB1",
+      "labelLocked": false,
+      "detail": "",
+      "children": {
+        "top-1": 9,
+        "top-2": 10,
+        "top-3": 11,
+        "bottom": 27
+      },
+      "orient": 0,
+      "labelPos": "bottom",
+      "showLabel": true,
+      "outputs": 4
+    },
+    {
+      "id": 9,
+      "symbolType": "breaker",
+      "parent": 8,
+      "dir": "top-1",
+      "label": "A",
+      "labelLocked": false,
+      "detail": "",
+      "children": {
+        "top": 22
+      },
+      "orient": 0,
+      "labelPos": "top",
+      "showLabel": true,
+      "params": {
+        "rating": 20,
+        "curve": "C",
+        "icb": 3000
+      },
+      "poles": "2P",
+      "circuit": true
+    },
+    {
+      "id": 10,
+      "symbolType": "breaker",
+      "parent": 8,
+      "dir": "top-2",
+      "label": "B",
+      "labelLocked": false,
+      "detail": "",
+      "children": {
+        "top": 23
+      },
+      "orient": 0,
+      "labelPos": "top",
+      "showLabel": true,
+      "params": {
+        "rating": 16,
+        "curve": "C",
+        "icb": 3000
+      },
+      "poles": "2P",
+      "circuit": true
+    },
+    {
+      "id": 11,
+      "symbolType": "breaker",
+      "parent": 8,
+      "dir": "top-3",
+      "label": "C",
+      "labelLocked": false,
+      "detail": "",
+      "children": {
+        "top": 25
+      },
+      "orient": 0,
+      "labelPos": "top",
+      "showLabel": true,
+      "params": {
+        "rating": 16,
+        "curve": "C",
+        "icb": 3000
+      },
+      "poles": "2P",
+      "circuit": true
+    },
+    {
+      "id": 22,
+      "symbolType": "socket",
+      "parent": 9,
+      "dir": "top",
+      "label": "A1",
+      "labelLocked": false,
+      "detail": "",
+      "children": {},
+      "orient": 0,
+      "labelPos": "bottom",
+      "showLabel": false,
+      "count": 1,
+      "socketType": "earth_childproof"
+    },
+    {
+      "id": 23,
+      "symbolType": "switch",
+      "parent": 10,
+      "dir": "top",
+      "label": "B1",
+      "labelLocked": false,
+      "detail": "",
+      "children": {
+        "top": 24
+      },
+      "orient": 0,
+      "labelPos": "bottom",
+      "showLabel": false,
+      "switchType": "simple"
+    },
+    {
+      "id": 24,
+      "symbolType": "light",
+      "parent": 23,
+      "dir": "top",
+      "label": "B2",
+      "labelLocked": false,
+      "detail": "",
+      "children": {},
+      "orient": 0,
+      "labelPos": "bottom",
+      "showLabel": false
+    },
+    {
+      "id": 25,
+      "symbolType": "switch",
+      "parent": 11,
+      "dir": "top",
+      "label": "C1",
+      "labelLocked": false,
+      "detail": "",
+      "children": {
+        "top": 26
+      },
+      "orient": 0,
+      "labelPos": "bottom",
+      "showLabel": false,
+      "switchType": "simple"
+    },
+    {
+      "id": 26,
+      "symbolType": "light",
+      "parent": 25,
+      "dir": "top",
+      "label": "C2",
+      "labelLocked": false,
+      "detail": "",
+      "children": {},
+      "orient": 0,
+      "labelPos": "bottom",
+      "showLabel": false
+    },
+    {
+      "id": 27,
+      "symbolType": "earth",
+      "parent": 8,
+      "dir": "bottom",
+      "label": "PE1",
+      "labelLocked": false,
+      "detail": "",
+      "children": {},
+      "orient": 180,
+      "labelPos": "bottom",
+      "showLabel": false
+    },
+    {
+      "id": 28,
+      "symbolType": "rcd",
+      "parent": 7,
+      "dir": "top",
+      "label": "Q1",
+      "labelLocked": false,
+      "detail": "",
+      "children": {
+        "top": 29
+      },
+      "orient": 0,
+      "labelPos": "bottom",
+      "showLabel": false,
+      "params": {
+        "rating": 63,
+        "diff": 300,
+        "type": "A"
+      },
+      "poles": "2P"
+    },
+    {
+      "id": 29,
+      "symbolType": "rcd",
+      "parent": 28,
+      "dir": "top",
+      "label": "Q2",
+      "labelLocked": false,
+      "detail": "",
+      "children": {
+        "top": 8
+      },
+      "orient": 0,
+      "labelPos": "bottom",
+      "showLabel": false,
+      "params": {
+        "rating": 63,
+        "diff": 30,
+        "type": "A"
+      },
+      "poles": "2P"
+    }
   ],
+  "plan": {
+    "seq": 1,
+    "levels": [
+      {
+        "id": "p1",
+        "name": "Rez-de-chaussée",
+        "bg": null,
+        "walls": [],
+        "openings": [],
+        "rooms": [],
+        "placements": [],
+        "printScale": 100,
+        "printCenter": null
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": 1
+    }
+  ]
 };
