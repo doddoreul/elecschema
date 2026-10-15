@@ -9,6 +9,7 @@ import { renderSchema, sheetSize, deviceDetail, PAGE, layoutForced, drawCartouch
 import { buildPlanPages, planOverflowLevels } from './plan-print.js';
 import { SYMBOLS, SYMBOL_CATEGORIES, symbolName, symbolUrl, SOCKET_TYPES, SWITCH_TYPES, DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
 import { validate, RULES_BE, rulesFor, RULE_SEVERITY } from './rules-be.js';
+import { setLang, translateDocument, applyInitialLang, tf, t } from './i18n.js';
 import { DEFAULT_SCHEMA } from './default-schema.js';
 import { RATINGS, CURVES, RCD_TYPES, RCD_VALUES, RCD_RATINGS, DEFAULT_ICB, isProtection, anchorKeysOf, baseDir, outputIndex, SECTIONS, CABLE_TYPES, MOUNT_TYPES, mountName, DEFAULT_CABLE, TABLEAU_OUTPUTS, TABLEAU_OUTPUT_TYPES } from './standards.js';
 
@@ -802,32 +803,33 @@ function renderIssues() {
   if ((project.elements || []).length === 0) { host.hidden = true; host.innerHTML = ''; return; }
   const errs = issues.filter((i) => i.rule.severity === RULE_SEVERITY.ERROR);
   const forced = layoutForced(project);   // plafond de mise en page atteint (tracé contraint)
+  const issueText = (issue) => (issue.key ? tf(issue.key, issue.params) : issue.message);
   if (issues.length === 0 && !forced) {
     host.hidden = false;
-    host.innerHTML = `<span class="ok">✔ Aucune anomalie détectée (${selectedRules.length} règles).</span>`;
+    host.innerHTML = `<span class="ok">✔ ${escHtml(tf('Aucune anomalie détectée ({count} règles).', { count: selectedRules.length }))}</span>`;
     return;
   }
   host.hidden = false;
   const warnings = issues.length - errs.length + (forced ? 1 : 0);
   const forcedLi = forced
-    ? '<li class="warn"><span class="sev">avertissement</span>'
-      + '<span>Tracé contraint : la mise en page a atteint son plafond, certains symboles peuvent se chevaucher.'
-      + '<span class="src">Mise en page</span></span></li>'
+    ? '<li class="warn"><span class="sev">' + escHtml(t('avertissement')) + '</span>'
+      + '<span>' + escHtml(t('Tracé contraint : la mise en page a atteint son plafond, certains symboles peuvent se chevaucher.'))
+      + '<span class="src">' + escHtml(t('Mise en page')) + '</span></span></li>'
     : '';
   host.innerHTML =
-    `<div class="head">${errs.length} erreur(s) · ${warnings} avertissement(s)</div><ul>${forcedLi}` +
+    `<div class="head">${escHtml(tf('{errors} erreur(s) · {warnings} avertissement(s)', { errors: errs.length, warnings }))}</div><ul>${forcedLi}` +
     issues.map((i, n) =>
       `<li class="${i.rule.severity === 'erreur' ? 'err' : 'warn'}" data-issue="${n}">` +
-      `<span class="sev">${i.rule.severity}</span>` +
-      `<span>${escHtml(i.message)}<span class="src">${escHtml(i.rule.id)} · ${escHtml(i.rule.source)}</span></span></li>`
+      `<span class="sev">${escHtml(t(i.rule.severity))}</span>` +
+      `<span>${escHtml(issueText(i))}<span class="src">${escHtml(i.rule.id)} · ${escHtml(t(i.rule.source))}</span></span></li>`
     ).join('') + '</ul>';
 
   host.querySelectorAll('[data-issue]').forEach((li) => {
     li.addEventListener('click', () => {
       const issue = issues[Number(li.dataset.issue)];
-      if (issue.rule.id === 'BE-09') { switchTab('plan'); }
+      if (String(issue.rule.id).endsWith('-09')) { switchTab('plan'); }
       else if (issue.elementId != null) { selectElement(issue.elementId); switchTab('schema'); }
-      else status(`${issue.rule.severity.toUpperCase()} ${issue.rule.id} — ${issue.message}`);
+      else status(`${issue.rule.severity.toUpperCase()} ${issue.rule.id} — ${issueText(issue)}`);
     });
   });
 }
@@ -859,6 +861,7 @@ function refreshAll() {
   $('#layout-scale').value = String(Math.round(lay.scale * 100));
   $('#layout-scale-val').textContent = Math.round(lay.scale * 100) + ' %';
   refreshTitleBlock();
+  translateDocument();
 }
 
 function clearDirty(file) {
@@ -1965,4 +1968,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Affiche l'écran d'accueil (reprendre, nouveau, ouvrir, récents)
   showWelcome();
+
+  // sélecteur de langue branché après le rendu initial, puis traduction effective
+  const _langSel = document.getElementById('lang-select');
+  if (_langSel) {
+    _langSel.value = localStorage.getItem('elexio.lang') || 'fr';
+    _langSel.addEventListener('change', (e) => { setLang(e.target.value); });
+  }
+  applyInitialLang();
+  translateDocument();
+
+  // les messages de règles sont formatés dans la langue courante : les régénérer
+  document.addEventListener('elexio-langchange', () => { renderIssues(); });
 });
