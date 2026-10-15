@@ -512,6 +512,25 @@ const PROMPTS = {
     ],
     build: (d) => ({ label: d.label, switchType: d.switchType }),
   },
+
+  fil: {
+    title: 'Fil / câble',
+    fields: [
+      { key: 'cableN', label: 'Nombre de conducteurs', value: '3G', options: ['1X','2X','3X','4X','5X','6X','7X','2G','3G','4G','5G','6G','7G'].map((v) => ({ value: v, label: v })) },
+      { key: 'cableSection', label: 'Section (mm²)', num: true, value: 2.5, options: SECTIONS.map((v) => ({ value: v, label: String(v).replace('.', ',') + ' mm²' })) },
+      { key: 'cableType', label: 'Type de câble', value: 'XVB', options: CABLE_TYPES.map((v) => ({ value: v, label: v })) },
+      { key: 'cableMontage', label: 'Type de montage', value: 'encastre_conduit', options: MOUNT_TYPES.map((v) => ({ value: v.key, label: v.name })) },
+    ],
+    build: (d) => ({
+      cable: {
+        n: d.cableN,
+        terre: !String(d.cableN).endsWith('X'),
+        section: d.cableSection,
+        type: d.cableType,
+        montage: d.cableMontage,
+      },
+    }),
+  },
 };
 
 /** Ouvre la boîte de dialogue. Résout { propriétés } ou null si annulé. */
@@ -560,6 +579,7 @@ function applyProps(e, p) {
   if (p.params) e.params = { ...(e.params || {}), ...p.params };
   if (p.socketType) e.socketType = p.socketType;
   if (p.switchType) e.switchType = p.switchType;
+  if (p.cable) e.cable = { ...(e.cable || DEFAULT_CABLE), ...p.cable };
 }
 
 async function addWithProps(type, parentId, dir) {
