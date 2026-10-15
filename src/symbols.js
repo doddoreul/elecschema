@@ -128,7 +128,7 @@ export const SYMBOLS = {
   },
   kwh: {
     name: 'Compteur kWh', ref: 'G', category: 'appareils', prefix: 'W',
-    w: 30, h: 30, file: 'symbols/kwh.svg',
+    w: 30, h: 30, file: 'symbols/kwhmeter.svg',
   },
   appliance: {
     name: 'Appareil électrodomestique fixe', ref: 'G', category: 'appareils', prefix: 'AP',
