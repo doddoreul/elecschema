@@ -42,6 +42,6 @@ export const DEFAULT_SCHEMA = {
     { id: 25, symbolType: 'switch', parent: 11, dir: 'top', label: 'C1', labelLocked: false, detail: '', children: { top: 26 }, orient: 0, labelPos: 'bottom', showLabel: false, switchType: 'simple' },
     { id: 26, symbolType: 'light', parent: 25, dir: 'top', label: 'C2', labelLocked: false, detail: '', children: {}, orient: 0, labelPos: 'bottom', showLabel: false },
     { id: 27, symbolType: 'earth', parent: 8, dir: 'bottom', label: 'PE1', labelLocked: false, detail: '', children: {}, orient: 180, labelPos: 'bottom', showLabel: false },
-    { id: 28, symbolType: 'rcd', parent: 7, dir: 'top', label: 'Q1', labelLocked: false, detail: '', children: { top: 8 }, orient: 0, labelPos: 'bottom', showLabel: false, params: { rating: 63, diff: 300, type: 'AC' }, poles: '2P' },
+    { id: 28, symbolType: 'rcd', parent: 7, dir: 'top', label: 'Q1', labelLocked: false, detail: '', children: { top: 8 }, orient: 0, labelPos: 'bottom', showLabel: false, params: { rating: 63, diff: 300, type: 'A' }, poles: '2P' },
   ],
 };

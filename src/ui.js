@@ -406,7 +406,7 @@ function orientForDir(dir) {
 
 /** Types sans repère automatique : leur repère reste vide tant que l'utilisateur
  *  ne le saisit pas (le schéma n'affiche alors que la description). */
-const NO_AUTO_LABEL = ['node', 'node_parallel', 'socket'];
+const NO_AUTO_LABEL = ['node', 'node_parallel', 'socket', 'fil'];
 
 /* --------------------------------------------------------- règles de composition */
 
@@ -491,7 +491,7 @@ const PROMPTS = {
       REPERE_FIELD,
       { key: 'diff', label: 'Sensibilité', num: true, value: 30, options: RCD_VALUES.map((v) => ({ value: v, label: v + ' mA' })) },
       { key: 'rating', label: 'Intensité nominale', num: true, value: 63, options: RCD_RATINGS.map((v) => ({ value: v, label: v + ' A' })) },
-      { key: 'type', label: 'Type', value: 'AC', options: RCD_TYPES.map((v) => ({ value: v, label: v })) },
+      { key: 'type', label: 'Type', value: 'A', options: RCD_TYPES.map((v) => ({ value: v, label: v })) },
       { key: 'poles', label: 'Pôles', value: '2P', options: ['2P', '4P'].map((v) => ({ value: v, label: v })) },
     ],
     build: (d) => ({ label: d.label, poles: d.poles, params: { diff: d.diff, rating: d.rating, type: d.type } }),
@@ -1820,7 +1820,7 @@ const isParallel = node.symbolType === 'node_parallel';
       (isRcd ? RCD_RATINGS : RATINGS).map((v) => `<option value="${v}">${v}</option>`).join('');
     $('#e-rating').value = p.rating == null ? '' : String(p.rating);
     $('#e-rcdtype-lbl').hidden = !isRcd;
-    $('#e-rcdtype').value = p.type || 'AC';
+    $('#e-rcdtype').value = p.type || 'A';
     $('#e-diff-lbl').hidden = !isRcd;
     $('#e-diff').innerHTML = RCD_VALUES.map((v) => `<option value="${v}">${v} mA</option>`).join('');
     $('#e-diff').value = p.diff == null ? '30' : String(p.diff);

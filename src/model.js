@@ -77,7 +77,7 @@ export function syncIdCounter(project) {
 
 /** Paramètres par défaut d'une protection. */
 function defaultParams(symbolType) {
-  if (symbolType === 'rcd') return { rating: 40, diff: 30, type: 'AC' };
+  if (symbolType === 'rcd') return { rating: 40, diff: 30, type: 'A' };
   if (symbolType === 'fuse') return { rating: 16, icb: DEFAULT_ICB };
   return { rating: null, curve: 'C', icb: DEFAULT_ICB };
 }
@@ -148,7 +148,7 @@ export function migrateProject(p) {
 
   const mk = (type, parentId, dir) => {
     const e = { id: nextId(), symbolType: type, parent: parentId, dir, label: '', labelLocked: false, detail: '', children: {} };
-    if (isProtection(type)) e.params = type === 'rcd' ? { rating: 40, diff: 30, type: 'AC' } : { rating: null, curve: 'C', icb: DEFAULT_ICB };
+    if (isProtection(type)) e.params = type === 'rcd' ? { rating: 40, diff: 30, type: 'A' } : { rating: null, curve: 'C', icb: DEFAULT_ICB };
     if (type === 'socket') e.count = 1;
     return e;
   };
@@ -160,7 +160,7 @@ export function migrateProject(p) {
     const dir = parent === p.supply ? 'right' : (ANCHOR_DIRECTIONS.find((x) => parent.children[x] == null) || 'right');
     const e = addEl('rcd', parent, dir);
     e.label = d.label || '';
-    e.params = d.params || { rating: 40, diff: 30, type: 'AC' };
+    e.params = d.params || { rating: 40, diff: 30, type: 'A' };
     parent = e;
   }
 
