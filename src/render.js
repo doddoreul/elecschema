@@ -12,7 +12,8 @@ const NS = 'http://www.w3.org/2000/svg';
 
 const CW = 40;          // pas horizontal de base entre deux cellules
 const CH = 28;          // pas vertical de base entre deux cellules
-const GAP = 10;         // espace libre minimal (px) entre deux corps adjacents
+const GAP = 10;         // espace libre minimal (px) entre deux corps adjacents, horizontal
+const GAP_VERT = 3;    // espace libre minimal (px) vertical (réduction des vides verticaux)
 const MARGIN = 40;      // marge gauche/droite
 const TOP_PAD = 18;     // petite marge (tete/cartouche hors canvas, dans le PDF)
 const BOTTOM_PAD = 18;  // petite marge (pied hors canvas, dans le PDF)
@@ -275,7 +276,8 @@ function layoutOnce(project, bias) {
         const sc = sizeOf(child, spanOf(child));
         const halfP = (dir[0] ? sp.w : sp.h) / 2;
         const halfC = (dir[0] ? sc.w : sc.h) / 2;
-        const tMin = (halfP + halfC + GAP) / pitch + extra;
+        const gap = dir[0] ? GAP : GAP_VERT;
+        const tMin = (halfP + halfC + gap) / pitch + extra;
         let pts = findRoute(child, P, dir, node.id, tMin, detour);
         if (!pts) {
           if (!detour) { next.push(key); continue; }

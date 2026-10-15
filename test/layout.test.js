@@ -92,3 +92,15 @@ test('layout : tableau à 5 sorties -> aucun chevauchement', () => {
   assert.equal(new Set(L.rects.map((r) => r.id)).size, L.rects.length);
   if (!layoutForced(p)) assert.deepEqual(overlaps(p, L.rects), []);
 });
+test('layout : chaîne prise -> fil -> protection : distance réduite sans chevauchement', () => {
+  const p = emptyProject();
+  const add = makeAdder(p);
+  const prot = add('breaker', p.supply, 'right');
+  const fil = add('fil', prot, 'top');
+  const prise = add('socket', fil, 'top');
+  const L = computeLayout(p);
+  const dy = (L.pos.get(prot.id).y - L.pos.get(prise.id).y) * 28;
+  assert.ok(dy < 180, 'distance verticale réduite');
+  assert.equal(layoutForced(p), false, 'pas de tracé contraint');
+  assert.deepEqual(overlaps(p, L.rects), [], 'aucun chevauchement');
+});
