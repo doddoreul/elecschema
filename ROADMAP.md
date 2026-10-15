@@ -116,7 +116,7 @@ interactions dans `src/plan-ui.js`, fond de plan dans `src/plan-assets.js`
   et un **zoom general 1:N** (champ + `−`/`+`, poignee `printCenter`).
 - **BE-09** (info) : appareillage non place sur le plan — signale seulement si le plan
   contient deja au moins un placement ; message lisible (`symbolName` + repere).
-- **Export CSV supprime** definitivement (modele, UI, menu, PDF).
+
 
 ---
 

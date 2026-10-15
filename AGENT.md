@@ -95,7 +95,7 @@ cable          { n, terre, section, type, montage }, fil uniquement
 ```
 
 Decisions actees :
-- **Aucun export CSV, jamais.**
+
 - **Arbre unique d'elements** ancres par points d'ancrage. Les anciens concepts
   `circuits` / `difs` sont **supprimes** (migration legacy -> nodes, voir `migrateProject`).
 - **Compteur : un seul point d'ancrage, a droite** (`freeAnchorDirs`, `drawAnchors`) ;
@@ -510,7 +510,7 @@ valide de `win` (schéma `WindowsConfiguration`).
   murs, portes/fenetres, pieces, symboles, fond de plan calibrable) + pages PDF du plan.
   Modeles v5 (`src/plan-model.js`), rendu `src/plan-render.js`, interactions
   `src/plan-ui.js`, images `src/plan-assets.js`, PDF `src/plan-print.js`.
-  Regle **BE-09** (appareillage non place). **Export CSV supprime** definitivement.
+  Regle **BE-09** (appareillage non place).
 - **Mise en page multi-pages** : cadres A4 paysage cote a cote, cartouche sur chaque
   page, zoom + liste des pages dans le panneau de droite, deplacement du dessin entier,
   panoramique a la barre d'espace (curseur main).
