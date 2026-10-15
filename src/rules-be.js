@@ -39,7 +39,7 @@ export const RULES_BE = [
     source: 'Cohérence du schéma unifilaire',
     verified: false,
     check: (p) => ((p.elements || []).length === 0
-      ? [{ elementId: null, message: 'Aucun élément raccordé au compteur.' }] : []),
+      ? [{ elementId: null, key: 'Aucun élément raccordé au compteur.' }] : []),
   },
   {
     id: 'BE-03',
@@ -50,7 +50,7 @@ export const RULES_BE = [
     check: (p) => (p.elements || [])
       .filter((e) => e.symbolType === 'socket')
       .filter((e) => !hasUpstreamRcd30(p, e))
-      .map((e) => ({ elementId: e.id, message: `« ${e.label || 'prise'} » : aucun Δ30 mA en amont.` })),
+      .map((e) => ({ elementId: e.id, key: '« {label} » : aucun Δ30 mA en amont.', params: { label: e.label || symbolName('socket') } })),
   },
   {
     id: 'BE-04',
@@ -65,7 +65,7 @@ export const RULES_BE = [
         if (e.symbolType === 'rcd') return !(Number(pa.diff) > 0) && !(Number(pa.rating) > 0);
         return !(Number(pa.rating) > 0);
       })
-      .map((e) => ({ elementId: e.id, message: `« ${e.label || e.symbolType} » : pas de calibre.` })),
+      .map((e) => ({ elementId: e.id, key: '« {label} » : pas de calibre.', params: { label: e.label || symbolName(e.symbolType) } })),
   },
   {
     id: 'BE-05',
@@ -81,7 +81,7 @@ export const RULES_BE = [
         seen.set(l, (seen.get(l) || 0) + 1);
       }
       const out = [];
-      for (const [label, n] of seen) if (n > 1) out.push({ elementId: null, message: `${n} éléments ont le repère « ${label} ».` });
+      for (const [label, n] of seen) if (n > 1) out.push({ elementId: null, key: '{n} éléments ont le repère « {label} ».', params: { n, label } });
       return out;
     },
   },
@@ -94,7 +94,7 @@ export const RULES_BE = [
     check: (p) => (p.elements || [])
       .filter((e) => e.symbolType !== 'node' && e.symbolType !== 'node_parallel' && e.symbolType !== 'fil')
       .filter((e) => !(e.label || '').trim())
-      .map((e) => ({ elementId: e.id, message: `${symbolName(e.symbolType)} sans repère.` })),
+      .map((e) => ({ elementId: e.id, key: '{symbol} sans repère.', params: { symbol: symbolName(e.symbolType) } })),
   },
   {
     id: 'BE-08',
@@ -109,7 +109,7 @@ export const RULES_BE = [
       if (!i.installateur?.societe) missing.push('société installatrice');
       if (!i.dessinateur?.nom) missing.push('dessinateur');
       if (missing.length === 0) return [];
-      return [{ elementId: null, message: `Informations manquantes : ${missing.join(', ')}.` }];
+      return [{ elementId: null, key: 'Informations manquantes : {list}.', params: { list: missing } }];
     },
   },
   {
@@ -128,7 +128,7 @@ export const RULES_BE = [
       for (const e of [p.supply, ...(p.elements || [])]) {
         if (!e || PLAN_EXCLUDED.includes(e.symbolType) || placed.has(e.id)) continue;
         const rep = (e.label || '').trim();
-        out.push({ elementId: e.id, message: `${symbolName(e.symbolType)}${rep ? ` « ${rep} »` : ''} non placé sur le plan.` });
+        out.push({ elementId: e.id, key: '{symbol}{rep} non placé sur le plan.', params: { symbol: symbolName(e.symbolType), rep: rep ? ` « ${rep} »` : '' } });
       }
       return out;
     },
@@ -153,7 +153,7 @@ export const RULES_BE = [
       const out = [];
       for (const cs of (p.elements || []).filter((e) => isCircuitStart(p, e))) {
         const n = counts.get(cs.id) || 0;
-        if (n > limit) out.push({ elementId: cs.id, message: `${cs.label || cs.symbolType} : ${n} points (max. ${limit} pour ${norm === 'NFC' ? 'NF C 15-100' : 'RGIE/AREI'}).` });
+        if (n > limit) out.push({ elementId: cs.id, key: '{label} : {n} points (max. {limit} pour {norm}).', params: { label: cs.label || symbolName(cs.symbolType), n, limit, norm: norm === 'NFC' ? 'NF C 15-100' : 'RGIE/AREI' } });
       }
       return out;
     },
@@ -173,7 +173,7 @@ export const RULES_BE = [
         const cal = Number(parent.params?.rating);
         const sec = Number(f.cable?.section);
         const lim = MAX[sec];
-        if (lim != null && cal > lim) out.push({ elementId: f.id, message: `Fil ${f.label || f.id} (${sec} mm² pour ${cal} A) : section insuffisante (max. ${lim} A).` });
+        if (lim != null && cal > lim) out.push({ elementId: f.id, key: 'Fil {label} ({section} mm² pour {rating} A) : section insuffisante (max. {limit} A).', params: { label: f.label || f.id, section: sec, rating: cal, limit: lim } });
       }
       return out;
     },
@@ -192,7 +192,7 @@ export const RULES_BE = [
         if (cs) lightCircuits.add(cs.id);
       }
       if (lightCircuits.size === 0) return [];
-      if (lightCircuits.size < 2) return [{ elementId: null, message: 'Seulement 1 circuit d\'eclairage identifiable (minimum 2 recommandes).' }];
+      if (lightCircuits.size < 2) return [{ elementId: null, key: "Seulement 1 circuit d'eclairage identifiable (minimum 2 recommandes)." }];
       return [];
     },
   },
@@ -204,11 +204,11 @@ export const RULES_BE = [
     verified: false,
     check: (p) => {
       const rcds = (p.elements || []).filter((e) => e.symbolType === 'rcd');
-      if (rcds.length === 0) return [{ elementId: null, message: 'Aucun differentiel dans le schema.' }];
+      if (rcds.length === 0) return [{ elementId: null, key: 'Aucun differentiel dans le schema.' }];
       const norm = p.info?.projet?.norme === 'NFC15-100' ? 'NFC' : 'RGIE';
       const min = norm === 'NFC' ? 2 : 1;
       const hs = rcds.filter((e) => Number(e.params?.diff) === 30).length;
-      if (hs < min) return [{ elementId: null, message: `${hs} differentiel(s) 30 mA (minimum ${min} pour ${norm === 'NFC' ? 'NF C 15-100' : 'RGIE/AREI'}).` }];
+      if (hs < min) return [{ elementId: null, key: '{count} differentiel(s) 30 mA (minimum {min} pour {norm}).', params: { count: hs, min, norm: norm === 'NFC' ? 'NF C 15-100' : 'RGIE/AREI' } }];
       return [];
     },
   },
@@ -222,7 +222,7 @@ export const RULES_BE = [
       const rcds = (p.elements || []).filter((e) => e.symbolType === 'rcd');
       if (rcds.length === 0) return [];
       if (rcds.some((e) => ['A', 'F', 'Hpi'].includes(e.params?.type))) return [];
-      return [{ elementId: null, message: 'Aucun differentiel de type A (ou superieur) dans le schema.' }];
+      return [{ elementId: null, key: 'Aucun differentiel de type A (ou superieur) dans le schema.' }];
     },
   },
   {
@@ -233,7 +233,7 @@ export const RULES_BE = [
     verified: false,
     check: (p) => (p.elements || [])
       .filter((e) => e.symbolType === 'breaker' && e.params?.icb != null && Number(e.params.icb) < 3000)
-      .map((e) => ({ elementId: e.id, message: `${e.label || 'disjoncteur'} : pouvoir de coupure ${e.params.icb} A (< 3000 A).` })),
+      .map((e) => ({ elementId: e.id, key: '{label} : pouvoir de coupure {icb} A (< 3000 A).', params: { label: e.label || symbolName('breaker'), icb: e.params.icb } })),
   },
   {
     id: 'BE-16',
@@ -247,7 +247,7 @@ export const RULES_BE = [
       for (const cs of (p.elements || []).filter((e) => isCircuitStart(p, e))) {
         const children = (p.elements || []).filter((e) => circuitStartOf(p, e) === cs && !['node', 'node_parallel', 'fil', 'tableau'].includes(e.symbolType));
         if (children.length <= 1) continue;
-        if (children.some((e) => dedicated.has(e.symbolType))) out.push({ elementId: cs.id, message: `${cs.label || cs.symbolType} : circuit dedie partage avec d'autres points.` });
+        if (children.some((e) => dedicated.has(e.symbolType))) out.push({ elementId: cs.id, key: "{label} : circuit dedie partage avec d'autres points.", params: { label: cs.label || symbolName(cs.symbolType) } });
       }
       return out;
     },
@@ -276,7 +276,7 @@ export function validate(project, rules = RULES_BE) {
     try {
       hits = rule.check(project) || [];
     } catch (err) {
-      hits = [{ elementId: null, message: `Règle ${rule.id} en erreur : ${err.message}` }];
+      hits = [{ elementId: null, key: 'Règle {id} en erreur : {msg}', params: { id: rule.id, msg: err.message } }];
     }
     for (const hit of hits) issues.push({ rule, ...hit });
   }
