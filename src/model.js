@@ -5,8 +5,11 @@
 
 import { DEFAULT_ICB, isProtection, DEFAULT_CABLE, TABLEAU_OUTPUTS, ANCHOR_DIRECTIONS, outputIndex } from './standards.js';
 import { DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
+import { emptyPlan, normalizePlan, ensurePlan } from './plan-model.js';
 
-export const SCHEMA_VERSION = 3;
+export { ensurePlan };
+
+export const SCHEMA_VERSION = 5;
 const DOMAINE = 'DOMESTIQUE';
 const PAYS = 'BE';
 
@@ -16,7 +19,9 @@ const PREFIXES = {
   socket: 'X', light: 'E', fluo: 'E', projector: 'E', emergency: 'E',
   heater: 'R', boiler: 'CE', fan: 'V', bell: 'SO', motor: 'M',
   kwh: 'W', appliance: 'AP', transformer: 'T', solar: 'PV', earth: 'PE',
-  node: 'D', fil: 'C', tableau: 'TB',
+  fridge: 'FR', freezer: 'CG', oven: 'FO', microwave: 'MO', dishwasher: 'LV',
+  washing_machine: 'LL', dryer: 'SL', kitchenette: 'KT',
+  node: 'D', fil: 'C', tableau: 'TB', node_parallel: 'D',
 };
 
 function today() { return new Date().toISOString().slice(0, 10); }
@@ -43,6 +48,7 @@ function emptyInfo() {
       domaine: DOMAINE,
       pays: PAYS,
       typeAlim: 'MONO', // MONO | TRI
+      norme: 'RGIE',
     },
     remarques: '',
   };
@@ -54,6 +60,7 @@ function emptyProject() {
     supply: emptySupply(),
     info: emptyInfo(),
     elements: [],
+    plan: emptyPlan(),
   };
 }
 
@@ -85,8 +92,9 @@ export function createElement(symbolType, parentId, dir) {
   if (symbolType === 'breaker' || symbolType === 'rcd') {
     e.poles = symbolType === 'rcd' ? '2P' : '1P';
   }
+  if (symbolType === 'breaker') e.circuit = true;
   // un tableau doit toujours afficher son repère (libellé de la barre)
-  if (symbolType === 'tableau') { e.showLabel = true; e.outputs = TABLEAU_OUTPUTS; }
+  if (symbolType === 'tableau' || symbolType === 'node_parallel') { if (e.showLabel == null) e.showLabel = true; e.outputs = TABLEAU_OUTPUTS; }
   if (symbolType === 'socket') { e.count = 1; e.socketType = DEFAULT_SOCKET_TYPE; }
   if (symbolType === 'switch') e.switchType = DEFAULT_SWITCH_TYPE;
   if (symbolType === 'fil') e.cable = { ...DEFAULT_CABLE };
@@ -127,12 +135,12 @@ export function treeOrder(project) {
 
 const LEGACY_SOCKETS = { socket: 'generic', socket_earth: 'earth', socket_switch: 'switch', socket_waterproof: 'waterproof' };
 const LEGACY_SWITCHES = { switch_2way: 'two_way' };
-const LEGACY_SYMBOLS = { carrefour: 'node' };
+const LEGACY_SYMBOLS = { carrefour: 'node', washinmachine: 'washing_machine' };
 
 /** Migration d'un ancien projet (circuits/difs) vers l'arbre d'éléments v3.
  *  Sans effet sur un projet déjà en v3 (retour anticipé). */
 export function migrateProject(p) {
-  if (Array.isArray(p.elements) && (p.schemaVersion || 0) >= 3) { delete p.circuits; delete p.difs; return; }
+  if (Array.isArray(p.elements) && (p.schemaVersion || 0) >= 3) { delete p.circuits; delete p.difs; if (p.info && p.info.projet && p.info.projet.norme == null) p.info.projet.norme = 'RGIE'; migratePlan(p); return; }
   const els = [];
   p.supply = p.supply || {};
   p.supply.symbolType = p.supply.symbolType || 'compteur';
@@ -176,6 +184,15 @@ export function migrateProject(p) {
   p.schemaVersion = 3;
   delete p.circuits;
   delete p.difs;
+  migratePlan(p);
+}
+
+/** Passe au modèle courant : bloc `plan` (étages, murs, placements) ramené à une forme
+ *  valide. Migration v4 -> v5 : `printScale` 'auto' converti en nombre, `printCenter`.
+ *  Idempotent. Doit venir après la construction de `elements`. */
+export function migratePlan(p) {
+  p.plan = normalizePlan(p);
+  p.schemaVersion = SCHEMA_VERSION;
 }
 
 /** Ramène les anciens types éclatés (prises, interrupteurs) vers le type unique + sa propriété de type. */
@@ -200,14 +217,15 @@ export function normalizeTypes(p) {
       if (/^X\d+$/.test(e.label || '')) e.label = '';
     }
     if (e.symbolType === 'switch' && !e.switchType) e.switchType = DEFAULT_SWITCH_TYPE;
+    if (e.symbolType === 'breaker' && e.circuit == null) e.circuit = true;
     // Un node n'a aucune propriété : on nettoie les anciens champs hérités.
     if (e.symbolType === 'node') {
       e.label = ''; e.labelLocked = false; e.detail = '';
       delete e.labelPos; delete e.showLabel; delete e.poles;
     }
     // Tableau : sorties nommées top-1, top-2… ; anciens ancrages (top, right…) convertis.
-    if (e.symbolType === 'tableau') {
-      e.orient = 0;
+    if (e.symbolType === 'tableau' || e.symbolType === 'node_parallel') {
+      if (e.symbolType === 'tableau') e.orient = 0;
       const kids = Object.entries(e.children || {}).filter(([, v]) => v != null);
       e.children = {};
       const taken = new Set();
@@ -241,12 +259,13 @@ export function letterOf(i) {
 }
 
 /** Types pouvant porter le début d'un circuit. */
-const CIRCUIT_PARENTS = ['tableau', 'rcd', 'compteur', 'node'];
+const CIRCUIT_PARENTS = ['tableau', 'rcd', 'compteur', 'node', 'node_parallel'];
 
 /** Début de circuit : disjoncteur/fusible posé directement sous un tableau, un
  *  différentiel, le compteur ou un node. */
 export function isCircuitStart(project, e) {
   if (!e || !['breaker', 'fuse'].includes(e.symbolType)) return false;
+  if (e.symbolType === 'breaker' && e.circuit === false) return false;
   const p = e.parent != null ? nodeById(project, e.parent) : null;
   return !!p && CIRCUIT_PARENTS.includes(p.symbolType);
 }
@@ -263,6 +282,9 @@ export function circuitStartOf(project, e) {
  *  pour les symboles du circuit. Un repère saisi à la main (verrouillé) est conservé. */
 export function renumberCircuits(project) {
   const all = treeOrder(project);
+  for (const e of all) {
+    if (e.symbolType === 'breaker' && e.circuit === false && !e.labelLocked && /^[A-Z]{1,2}$/.test(e.label || '')) e.label = '';
+  }
   const starts = all.filter((e) => isCircuitStart(project, e));
   const reserved = new Set(starts.filter((s) => s.labelLocked && /^[A-Z]{1,2}$/.test(s.label || '')).map((s) => s.label));
   let i = 0;
@@ -271,6 +293,8 @@ export function renumberCircuits(project) {
     let l;
     do { l = letterOf(++i); } while (reserved.has(l));
     s.label = l;
+    s.labelPos = 'top';
+    s.showLabel = true;
   }
   const counts = new Map();
   for (const e of all) {

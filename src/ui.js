@@ -1,11 +1,14 @@
 // Contrôleur d'interface : onglets, informations, palette, arbre d'éléments, BOM.
 // Toute mutation du projet passe par markDirty() + refreshAll() pour rester synchronisé.
 
-import { emptyProject, createElement, syncIdCounter, nodeById, treeOrder, nextId, PREFIXES, migrateProject, normalizeTypes, isCircuitStart, renumberCircuits } from './model.js';
-import { encodeElx, decodeElx, checkCompatibility, FILE_EXT, APP_VERSION } from './format.js';
+import { emptyProject, createElement, syncIdCounter, nodeById, treeOrder, nextId, PREFIXES, migrateProject, normalizeTypes, isCircuitStart, circuitStartOf, renumberCircuits, ensurePlan } from './model.js';
+import { encodeElx, decodeElx, checkCompatibility, FILE_EXT, APP_VERSION, referencedAssets } from './format.js';
+import { initPlan, refreshPlan, resetPlanView } from './plan-ui.js';
+import { assetsObject, assetsReplace, saveAssetsIdb, loadAssetsIdb } from './plan-assets.js';
 import { renderSchema, sheetSize, deviceDetail, PAGE, layoutForced, drawCartouche } from './render.js';
+import { buildPlanPages, planOverflowLevels } from './plan-print.js';
 import { SYMBOLS, SYMBOL_CATEGORIES, symbolName, symbolUrl, SOCKET_TYPES, SWITCH_TYPES, DEFAULT_SOCKET_TYPE, DEFAULT_SWITCH_TYPE } from './symbols.js';
-import { validate, RULES_BE, RULE_SEVERITY } from './rules-be.js';
+import { validate, RULES_BE, rulesFor, RULE_SEVERITY } from './rules-be.js';
 import { DEFAULT_SCHEMA } from './default-schema.js';
 import { RATINGS, CURVES, RCD_TYPES, RCD_VALUES, RCD_RATINGS, DEFAULT_ICB, isProtection, anchorKeysOf, baseDir, outputIndex, SECTIONS, CABLE_TYPES, MOUNT_TYPES, mountName, DEFAULT_CABLE, TABLEAU_OUTPUTS, TABLEAU_OUTPUT_TYPES } from './standards.js';
 
@@ -23,7 +26,21 @@ let armedSymbol = null;      // symbole choisi dans la bibliothèque, posé sur 
 let dragActive = false;      // glisser-déposer depuis la palette en cours
 let printPreview = false;    // mode mise en page (cadres A4 + panneau de mise en page)
 let currentPage = 0;         // index de la page courante (sélectionnée dans la liste)
-try { printPreview = localStorage.getItem('elecschema.printPreview') === '1'; } catch (err) { /* ignore */ }
+
+/** Lit une clé `elexio.*` ; à défaut, reprend l'ancienne clé `elecschema.*` (renommage
+ *  du 0.4.0) et la recopie. L'ancienne entrée n'est jamais supprimée. */
+function lsGet(key) {
+  try {
+    const v = localStorage.getItem(key);
+    if (v !== null) return v;
+    const legacy = localStorage.getItem('elecschema.' + key.replace(/^elexio\./, ''));
+    if (legacy === null) return null;
+    try { localStorage.setItem(key, legacy); } catch (err) { /* recopie impossible : valeur rendue quand même */ }
+    return legacy;
+  } catch (err) { return null; }
+}
+
+try { printPreview = lsGet('elexio.printPreview') === '1'; } catch (err) { /* ignore */ }
 let view = { x: 0, y: 0, w: 2100, h: 1100 };
 
 const escHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -32,10 +49,13 @@ const escHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').re
 const TYPE_LABELS = {
   compteur: 'Compteur', rcd: 'Différentiel', breaker: 'Disjoncteur', fuse: 'Fusible',
   sectionneur: 'Sectionneur', tableau: 'Tableau',
-  node: 'Dérivation', socket: 'Prise', light: 'Éclairage', fluo: 'Éclairage',
+  node: 'Dérivation', node_parallel: 'Dérivation', socket: 'Prise', light: 'Éclairage', fluo: 'Éclairage',
   projector: 'Éclairage', emergency: 'Éclairage de sécurité', switch: 'Interrupteur',
   push: 'Bouton', heater: 'Chauffage', boiler: 'Chauffe-eau', fan: 'Ventilateur',
   bell: 'Sonnerie', motor: 'Moteur', kwh: 'Compteur', appliance: 'Appareil',
+  fridge: 'Électroménager', freezer: 'Électroménager', oven: 'Électroménager',
+  microwave: 'Électroménager', dishwasher: 'Électroménager', washing_machine: 'Électroménager',
+  dryer: 'Électroménager', kitchenette: 'Électroménager',
   transformer: 'Transformateur', solar: 'Source', earth: 'Terre',
   fil: 'Fil / câble',
 };
@@ -100,31 +120,56 @@ const status = (t) => ($('#status').textContent = t);
 
 /* ------------------------------------------------------------- autosave (localStorage) */
 
-const AUTOSAVE_KEY = 'elecschema.autosave';
-const TAB_KEY = 'elecschema.tab';   // onglet actif, conservé au refresh
+const AUTOSAVE_KEY = 'elexio.autosave';
+const TAB_KEY = 'elexio.tab';   // onglet actif, conservé au refresh
 
 /** Persiste projet + fichier courant dans le localStorage (ne rien perdre au reload). */
 let autosaveFileTimer = null;
+let lastAssetsSig = '';
+let lastPersistedJson = null;
+let lastDiskMirrorJson = null;   // empreinte des images référencées à la dernière écriture du miroir
 
 function persistSnapshot() {
   const rec = JSON.stringify({ project, file: currentFile });
-  try {
-    localStorage.setItem(AUTOSAVE_KEY, rec);
-  } catch (err) {
-    console.warn('Autosave local impossible :', err);
+  if (rec !== lastPersistedJson) {
+    try {
+      localStorage.setItem(AUTOSAVE_KEY, rec);
+      lastPersistedJson = rec;
+    } catch (err) {
+      console.warn('Autosave local impossible :', err);
+    }
   }
-  // Miroir disque (bureau) : debounce 400 ms, jamais bloquant ; ignoré en navigateur.
-  if (typeof window.elexio?.autosaveWrite === 'function') {
-    clearTimeout(autosaveFileTimer);
-    autosaveFileTimer = setTimeout(() => {
-      window.elexio.autosaveWrite(rec).catch((err) => console.warn('Autosave disque impossible :', err));
-    }, 400);
+  // Miroir persistant : fichier disque (bureau) et/ou IndexedDB (navigateur, filet de
+  // sécurité permanent). Le projet et le reste sont différés (400 ms) pour ne pas
+  // marteler le stockage ; en revanche, dès que la liste des images référencées change
+  // (import ou suppression d'un fond), on écrit TOUT DE SUITE : une image ne doit jamais
+  // être perdue par un rechargement ou une fermeture rapide avant l'échéance du différé.
+  const assets = referencedAssets(project, assetsObject());
+  const sig = Object.keys(assets).sort().join('|');
+  const hasDisk = typeof window.elexio?.autosaveWrite === 'function';
+  clearTimeout(autosaveFileTimer);
+  const writeDiskMirror = () => {
+    if (!hasDisk) return;
+    const disk = JSON.stringify({ project, file: currentFile, assets });
+    if (disk === lastDiskMirrorJson) return;
+    lastDiskMirrorJson = disk;
+    window.elexio.autosaveWrite(disk).catch((err) => console.warn('Autosave disque impossible :', err));
+  };
+  if (sig !== lastAssetsSig) {
+    // Ensemble d'images modifié : écriture immédiate (jamais attendre le différé).
+    lastAssetsSig = sig;
+    writeDiskMirror();
+    saveAssetsIdb(assets).then((ok) => {
+      if (!ok && !hasDisk) status('Fonds de plan non sauvegardés (stockage navigateur indisponible).');
+    });
+  } else {
+    autosaveFileTimer = setTimeout(writeDiskMirror, 400);
   }
 }
 
 function getLocalAutosave() {
   let raw;
-  try { raw = localStorage.getItem(AUTOSAVE_KEY); } catch (err) { raw = null; }
+  try { raw = lsGet(AUTOSAVE_KEY); } catch (err) { raw = null; }
   if (!raw) return null;
   try {
     const rec = JSON.parse(raw);
@@ -144,7 +189,7 @@ async function getDiskAutosave() {
     if (!rawFile) return null;
     const rec = JSON.parse(rawFile);
     if (rec && rec.project && rec.project.supply && Array.isArray(rec.project.elements)) {
-      return { project: rec.project, file: rec.file || null };
+      return { project: rec.project, file: rec.file || null, assets: rec.assets || {} };
     }
   } catch (err) {
     console.warn('Autosave disque illisible, ignoré :', err);
@@ -182,7 +227,6 @@ async function renderWelcomeRecents() {
       try {
         const res = await window.elexio.openPath(p);
         if (importProjectText(res.text, res.filePath)) {
-          await loadRecents();
         }
       } catch (err) {
         alert(`Ouverture impossible.\n\n${p}\n\n${err.message}`);
@@ -196,18 +240,25 @@ async function showWelcome() {
   const welcomeEl = $('#welcome');
   if (!welcomeEl) return;
 
-  // Détermine s'il y a un autosave à proposer
+  // Détermine s'il y a un autosave à proposer (localStorage d'abord, puis disque).
   let pending = getLocalAutosave();
-  if (!pending) {
-    pending = await getDiskAutosave();
-  }
+  const disk = await getDiskAutosave();
+  if (!pending) pending = disk;
   if (resumeBtn) {
     if (pending) {
       const name = pending.file ? pending.file.split(/[\\/]/).pop() : 'sans titre';
       resumeBtn.textContent = `Reprendre « ${name} »`;
       resumeBtn.hidden = false;
-      resumeBtn.onclick = () => {
-        loadProject(pending.project, pending.file);
+      resumeBtn.onclick = async () => {
+        // Onglet ouvert avant l'actualisation : `loadProject` repart sur
+        // « Informations », on le réapplique pour retomber sur l'onglet qui était ouvert.
+        const tab = savedTabName();
+        // Images de fond : on réunit toutes les sources disponibles (IndexedDB, miroir
+        // disque, autosave) pour ne jamais en perdre une seule.
+        const idbAssets = (await loadAssetsIdb()) || {};
+        const assets = { ...idbAssets, ...(disk?.assets || {}), ...(pending.assets || {}) };
+        loadProject(pending.project, pending.file, assets);
+        switchTab(tab);
         status('Restauration du dernier état (sauvegarde locale/stockage).');
       };
     } else {
@@ -250,6 +301,14 @@ function switchTab(name) {
   });
   $$('.pane').forEach((p) => p.classList.toggle('active', p.dataset.pane === name));
   try { localStorage.setItem(TAB_KEY, name); } catch (err) { /* ignore */ }
+  refreshPlan();
+}
+
+/** Onglet mémorisé (survit à l'actualisation) : un onglet connu, sinon « Informations ». */
+function savedTabName() {
+  let name = null;
+  try { name = lsGet(TAB_KEY); } catch (err) { /* ignore */ }
+  return ['info', 'schema', 'plan', 'bom'].includes(name) ? name : 'info';
 }
 
 $$('.tab').forEach((btn) => {
@@ -281,6 +340,7 @@ function loadInfoForm() {
     input.value = value ?? '';
   }
   refreshTitleBlock();
+  updateNormDisplay();
 }
 
 INFO_PATHS.forEach((input) => {
@@ -288,9 +348,15 @@ INFO_PATHS.forEach((input) => {
     setInfo(input.dataset.info, input.value);
     markDirty();
     refreshTitleBlock();
+    if (input.dataset.info === 'projet.norme') updateNormDisplay();
   });
 });
 
+function updateNormDisplay() {
+  const n = project.info?.projet?.norme || 'RGIE';
+  const el = $('#norm-display');
+  if (el) el.textContent = n === 'RGIE' ? 'RGIE / AREI' : n;
+}
 function refreshTitleBlock() {
   const p = project.info;
   const place = [p.chantier.codePostal && p.chantier.localite].filter(Boolean).join(' ') || p.chantier.denomination || '—';
@@ -312,7 +378,7 @@ function freeAnchorDirs(node) {
   const hasChild = node.children && Object.values(node.children).some((v) => v != null);
   // Le compteur n'a qu'un seul point d'ancrage : a droite.
   if (node.symbolType === 'compteur') return (node.children || {}).right == null ? ['right'] : [];
-  const ramifiable = node.symbolType === 'node' || node.symbolType === 'tableau';
+  const ramifiable = node.symbolType === 'node' || node.symbolType === 'tableau' || node.symbolType === 'node_parallel';
   if (hasChild && !ramifiable) return [];
   return anchorKeysOf(node).filter((d) => (node.children || {})[d] == null);
 }
@@ -339,15 +405,15 @@ function orientForDir(dir) {
 
 /** Types sans repère automatique : leur repère reste vide tant que l'utilisateur
  *  ne le saisit pas (le schéma n'affiche alors que la description). */
-const NO_AUTO_LABEL = ['node', 'socket'];
+const NO_AUTO_LABEL = ['node', 'node_parallel', 'socket'];
 
 /* --------------------------------------------------------- règles de composition */
 
 /** Quels types d'élément chaque type peut recevoir en enfant.
  *  `null` = tout est accepté. Le node (dérivation) et le fil/câble sont hors règles. */
 const ACCEPT_RULES = {
-  compteur: ['rcd'],
-  rcd: ['breaker', 'rcd'],
+  compteur: [],
+  rcd: [],
   breaker: null,
 };
 
@@ -370,20 +436,27 @@ function removeOutput(node, key) {
 /** Toujours une sortie vierge après la dernière occupée : le tableau s'élargit ou se réduit. */
 function syncOutputs() {
   for (const e of project.elements) {
-    if (e.symbolType !== 'tableau') continue;
+    if (e.symbolType !== 'tableau' && e.symbolType !== 'node_parallel') continue;
     const used = Object.keys(e.children || {}).filter((k) => e.children[k] != null).map(outputIndex);
     e.outputs = Math.max(TABLEAU_OUTPUTS, ...used.map((i) => i + 2));
   }
 }
 
 function canAccept(parentType, childType, dir) {
-  // tableau : seulement différentiels, disjoncteurs et sectionneurs en sortie
+  // tableau / node_parallel : seulement différentiels, disjoncteurs et sectionneurs en sortie
+  // Un disjoncteur ou differentiel ne peut etre installe que sur un tableau.
+  if (childType === 'breaker' || childType === 'rcd') {
+    if (parentType !== 'tableau') return false;
+    if (dir === 'bottom') return false;
+    return TABLEAU_OUTPUT_TYPES.includes(childType);
+  }
   if (parentType === 'tableau') {
     if (dir === 'bottom') return childType === 'earth';
     return TABLEAU_OUTPUT_TYPES.includes(childType);
   }
+  if (parentType === 'node_parallel') return true;
   // point de derivation, cable, sectionneur et barre de tableau : hors regles
-  if (childType === 'node' || childType === 'fil' || childType === 'sectionneur' || childType === 'tableau') return true;
+  if (childType === 'node' || childType === 'fil' || childType === 'sectionneur' || childType === 'tableau' || childType === 'node_parallel') return true;
   const allowed = ACCEPT_RULES[parentType];
   return allowed == null ? true : allowed.includes(childType);
 }
@@ -498,10 +571,10 @@ function addElement(symbolType, parentId, dir, props = null) {
   }
   const e = createElement(symbolType, parentId, dir);
   e.label = NO_AUTO_LABEL.includes(symbolType) ? '' : nextGlobalLabel(symbolType);
-  if (isCircuitStart(project, e)) e.showLabel = true;
+  if (isCircuitStart(project, e)) { e.showLabel = true; if (e.symbolType === 'breaker') e.labelPos = 'top'; }
   applyProps(e, props);
   // une barre de tableau reste horizontale par defaut (hors sens de pose)
-  e.orient = symbolType === 'tableau' ? 0 : orientForDir(dir);
+  e.orient = (symbolType === 'tableau' || symbolType === 'node_parallel') ? 0 : orientForDir(dir);
   parent.children = parent.children || {};
   parent.children[dir] = e.id;
   project.elements.push(e);
@@ -535,15 +608,15 @@ function insertNode(parentId, dir, type = 'node', props = null) {
   if (!canAccept(parent.symbolType, type, dir)) { status(`Un ${symbolName(parent.symbolType)} ne peut pas recevoir un ${symbolName(type)}.`); return; }
   if (old && !canAccept(type, old.symbolType, baseDir(dir))) { status(`Un ${symbolName(type)} ne peut pas recevoir un ${symbolName(old.symbolType)}.`); return; }
   const c = createElement(type, parentId, dir);
-  c.orient = type === 'tableau' ? 0 : orientForDir(dir);
+  c.orient = (type === 'tableau' || type === 'node_parallel') ? 0 : orientForDir(dir);
   c.label = NO_AUTO_LABEL.includes(type) ? '' : nextGlobalLabel(type);
-  if (isCircuitStart(project, c)) c.showLabel = true;
+  if (isCircuitStart(project, c)) { c.showLabel = true; if (c.symbolType === 'breaker') c.labelPos = 'top'; }
   applyProps(c, props);
   parent.children = parent.children || {};
   parent.children[dir] = c.id;
   project.elements.push(c);
   if (old) {
-    const keep = type === 'tableau' ? 'top-1' : baseDir(dir);
+    const keep = (type === 'tableau' || type === 'node_parallel') ? 'top-1' : baseDir(dir);
     c.children[keep] = old.id; old.parent = c.id; old.dir = keep;
   }
   selectedId = c.id;
@@ -570,7 +643,7 @@ function deleteElement(id) {
     if (cid != null) { const k = nodeOf(cid); if (k) kids.push({ child: k, dir }); }
   }
   // tableau : le point d'ancrage disparaît avec son élément ; les sorties suivantes remontent
-  if (parent.symbolType === 'tableau') {
+  if (parent.symbolType === 'tableau' || parent.symbolType === 'node_parallel') {
     removeOutput(parent, myDir);
     for (const k of kids) {
       if (!canAccept('tableau', k.child.symbolType, k.dir)) { removeSubtree(k.child.id); continue; }
@@ -590,7 +663,7 @@ function deleteElement(id) {
 
   let promoted = null;
   const same = kids.find((k) => k.dir === myDir);
-  if (same && parentAnchors.includes(myDir) && (parent.symbolType !== 'tableau' || canAccept('tableau', same.child.symbolType, myDir))) {
+  if (same && parentAnchors.includes(myDir) && (parent.symbolType !== 'tableau' && parent.symbolType !== 'node_parallel' || canAccept(parent.symbolType, same.child.symbolType, myDir))) {
     parent.children[myDir] = same.child.id;
     same.child.parent = parent.id; same.child.dir = myDir;
     promoted = same.child;
@@ -599,7 +672,7 @@ function deleteElement(id) {
 
   for (const k of kids) {
     let target = null, tdir = null;
-    const pf = parent.symbolType === 'tableau' && !canAccept('tableau', k.child.symbolType, k.dir) ? [] : freeAnchorDirs(parent);
+    const pf = (parent.symbolType === 'tableau' || parent.symbolType === 'node_parallel') && !canAccept(parent.symbolType, k.child.symbolType, k.dir) ? [] : freeAnchorDirs(parent);
     if (pf.length) {
       target = parent;
       tdir = pf.includes(k.dir) ? k.dir : pf[0];
@@ -663,8 +736,7 @@ function symbolLabel(node) {
 }
 
 function renderBom() {
-  const tbody = $('#bom-table tbody');
-  const nodes = treeOrder(project).filter((n) => n.symbolType !== 'node');
+  const nodes = treeOrder(project).filter((n) => n.symbolType !== 'node' && n.symbolType !== 'node_parallel');
   const rows = nodes.map((node) => {
     const parent = nodeOf(node.parent);
     const parentLabel = parent ? (parent.label || (parent.symbolType === 'compteur' ? 'W1' : '—')) : '—';
@@ -678,13 +750,32 @@ function renderBom() {
   });
   rows.sort((a, b) => String(a.label).localeCompare(String(b.label), 'fr', { numeric: true }));
 
-  tbody.innerHTML = rows
-    .map((r) => `<tr><td>${escHtml(r.label)}</td><td>${escHtml(r.place)}</td><td>${escHtml(r.symbol)}</td>` +
-      `<td>${escHtml(r.detail)}</td><td>${escHtml(r.type)}</td></tr>`)
+
+  // Liste des circuits
+  const circuitTbody = $('#bom-circuits tbody');
+  const starts = treeOrder(project).filter((e) => isCircuitStart(project, e));
+  const circuitRows = starts.map((start) => {
+    const parent = nodeOf(start.parent);
+    const parentLabel = parent ? (parent.label || (parent.symbolType === 'compteur' ? 'W1' : (parent.symbolType === 'tableau' ? 'Tableau' : '-'))) : '-';
+    const childLabels = treeOrder(project)
+      .filter((e) => e !== start && circuitStartOf(project, e) === start
+        && !['node', 'node_parallel', 'fil', 'tableau'].includes(e.symbolType))
+      .map((e) => {
+        const lbl = e.label || symbolLabel(e);
+        const typ = symbolLabel(e);
+        return lbl && lbl !== typ ? `${lbl} (${typ})` : typ;
+      });
+    return {
+      letter: start.label || '?',
+      parent: parentLabel,
+      children: childLabels.length ? childLabels.join(', ') : '-',
+    };
+  });
+  circuitTbody.innerHTML = circuitRows
+    .map((r) => `<tr><td>${escHtml(r.letter)}</td><td>${escHtml(r.parent)}</td><td>${escHtml(r.children)}</td></tr>`)
     .join('');
-  $('#bom-empty').hidden = rows.length > 0;
-  $('#bom-table').hidden = rows.length === 0;
-  $('#bom-count').textContent = rows.length ? `${rows.length} éléments` : '';
+  $('#bom-circuits-empty').hidden = circuitRows.length > 0;
+  $('#bom-circuits').hidden = circuitRows.length === 0;
 
   const groups = new Map();
   for (const r of rows) {
@@ -702,48 +793,18 @@ function renderBom() {
   $('#bom-groups').textContent = gRows.length ? `${gRows.length} désignations` : '';
 }
 
-$('#btn-bom-csv').addEventListener('click', async () => {
-  if (typeof window.elexio !== 'object') { alert('Export CSV disponible dans la version bureau.'); return; }
-  const csv = await window.elexio.exportCsv(buildBomCsv(), suggestedName() + '-composants');
-  if (csv) status(`CSV exporté : ${csv}`);
-});
-
-function buildBomCsv() {
-  const head = ['Repère', 'Emplacement', 'Symbole', 'Caractéristique', 'Type'];
-  const lines = [head.join(';')];
-  // Anti-injection de formule : une cellule débutant par = + - @ est neutralisée
-  // par une apostrophe (Excel / Calc la traitent alors comme du texte).
-  const q = (s) => {
-    let v = String(s ?? '');
-    if (/^[=+\-@]/.test(v)) v = "'" + v;
-    return '"' + v.replace(/"/g, '""') + '"';
-  };
-  for (const node of treeOrder(project)) {
-    const parent = nodeOf(node.parent);
-    const parentLabel = node.symbolType === 'compteur' ? '—'
-      : (parent ? (parent.label || (parent.symbolType === 'compteur' ? 'W1' : '—')) : '—');
-    lines.push([
-      node.label || (node.symbolType === 'compteur' ? 'W1' : '—'),
-      parentLabel,
-      node.symbolType === 'node' ? 'Node' : symbolLabel(node),
-      node.symbolType === 'compteur' ? (node.detail || 'Compteur') : (deviceDetail(node) || ''),
-      TYPE_LABELS[node.symbolType] || node.symbolType,
-    ].map(q).join(';'));
-  }
-  return lines.join('\r\n');
-}
-
 /* -------------------------------------------------------------- rendu global */
 
 function renderIssues() {
   const host = $('#issues');
-  const issues = validate(project);
+  const selectedRules = rulesFor(project);
+  const issues = validate(project, selectedRules);
   if ((project.elements || []).length === 0) { host.hidden = true; host.innerHTML = ''; return; }
   const errs = issues.filter((i) => i.rule.severity === RULE_SEVERITY.ERROR);
   const forced = layoutForced(project);   // plafond de mise en page atteint (tracé contraint)
   if (issues.length === 0 && !forced) {
     host.hidden = false;
-    host.innerHTML = `<span class="ok">✔ Aucune anomalie détectée (${RULES_BE.length} règles).</span>`;
+    host.innerHTML = `<span class="ok">✔ Aucune anomalie détectée (${selectedRules.length} règles).</span>`;
     return;
   }
   host.hidden = false;
@@ -764,13 +825,15 @@ function renderIssues() {
   host.querySelectorAll('[data-issue]').forEach((li) => {
     li.addEventListener('click', () => {
       const issue = issues[Number(li.dataset.issue)];
-      if (issue.elementId != null) { selectElement(issue.elementId); switchTab('schema'); }
+      if (issue.rule.id === 'BE-09') { switchTab('plan'); }
+      else if (issue.elementId != null) { selectElement(issue.elementId); switchTab('schema'); }
       else status(`${issue.rule.severity.toUpperCase()} ${issue.rule.id} — ${issue.message}`);
     });
   });
 }
 
 function refreshAll() {
+  ensurePlan(project);   // nettoie les placements orphelins (élément supprimé du schéma)
   syncOutputs();
   renumberCircuits(project);
   renderElementList();
@@ -778,6 +841,7 @@ function refreshAll() {
   renderIssues();
   renderProps();
   refreshPaletteAccept();
+  refreshPlan();
   renderSchema($('#canvas'), project, {
     viewBox: `${view.x} ${view.y} ${view.w} ${view.h}`,
     selectedIds,
@@ -830,7 +894,7 @@ $('#btn-save').addEventListener('click', saveLocal);
 
 $('#btn-export').addEventListener('click', () => {
   project.info.projet.dateModification = new Date().toISOString().slice(0, 10);
-  const text = encodeElx(project);
+  const text = encodeElx(project, APP_VERSION, assetsObject());
   const blob = new Blob([text], { type: 'application/octet-stream' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -840,43 +904,9 @@ $('#btn-export').addEventListener('click', () => {
   status(`Fichier .${FILE_EXT} exporté.`);
 });
 
-async function loadRecents() {
-  const sel = $('#recent-select');
-  if (typeof window.elexio !== 'object') {
-    sel.innerHTML = '<option value="">(version navigateur — pas de fichiers récents)</option>';
-    return;
-  }
-  const list = await window.elexio.recents();
-  sel.innerHTML = list.length
-    ? '<option value="">— Projets récents —</option>' +
-      list.map((r) => `<option value="${escHtml(r.path)}">${escHtml(r.name)}</option>`).join('')
-    : '<option value="">(aucun projet récent)</option>';
-}
 
-async function openRecentPath(p) {
-  if (typeof window.elexio !== 'object') return;
-  if (dirty && !confirm('Des modifications ne sont pas enregistrées. Ouvrir un autre projet ?')) { $('#recent-select').value = ''; return; }
-  try {
-    const res = await window.elexio.openPath(p);
-    if (importProjectText(res.text, res.filePath)) {
-      status(`Projet ouvert : ${res.filePath}`);
-      await loadRecents();
-    } else {
-      $('#recent-select').value = '';
-    }
-  } catch (err) {
-    alert(`Ouverture impossible.\n\n${p}\n\n${err.message}`);
-    $('#recent-select').value = '';
-  }
-}
-
-$('#recent-select').addEventListener('change', async (e) => {
-  const p = e.target.value;
-  if (!p) return;
-  await openRecentPath(p);
-});
-
-function loadProject(data, filePath) {
+function loadProject(data, filePath, assets = {}) {
+  assetsReplace(assets);
   const base = emptyProject();
   project = {
     ...base,
@@ -899,6 +929,7 @@ function loadProject(data, filePath) {
   history.future.length = 0;
   updateHistoryButtons();
   clearDirty(filePath || null);
+  resetPlanView();
   refreshAll();
   switchTab('info');
   fitView();
@@ -910,7 +941,43 @@ function loadProject(data, filePath) {
 /** Décode un fichier (.elx base64 ou JSON legacy) et charge le projet.
  *  Vérifie la version du modèle : migration automatique, alerte si fichier trop
  *  récent. Retourne true si le projet a été chargé. */
-function importProjectText(text, filePath) {
+/** Validation légère d'un projet importé (sans modifier les données valides). */
+function validateProject(data) {
+  const knownTypes = new Set([...Object.keys(SYMBOLS), 'compteur']);
+  const ids = new Set();
+  const nodes = [];
+  if (!data.supply || typeof data.supply !== 'object') return 'Compteur manquant.';
+  if (data.supply.id == null || (typeof data.supply.id !== 'number' && typeof data.supply.id !== 'string')) return 'Identifiant du compteur invalide.';
+  nodes.push({ isSupply: true, n: data.supply });
+  if (!Array.isArray(data.elements)) return 'Liste d\u2019éléments invalide.';
+  for (const e of data.elements) {
+    if (!e || typeof e !== 'object') return 'Élément mal formé.';
+    if (e.id == null || (typeof e.id !== 'number' && typeof e.id !== 'string')) return 'Identifiant d\u2019élément invalide.';
+    if (ids.has(e.id)) return `Identifiant dupliqué : ${e.id}.`;
+    ids.add(e.id);
+    if (!knownTypes.has(e.symbolType)) return `Type de symbole inconnu : ${e.symbolType}.`;
+    if (e.dir != null && !/^(right|left|top|bottom|top-\d+)$/.test(String(e.dir))) return `Direction invalide pour ${e.id}.`;
+    nodes.push({ isSupply: false, n: e });
+  }
+  const idSet = new Set([data.supply.id, ...ids]);
+  if (ids.has(data.supply.id)) return 'Identifiant du compteur dupliqué parmi les éléments.';
+  for (const { isSupply, n } of nodes) {
+    if (!n.children || typeof n.children !== 'object' || Array.isArray(n.children)) return `Ancrages invalides pour ${n.id}.`;
+    for (const [key, val] of Object.entries(n.children)) {
+      if (val == null) continue;
+      if (!idSet.has(val)) return `Ancrage inconnu dans ${n.id} -> ${val}.`;
+    }
+    if (!isSupply) {
+      const parent = n.parent;
+      if (parent == null) return `Parent manquant pour ${n.id}.`;
+      if (!idSet.has(parent)) return `Parent inconnu pour ${n.id}.`;
+      if (parent === n.id) return `Parent circulaire pour ${n.id}.`;
+    }
+  }
+  return null;
+}
+
+function importProjectText (text, filePath) {
   let decoded;
   try {
     decoded = decodeElx(text);
@@ -923,9 +990,15 @@ function importProjectText(text, filePath) {
     alert('Ouverture impossible.\n\nStructure de projet invalide.');
     return false;
   }
+  try { migrateProject(data); normalizeTypes(data); } catch (err) { alert('Ouverture impossible.\n\n' + err.message); return false; }
+  const validity = validateProject(data);
+  if (validity) {
+    alert('Ouverture impossible.\n\n' + validity);
+    return false;
+  }
   const compat = checkCompatibility(decoded.meta);
   if (compat.level === 'future' && !confirm(`${compat.message}\n\nOuvrir quand même ? (comportement non garanti)`)) return false;
-  loadProject(data, filePath);
+  loadProject(data, filePath, decoded.assets);
   if (compat.level === 'migrate' || compat.level === 'unknown') status(compat.message);
   return true;
 }
@@ -952,7 +1025,6 @@ $('#btn-open').addEventListener('click', async () => {
   const res = await window.elexio.open();
   if (!res) return;
   if (importProjectText(res.text, res.filePath)) {
-    await loadRecents();
     status('Projet ouvert.');
   }
 });
@@ -976,6 +1048,11 @@ $('#btn-pdf').addEventListener('click', async () => {
     return;
   }
   if (drawingOverflowsPages() && !confirm('Le schéma déborde des pages de la mise en page : la partie hors pages ne sera pas imprimée. Continuer ?')) return;
+  const overPlan = planOverflowLevels(project);
+  if (overPlan.length > 0) {
+    const noms = overPlan.map((x) => `« ${x} »`).join(', ');
+    if (!confirm(`Le plan de l’étage ${noms} déborde de la page : la partie hors cadre ne sera pas imprimée. Continuer ?`)) return;
+  }
   const html = buildPrintHtml();
   if (typeof window.elexio !== 'object') {
     const w = window.open('', '_blank');
@@ -995,8 +1072,9 @@ function suggestedName() {
     .filter(Boolean).join('-').replace(/[^\w\-\.À-ÿ]+/g, '_');
 }
 
-/** Dossier PDF : cartouche général, schéma (une page, mis à l'échelle), liste des circuits,
- *  liste des matériaux. (Schéma d'implantation : à venir.) */
+/** Dossier PDF : cartouche général, schéma (une page par page de mise en page),
+ *  plan d'implantation (une page par étage non vide), liste des circuits,
+ *  liste des matériaux. */
 function buildPrintHtml() {
   const i = project.info;
   const ch = i.chantier, oc = i.occupant, ins = i.installateur, dd = i.dessinateur, ct = i.controle, pr = i.projet;
@@ -1033,7 +1111,10 @@ ${box('Remarques', [row('Remarques', i.remarques)])}
     return `<section class="page schema">${clone.outerHTML}</section>`;
   }).join('');
 
-  // 3. liste des circuits : une ligne par protection (disjoncteur, fusible) avec son repère
+  // 3. plan d'implantation : une page A4 paysage par étage non vide
+  const plans = buildPlanPages(project);
+
+  // 4. liste des circuits : une ligne par protection (disjoncteur, fusible) avec son repère
   const protections = treeOrder(project).filter((n) => ['breaker', 'fuse'].includes(n.symbolType));
   const circuits = `<section class="page"><h2>Liste des circuits</h2>
 <table><thead><tr><th>Repère</th><th>Protection</th><th>Caractéristique</th><th>Alimenté depuis</th></tr></thead><tbody>
@@ -1044,10 +1125,11 @@ ${protections.map((n) => {
   }).join('') || '<tr><td colspan="4">Aucun circuit.</td></tr>'}
 </tbody></table></section>`;
 
-  // 4. liste des matériaux, regroupés par désignation et caractéristique
+  // 5. liste des matériaux, regroupés par désignation et caractéristique
+  // Liste des circuits
   const groups = new Map();
   for (const n of treeOrder(project)) {
-    if (n.symbolType === 'node') continue;
+    if (n.symbolType === 'node' || n.symbolType === 'node_parallel') continue;
     const name = symbolLabel(n);
     const det = n.symbolType === 'compteur' ? (n.detail || 'Compteur') : (deviceDetail(n) || '—');
     const key = name + '||' + det;
@@ -1069,12 +1151,13 @@ ${mats.map((g) => `<tr><td>${escHtml(g.name)}</td><td>${escHtml(g.det)}</td><td>
 .page:last-child { page-break-after: auto; break-after: auto; }
 .schema { height: 186mm; }
 .schema svg { display: block; }
+.plan svg { display: block; width: 100%; height: 100%; }
   h1 { font-size:20px; margin:0 0 4px; }
   h2 { font-size:16px; margin:0 0 8px; }
   h3 { font-size:12px; margin:0 0 4px; }
   .sub { color:#6b7280; margin-bottom:10px; }
   .grid { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; }
-  .box { border:1px solid #d1d5db; border-radius:4px; padding:6px; }
+  .box { border:1px solid #d1d5db; padding:6px; }
   table { border-collapse: collapse; width:100%; font-size:10px; }
   th, td { border:1px solid #d1d5db; padding:3px 6px; text-align:left; vertical-align:top; }
   thead th { background:#f3f4f6; }
@@ -1083,13 +1166,24 @@ ${mats.map((g) => `<tr><td>${escHtml(g.name)}</td><td>${escHtml(g.det)}</td><td>
   .wire { stroke:#111827; stroke-width:1.6; fill:none; }
   .bus { stroke:#111827; stroke-width:2; fill:none; }
   text { font-family: sans-serif; }
-  .lbl { font-size:9px; fill:#374151; }
-  .lbl-sm { font-size:8px; fill:#4b5563; white-space: pre-line; }
+  .lbl { font-size:5.4px; fill:#374151; }
+  .lbl-sm { font-size:4.8px; fill:#4b5563; white-space: pre-line; }
   .cart-title { font-size:8px; font-weight:600; fill:#111827; }
   .cart-line { font-size:6.5px; fill:#4b5563; }
+  .plan-title { font-size:13px; font-weight:600; fill:#111827; }
+  .plan-scale-txt { font-size:7px; fill:#4b5563; }
+  .plan-legend-title { font-size:8px; font-weight:600; fill:#111827; }
+  .plan-legend-txt { font-size:7px; fill:#374151; }
+  .plan-wall { stroke:#111827; fill:none; }
+  .plan-wall.selected { stroke:#111827; }
+  .plan-opening { stroke:#111827; fill:none; pointer-events:none; }
+  .plan-room { fill:#111827; font-family:sans-serif; text-anchor:middle; }
+  .plan-label { fill:#111827; font-family:sans-serif; }
+  .plan-sym-hit { fill:none; stroke:none; }
 </style></head><body>
 ${cover}
 ${schema}
+${plans}
 ${circuits}
 ${materials}
 </body></html>`;
@@ -1101,17 +1195,24 @@ function renderPalette() {
   const host = $('#palette-groups');
   host.innerHTML = '<h4>Favoris</h4><div id="palette-favs" class="palette-favs"></div>' +
     SYMBOL_CATEGORIES.map((cat) => {
-    const items = Object.entries(SYMBOLS)
-      .filter(([, s]) => s.category === cat.id)
-      .map(([key]) => symBtnHtml(key, true))
-      .join('');
-    return `<h4>${escHtml(cat.name)}</h4>${items}`;
-  }).join('');
+      const subs = (cat.subs || [])
+        .map((sub) => `<h5>${escHtml(sub.name)}</h5>${symItemsHtml(sub.id)}`)
+        .join('');
+      return `<h4>${escHtml(cat.name)}</h4>${symItemsHtml(cat.id)}${subs}`;
+    }).join('');
 
   host.querySelectorAll('.sym-btn').forEach(bindSymBtn);
   host.querySelectorAll('.fav-star').forEach(bindStar);
   renderFavorites();
   refreshPaletteAccept();
+}
+
+/** Boutons de tous les symboles d'une catégorie (ou sous-catégorie), avec étoile. */
+function symItemsHtml(categoryId) {
+  return Object.entries(SYMBOLS)
+    .filter(([, s]) => s.category === categoryId)
+    .map(([key]) => symBtnHtml(key, true))
+    .join('');
 }
 
 /** HTML d'un bouton de symbole (palette, favoris, menu contextuel).
@@ -1173,12 +1274,12 @@ function refreshPaletteAccept() {
 
 /* ------------------------------------------------------------- symboles favoris */
 
-const FAV_KEY = 'elecschema.favorites';   // liste ordonnée de clés de symbole
+const FAV_KEY = 'elexio.favorites';   // liste ordonnée de clés de symbole
 
 /** Favoris valides (symboles connus), dans l'ordre d'ajout. */
 function favoriteKeys() {
   try {
-    const list = JSON.parse(localStorage.getItem(FAV_KEY) || '[]');
+    const list = JSON.parse(lsGet(FAV_KEY) || '[]');
     return Array.isArray(list) ? list.filter((k) => SYMBOLS[k]) : [];
   } catch (err) { return []; }
 }
@@ -1316,6 +1417,12 @@ function setView(v) {
 function fitView() {
   const s = baseSize();
   setView({ x: 0, y: 0, w: s.w, h: s.h });
+}
+
+/** Recentre le schéma dans la fenêtre en conservant le zoom courant. */
+function centerView() {
+  const s = baseSize();
+  setView({ x: (s.w - view.w) / 2, y: (s.h - view.h) / 2, w: view.w, h: view.h });
 }
 
 function zoomAt(f, p = { x: view.x + view.w / 2, y: view.y + view.h / 2 }) {
@@ -1473,13 +1580,14 @@ svgEl.addEventListener('wheel', (e) => {
 $('#btn-zoom-in').addEventListener('click', () => zoomAt(0.8));
 $('#btn-zoom-out').addEventListener('click', () => zoomAt(1.25));
 $('#btn-zoom-reset').addEventListener('click', fitView);
+$('#btn-recenter').addEventListener('click', centerView);
 
 /* --------------------------------------------- aperçu avant impression */
 
 $('#preview-print').checked = printPreview;
 $('#preview-print').addEventListener('change', (e) => {
   printPreview = e.target.checked;
-  try { localStorage.setItem('elecschema.printPreview', printPreview ? '1' : '0'); } catch (err) { /* ignore */ }
+  try { localStorage.setItem('elexio.printPreview', printPreview ? '1' : '0'); } catch (err) { /* ignore */ }
   refreshAll();
 });
 $('#layout-scale').addEventListener('input', (e) => {
@@ -1561,6 +1669,10 @@ document.addEventListener('keydown', (e) => {
   if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); saveLocal(); return; }
   if (mod && e.key.toLowerCase() === 'n') { e.preventDefault(); $('#btn-new').click(); return; }
 
+  // Ctrl/Cmd + A : ne plus sélectionner tout le texte de la page (le comportement
+  // natif reste actif dans les champs de saisie, où c'est utile).
+  if (mod && e.key.toLowerCase() === 'a' && !isTyping(e.target)) { e.preventDefault(); return; }
+
   if (activeTab !== 'schema' || printPreview || isTyping(e.target) || $('#prop-dialog').open) return;
   if (e.key === 'Escape' && !anchorMenu.hidden) { closeAnchorMenu(); return; }
   if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -1621,6 +1733,7 @@ function renderProps() {
   const supply = node.symbolType === 'compteur';
   const isNode = node.symbolType === 'node';
   const tableau = node.symbolType === 'tableau';
+const isParallel = node.symbolType === 'node_parallel';
   const isSocket = node.symbolType === 'socket';
   const typeSel = $('#e-type');
   // Type : modifiable pour une prise (type de prise), sinon readonly (nom du symbole)
@@ -1632,12 +1745,15 @@ function renderProps() {
     typeSel.disabled = true;
     typeSel.innerHTML = `<option>${escHtml(supply ? 'Compteur (arrivée)' : (isNode ? 'Node' : symbolName(node.symbolType)))}</option>`;
   }
-  $('#e-label-lbl').hidden = isNode;
-  $('#e-locked-lbl').hidden = isNode;
+  $('#e-label-lbl').hidden = isNode || isParallel;
+  $('#e-locked-lbl').hidden = isNode || isParallel;
   $('#e-label').value = node.label || '';
   $('#e-locked').checked = !!node.labelLocked;
-  $('#e-showlabel-lbl').hidden = isNode;
+  $('#e-showlabel-lbl').hidden = isNode || isParallel;
   $('#e-showlabel').checked = node.showLabel === true;
+  const isBreaker = node.symbolType === 'breaker';
+  $('#e-circuit-lbl').hidden = !isBreaker;
+  if (isBreaker) $('#e-circuit').checked = node.circuit !== false;
   $('#e-count-lbl').hidden = !isSocket;
   if (isSocket) {
     $('#e-count').value = node.count || 1;
@@ -1647,15 +1763,15 @@ function renderProps() {
   $('#e-orient-lbl').hidden = isNode || tableau;
   $('#e-orient').value = String(node.orient || 0);
   // le texte d'un tableau est toujours en bas, horizontal : pas de position ni d'orientation
-  $('#e-labelpos-lbl').hidden = supply || isNode || tableau;
-  $('#e-labelpos').value = node.labelPos || 'bottom';
-  $('#e-labeloffset-lbl').hidden = isNode;
+  $('#e-labeloffset-lbl').hidden = isNode || isParallel;
   const off = node.labelOffset == null ? -5 : Number(node.labelOffset);
   $('#e-labeloffset').value = String(off);
   $('#e-labeloffset-val').value = off + ' px';
+  $('#e-detailoffset-lbl').hidden = isNode || isParallel || tableau;
+  const doff = node.detailOffset == null ? off + 14 : Number(node.detailOffset);
+  $('#e-detailoffset').value = String(doff);
+  $('#e-detailoffset-val').value = doff + ' px';
   // orientation du texte : masquee pour un node et pour le compteur (texte fixe)
-  $('#e-labelrot-lbl').hidden = supply || isNode || tableau;
-  $('#e-labelrot').value = node.labelRot || 'auto';
   $('#e-detail-lbl').hidden = !supply;
   $('#e-detail').value = node.detail || '';
 
@@ -1732,29 +1848,34 @@ $('#e-orient').addEventListener('change', (e) => {
   const n = selectedNode(); if (!n) return;
   n.orient = n.symbolType === 'tableau' ? 0 : Number(e.target.value); markDirty(); refreshAll();
 });
-$('#e-labelpos').addEventListener('change', (e) => {
-  const n = selectedNode(); if (!n) return;
-  n.labelPos = e.target.value; markDirty(); refreshAll();
-});
+
 $('#e-labeloffset').addEventListener('input', (e) => {
   const n = selectedNode(); if (!n) return;
   n.labelOffset = Number(e.target.value);
   $('#e-labeloffset-val').value = n.labelOffset + ' px';
   markDirty(); refreshAll();
 });
+$('#e-detailoffset').addEventListener('input', (e) => {
+  const n = selectedNode(); if (!n) return;
+  n.detailOffset = Number(e.target.value);
+  $('#e-detailoffset-val').value = n.detailOffset + ' px';
+  markDirty(); refreshAll();
+});
 $('#e-poles').addEventListener('change', (e) => {
   const n = selectedNode(); if (!n) return;
   n.poles = e.target.value; markDirty(); refreshAll();
 });
-$('#e-labelrot').addEventListener('change', (e) => {
-  const n = selectedNode(); if (!n) return;
-  n.labelRot = e.target.value; markDirty(); refreshAll();
-});
+
 $('#e-showlabel').addEventListener('change', (e) => {
   const n = selectedNode(); if (!n) return;
   n.showLabel = e.target.checked;
   // si aucun repere n'existe encore, on en genere un pour que la case ait un effet visible
   if (n.showLabel && !(n.label || '').trim()) n.label = nextGlobalLabel(n.symbolType);
+  markDirty(); refreshAll();
+});
+$('#e-circuit').addEventListener('change', (e) => {
+  const n = selectedNode(); if (!n || n.symbolType !== 'breaker') return;
+  n.circuit = e.target.checked;
   markDirty(); refreshAll();
 });
 $('#e-rating').addEventListener('change', (e) => {
@@ -1820,9 +1941,6 @@ $('#btn-apply-json').addEventListener('click', () => {
 document.addEventListener('DOMContentLoaded', () => {
   $('#app-version').textContent = 'v' + APP_VERSION;
 
-  let savedTab = null;
-  try { savedTab = localStorage.getItem(TAB_KEY); } catch (err) { /* ignore */ }
-
   // Initialise avec un projet vide ; l'écran d'accueil invitera à en choisir un
   project = emptyProject();
   selectedIds = new Set();
@@ -1838,11 +1956,12 @@ document.addEventListener('DOMContentLoaded', () => {
   fitView();
   renderPalette();
   loadInfoForm();
-  loadRecents();
   refreshAll();
   updateHistoryButtons();
-  switchTab(['info', 'schema', 'bom'].includes(savedTab) ? savedTab : 'info');
+  switchTab(savedTabName());
   status('Prêt. Sélectionnez un projet pour commencer.');
+
+  initPlan({ getProject: () => project, markDirty, status, activeTab: () => activeTab, selectElement, refreshAll });
 
   // Affiche l'écran d'accueil (reprendre, nouveau, ouvrir, récents)
   showWelcome();

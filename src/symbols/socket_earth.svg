@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30" height="20" viewBox="0 0 30 20">
   <title>socket_earth.svg</title>
   <g id="Layer_1" data-name="Layer 1">
-    <path d="M20 40 L20 26 M30 26 L10 26" fill="none" stroke="#111827" stroke-width="2"/>
-    <path d="M14 20 C14 23.314 16.686 26 20 26 C23.314 26 26 23.314 26 20" fill="none" stroke="#111827" stroke-width="2"/>
+    <g>
+      <path d="M15 30 L15 16 M25 16 L5 16" fill="none" stroke="#111827" stroke-width="2"/>
+      <path d="M9 10 C9 13.314 11.686 16 15 16 C18.314 16 21 13.314 21 10" fill="none" stroke="#111827" stroke-width="2"/>
+    </g>
   </g>
 </svg>

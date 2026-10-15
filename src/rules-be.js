@@ -5,7 +5,9 @@
 // a été confronté au document officiel. Aucune règle n'est validée ici sans
 // vérification manuelle par un professionnel.
 
-import { nodeById } from './model.js';
+import { nodeById, isCircuitStart, circuitStartOf } from './model.js';
+import { PLAN_EXCLUDED } from './standards.js';
+import { symbolName } from './symbols.js';
 
 export const RULE_SEVERITY = { ERROR: 'erreur', WARN: 'avertissement', INFO: 'info' };
 
@@ -90,9 +92,9 @@ export const RULES_BE = [
     source: 'Convention de repérage',
     verified: false,
     check: (p) => (p.elements || [])
-      .filter((e) => e.symbolType !== 'node' && e.symbolType !== 'fil')
+      .filter((e) => e.symbolType !== 'node' && e.symbolType !== 'node_parallel' && e.symbolType !== 'fil')
       .filter((e) => !(e.label || '').trim())
-      .map((e) => ({ elementId: e.id, message: `Symbole sans repère (${e.symbolType}).` })),
+      .map((e) => ({ elementId: e.id, message: `${symbolName(e.symbolType)} sans repère.` })),
   },
   {
     id: 'BE-08',
@@ -110,7 +112,161 @@ export const RULES_BE = [
       return [{ elementId: null, message: `Informations manquantes : ${missing.join(', ')}.` }];
     },
   },
+  {
+    id: 'BE-09',
+    severity: RULE_SEVERITY.INFO,
+    message: 'Appareillage non placé sur le plan',
+    source: "Implantation de l'appareillage",
+    verified: false,
+    check: (p) => {
+      const levels = p.plan?.levels || [];
+      const placements = levels.reduce((n, l) => n + (l.placements?.length || 0), 0);
+      if (placements === 0) return [];   // pas de plan : pas d'alerte
+      const placed = new Set();
+      for (const l of levels) for (const x of l.placements || []) placed.add(x.elementId);
+      const out = [];
+      for (const e of [p.supply, ...(p.elements || [])]) {
+        if (!e || PLAN_EXCLUDED.includes(e.symbolType) || placed.has(e.id)) continue;
+        const rep = (e.label || '').trim();
+        out.push({ elementId: e.id, message: `${symbolName(e.symbolType)}${rep ? ` « ${rep} »` : ''} non placé sur le plan.` });
+      }
+      return out;
+    },
+  },
+  {
+    id: 'BE-10',
+    severity: RULE_SEVERITY.WARN,
+    message: 'Trop de points sur un circuit',
+    source: 'RGIE/AREI et NF C 15-100 - max. 8 prises/points par circuit',
+    verified: false,
+    check: (p) => {
+      const counts = new Map();
+      for (const e of p.elements || []) {
+        const cs = circuitStartOf(p, e);
+        if (!cs) continue;
+        if (['node', 'node_parallel', 'fil', 'tableau'].includes(e.symbolType)) continue;
+        if (e === cs) continue;
+        counts.set(cs.id, (counts.get(cs.id) || 0) + (e.symbolType === 'socket' ? (e.count || 1) : 1));
+      }
+      const norm = p.info?.projet?.norme === 'NFC15-100' ? 'NFC' : 'RGIE';
+      const limit = norm === 'NFC' ? 12 : 8;
+      const out = [];
+      for (const cs of (p.elements || []).filter((e) => isCircuitStart(p, e))) {
+        const n = counts.get(cs.id) || 0;
+        if (n > limit) out.push({ elementId: cs.id, message: `${cs.label || cs.symbolType} : ${n} points (max. ${limit} pour ${norm === 'NFC' ? 'NF C 15-100' : 'RGIE/AREI'}).` });
+      }
+      return out;
+    },
+  },
+  {
+    id: 'BE-11',
+    severity: RULE_SEVERITY.WARN,
+    message: 'Section de conducteur insuffisante pour le calibre',
+    source: 'RGIE Tableau 4.11 / NF C 15-100',
+    verified: false,
+    check: (p) => {
+      const MAX = { 1.5: 16, 2.5: 20, 4: 25, 6: 40, 10: 63 };
+      const out = [];
+      for (const f of (p.elements || []).filter((e) => e.symbolType === 'fil')) {
+        const parent = nodeById(p, f.parent);
+        if (!parent || !['breaker', 'rcd'].includes(parent.symbolType)) continue;
+        const cal = Number(parent.params?.rating);
+        const sec = Number(f.cable?.section);
+        const lim = MAX[sec];
+        if (lim != null && cal > lim) out.push({ elementId: f.id, message: `Fil ${f.label || f.id} (${sec} mm² pour ${cal} A) : section insuffisante (max. ${lim} A).` });
+      }
+      return out;
+    },
+  },
+  {
+    id: 'BE-12',
+    severity: RULE_SEVERITY.INFO,
+    message: 'Moins de 2 circuits d\'eclairage',
+    source: 'RGIE 4.4 / NF C 15-100 : au moins 2 circuits d\'eclairage',
+    verified: false,
+    check: (p) => {
+      const lightCircuits = new Set();
+      for (const e of p.elements || []) {
+        if (e.symbolType !== 'light') continue;
+        const cs = circuitStartOf(p, e);
+        if (cs) lightCircuits.add(cs.id);
+      }
+      if (lightCircuits.size === 0) return [];
+      if (lightCircuits.size < 2) return [{ elementId: null, message: 'Seulement 1 circuit d\'eclairage identifiable (minimum 2 recommandes).' }];
+      return [];
+    },
+  },
+  {
+    id: 'BE-13',
+    severity: RULE_SEVERITY.WARN,
+    message: 'Absence de differentiel',
+    source: 'RGIE/AREI et NF C 15-100 - protection differentielle obligatoire',
+    verified: false,
+    check: (p) => {
+      const rcds = (p.elements || []).filter((e) => e.symbolType === 'rcd');
+      if (rcds.length === 0) return [{ elementId: null, message: 'Aucun differentiel dans le schema.' }];
+      const norm = p.info?.projet?.norme === 'NFC15-100' ? 'NFC' : 'RGIE';
+      const min = norm === 'NFC' ? 2 : 1;
+      const hs = rcds.filter((e) => Number(e.params?.diff) === 30).length;
+      if (hs < min) return [{ elementId: null, message: `${hs} differentiel(s) 30 mA (minimum ${min} pour ${norm === 'NFC' ? 'NF C 15-100' : 'RGIE/AREI'}).` }];
+      return [];
+    },
+  },
+  {
+    id: 'BE-14',
+    severity: RULE_SEVERITY.WARN,
+    message: 'Aucun differentiel de type A',
+    source: 'RGIE/AREI et NF C 15-100 - type A minimum pour les DDR',
+    verified: false,
+    check: (p) => {
+      const rcds = (p.elements || []).filter((e) => e.symbolType === 'rcd');
+      if (rcds.length === 0) return [];
+      if (rcds.some((e) => ['A', 'F', 'Hpi'].includes(e.params?.type))) return [];
+      return [{ elementId: null, message: 'Aucun differentiel de type A (ou superieur) dans le schema.' }];
+    },
+  },
+  {
+    id: 'BE-15',
+    severity: RULE_SEVERITY.WARN,
+    message: 'Pouvoir de coupure de disjoncteur insuffisant',
+    source: 'RGIE/AREI - pouvoir de coupure minimal 3000 A',
+    verified: false,
+    check: (p) => (p.elements || [])
+      .filter((e) => e.symbolType === 'breaker' && e.params?.icb != null && Number(e.params.icb) < 3000)
+      .map((e) => ({ elementId: e.id, message: `${e.label || 'disjoncteur'} : pouvoir de coupure ${e.params.icb} A (< 3000 A).` })),
+  },
+  {
+    id: 'BE-16',
+    severity: RULE_SEVERITY.WARN,
+    message: 'Circuit specialise partage',
+    source: 'RGIE/AREI et NF C 15-100 - circuits dedies obligatoires',
+    verified: false,
+    check: (p) => {
+      const dedicated = new Set(['washing_machine', 'dryer', 'dishwasher', 'oven', 'microwave', 'boiler', 'heater', 'motor', 'freezer', 'fridge']);
+      const out = [];
+      for (const cs of (p.elements || []).filter((e) => isCircuitStart(p, e))) {
+        const children = (p.elements || []).filter((e) => circuitStartOf(p, e) === cs && !['node', 'node_parallel', 'fil', 'tableau'].includes(e.symbolType));
+        if (children.length <= 1) continue;
+        if (children.some((e) => dedicated.has(e.symbolType))) out.push({ elementId: cs.id, message: `${cs.label || cs.symbolType} : circuit dedie partage avec d'autres points.` });
+      }
+      return out;
+    },
+  },
+
 ];
+
+/** Règles dédiées RGIE/AREI (Belgique). */
+export const RULES_RGIE = RULES_BE.map((r, i) => ({ ...r, id: `RGIE-${String(i + 1).padStart(2, '0')}` }));
+
+/** Règles dédiées NF C 15-100 (France). */
+export const RULES_NFC = RULES_BE.map((r, i) => ({ ...r, id: `NF-${String(i + 1).padStart(2, '0')}` }));
+
+/** Sélectionne le référentiel selon la norme du projet. */
+export function rulesFor(project) {
+  const norm = project?.info?.projet?.norme;
+  return norm === 'NFC15-100' ? RULES_NFC : RULES_RGIE;
+}
+
 
 /** Lance toutes les règles et renvoie une liste plate d'observations triée. */
 export function validate(project, rules = RULES_BE) {

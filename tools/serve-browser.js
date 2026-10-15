@@ -17,13 +17,11 @@ const PORT = Number(process.argv[2]) || 8080;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
 
 const SHIM = `(() => {
-  const save = (name, text, type) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); };
   window.elexio = {
     open() { return new Promise((res) => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json'; i.onchange = async () => { const f = i.files[0]; if (!f) return res(null); res({ filePath: f.name, data: JSON.parse(await f.text()) }); }; i.click(); }); },
     recents: async () => [],
     openPath: async () => { throw new Error('hors Electron'); },
     exportPdf: async (html) => { const w = window.open('', '_blank'); w.document.write(html); w.document.close(); w.print(); return 'impression'; },
-    exportCsv: async (content, name) => { save((name || 'composants') + '.csv', '\\uFEFF' + content, 'text/csv'); return (name || 'composants') + '.csv'; },
   };
 })();`;
 

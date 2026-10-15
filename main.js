@@ -110,6 +110,9 @@ ipcMain.handle('project:open', async (event) => {
     // contrôle de version sont faits dans le rendu (src/format.js), seul endroit
     // où le décodeur est disponible (ESM partagé navigateur/bureau).
     const text = await fs.readFile(filePath, 'utf8');
+    // Ajoute le projet aux récents : sans cela, la liste restait vide sous Electron
+    // (l'ouverture par dialogue ne passait pas par project:openPath).
+    try { await pushRecent(filePath); } catch { /* les récents sont un confort, pas un blocage */ }
     return { filePath, text };
   } catch (err) {
     dialog.showErrorBox('Ouverture impossible', `Le fichier n’a pas pu être lu.\n\n${filePath}\n\n${err.message}`);
@@ -132,6 +135,8 @@ ipcMain.handle('project:openPath', async (event, filePath) => {
 });
 
 /* ------------------------------------------------------------------ IPC : PDF */
+// Remarque : « Exporter en PDF » n'ajoute rien aux projets récents (ceux-ci ne
+// listent que des projets .elx/.json ; un PDF exporté n'est pas un projet).
 
 ipcMain.handle('pdf:export', async (event, html, defaultName) => {
   const dir = await ensureProjectsDir();
@@ -146,33 +151,26 @@ ipcMain.handle('pdf:export', async (event, html, defaultName) => {
     show: false,
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, javascript: false },
   });
-  // Les SVG sont inlinés en data: : le PDF ne dépend plus de l'accès file: depuis
-  // une page data: (robuste quelle que soit la version d'Electron).
+  // Les SVG sont inlinés en data: : le PDF ne dépend plus de l'accès file:.
   const inlined = await inlineSymbolSvg(html, (u) => fs.readFile(fileURLToPath(u)));
-  await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(inlined));
-  const pdf = await win.webContents.printToPDF({
-    landscape: true,
-    pageSize: 'A4',
-    printBackground: true,
-    margins: { marginType: 'custom', top: 0, bottom: 0, left: 0, right: 0 },
-  });
-  win.close();
-  await writeFileAtomic(filePath, pdf);
-  return filePath;
-});
-
-/* ------------------------------------------------------------------ IPC : CSV */
-
-ipcMain.handle('csv:export', async (event, content, defaultName) => {
-  const dir = await ensureProjectsDir();
-  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
-    title: 'Exporter la liste des composants',
-    defaultPath: path.join(dir, `${defaultName || 'composants'}.csv`),
-    filters: [{ name: 'CSV (séparateur ;)', extensions: ['csv'] }],
-  });
-  if (canceled || !filePath) return null;
-  await writeFileAtomic(filePath, '\uFEFF' + content);
-  return filePath;
+  // Écriture dans un fichier temporaire plutôt que loadURL('data:…') : Chromium
+  // plafonne les URL `data:` à ~2 Mo, ce qui échouait sur les dossiers volumineux.
+  const tmp = path.join(os.tmpdir(), `elexio-print-${process.pid}-${Date.now()}.html`);
+  try {
+    await fs.writeFile(tmp, inlined, 'utf8');
+    await win.loadFile(tmp);
+    const pdf = await win.webContents.printToPDF({
+      landscape: true,
+      pageSize: 'A4',
+      printBackground: true,
+      margins: { marginType: 'custom', top: 0, bottom: 0, left: 0, right: 0 },
+    });
+    await writeFileAtomic(filePath, pdf);
+    return filePath;
+  } finally {
+    win.destroy();
+    await fs.rm(tmp, { force: true });
+  }
 });
 
 /* -------------------------------------------------------------- IPC : autosave */
@@ -191,7 +189,7 @@ ipcMain.handle('autosave:read', async () => {
 });
 
 ipcMain.handle('autosave:write', async (event, text) => {
-  if (typeof text !== 'string' || text.length > 10_000_000) throw new Error('Autosave refusé.');
+  if (typeof text !== 'string' || text.length > 100_000_000) throw new Error('Autosave refusé.');
   await ensureDir(path.dirname(autosavePath()));
   await writeFileAtomic(autosavePath(), text);
   return true;

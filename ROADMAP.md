@@ -1,7 +1,7 @@
 # ROADMAP - Elexio
 
-**Cible :** schema unifilaire domestique belge, editeur drag & drop, validation RGIE, CSV.
-**Hors perimetre :** schema d'implantation, profil France, import DWG/PDF.
+**Cible :** schema unifilaire domestique belge, editeur drag & drop, validation RGIE.
+**Hors perimetre :** profil France, import DWG/PDF/DXF.
 **Scope :** habitation uniquement. Mono **et** triphase. Pas d'industriel. Pas de schema developpe.
 **Contraintes :** 100 % standalone, pas de cloud, pas de licence payante, installable **et** portable.
 
@@ -25,6 +25,9 @@
 | 12 | Renommage Elexio + version navigateur GitHub Pages | LIVREE |
 | 13 | Qualite : tests auto (node:test) + CI + durcissement | LIVREE |
 | 14 | Format de fichier `.elx` (versionne, base64) | LIVREE |
+| 15 | Schema d'implantation (plan, murs, ouvertures, symboles, PDF) | LIVREE |
+| 16 | Audit 0.4.0 (PDF exact, cadre A4, zoom 1:N, correctifs D1-D6) | LIVREE |
+| 17 | Node parallele + resserrage du layout + symboles redimensionnes | LIVREE |
 
 ---
 
@@ -38,8 +41,8 @@ Le modele « circuits + composants » a ete remplace par un **arbre d'elements**
 - Notion de **groupe sous differentiel** : tout element place sous un differentiel.
 - **Tableau** : sorties en haut (`top-n`), sortie de terre en bas.
 - Reperes automatiques par prefixe, lettres de circuit (A, B...).
-- **Mise en page** A4 paysage (594x420 px a 2 px/mm), pages cote a cote, cartouche
-  sur chaque page ; dossier PDF par page.
+- **Mise en page** A4 paysage (geometrie en mm ; zone imprimable 277x186 mm, marge 10 mm),
+  pages cote a cote, cartouche sur chaque page ; dossier PDF par page.
 
 Voir `AGENT.md` (source de verite) et `src/model.js`, `src/standards.js`, `src/render.js`.
 
@@ -88,6 +91,33 @@ Les symboles de protection (`breaker`, `rcd`, `fuse`) portent desormais
 Toutes les regles gardent `verified: false` : aucune n'a ete confrontee au texte
 officiel RGIE. A faire valider par un professionnel.
 
+### Etape 15 - Schema d'implantation
+
+Nouvel onglet **Schéma d'implantation** : dessin d'implantation par **étage**, en
+coordonnees **cm** (Y vers le bas). Modele pur dans `src/plan-model.js` (niveaux,
+murs, ouvertures, pieces, placements, echelle), rendu SVG dans `src/plan-render.js`,
+interactions dans `src/plan-ui.js`, fond de plan dans `src/plan-assets.js`
+(image **hors** du projet), pages PDF dans `src/plan-print.js`.
+
+- **Murs** : polyligne, orthogonal par defaut (`Alt` = angle libre), epaisseur 20 cm.
+- **Portes / fenetres** : posees sur le mur le plus proche (arc + double trait),
+  deplacables le long du mur, largeur reglable.
+- **Pieces** : libelles libres, deplacables, renommables.
+- **Symboles** : instances d'elements du schema (aucun nouvel equipement) ;
+  glisser-deposer ou clic-armer ; taille **constante sur papier** (4 mm).
+- **Fond de plan** : image importee, reduite (<= 2400 px, JPEG 0,85), calibrable,
+  jamais serialisee dans le projet (cle d'image seulement ; autosave disque / IndexedDB).
+- **`SCHEMA_VERSION = 5`** : migration idempotente depuis v3/v4 (l'ancien `'auto'` devient
+  l'echelle qui cadre le dessin), plan par defaut vide.
+- **PDF** : une page A4 paysage par etage non vide, apres le schema et avant les listes,
+  avec titre, echelle numerique + barre graphique, legende des symboles et cartouche.
+  **Rendu en mm et a l'echelle exacte** (1:N annonce = 1:N mesure ; contenu coupe hors
+  zone de trace) ; l'ecran affiche le meme **cadre A4** (feuille, zones, cartouche, voile)
+  et un **zoom general 1:N** (champ + `−`/`+`, poignee `printCenter`).
+- **BE-09** (info) : appareillage non place sur le plan — signale seulement si le plan
+  contient deja au moins un placement ; message lisible (`symbolName` + repere).
+
+
 ---
 
 ## Historique des etapes
@@ -112,7 +142,7 @@ arrivee `3N~ 400/230 V`, bus L1/L2/L3, controle d'equilibrage.
 `src/rules-be.js`, 6 regles sourcees, panneau d'anomalies cliquable.
 
 ### Etape 6 - Liste composants
-Tableau detaille, materiel regroupe par designation, export CSV UTF-8 `;`.
+Tableau detaille, materiel regroupe par designation.
 
 ### Etape 8 - Finitions
 Annuler/retablir par instantane (150 pas), copier/coller symbole ou circuit,
@@ -130,7 +160,7 @@ Tests automatises sans dependance (`node --test` : modele/migrations, 6 regles,
 proprietes de layout) + workflow CI (syntaxe `node --check` + tests). Durcissement
 du processus principal : validation d'arbre, `openPath` limite aux recents,
 fenetre PDF verrouillee (`javascript:false`), ecritures atomiques, autosave miroir
-disque. Shim web `src/platform.js` : memes fonctions CSV/PDF en navigateur qu'en
+disque. Shim web `src/platform.js` : memes fonctions PDF/ouverture en navigateur qu'en
 bureau. Avertissement « trace contraint » quand le layout atteint son plafond.
 PDF : SVG des symboles inlines en `data:` (`print-assets.js`), plus de dependance
 `file:` ; reperage des circuits (`renumberCircuits`) deplace dans `model.js`.
@@ -152,9 +182,39 @@ partage navigateur/bureau).
 
 ---
 
+### Etape 16 - Audit 0.4.0
+
+Correction des ecarts releves sur la 0.4.0 (branche `schema-implantation`) :
+PDF du plan a l'echelle exacte (unites mm, clip de la zone de trace, barre graphique
+exacte) ; cadre A4 a l'ecran (feuille, zones, cartouche, voile hors zone, poignee
+`printCenter`, case « Afficher le cadre A4 » memorisee) ; zoom general 1:N (champ
+editable + `−`/`+`, suggestions `PLAN_SCALES`, Recentrer / Centrer le cadre / Ajuster au
+dessin ; plus de mode `'auto'`) ; export PDF par **fichier temporaire** (`loadFile` au
+lieu d'une URL `data:` plafonnee par Chromium) ; ouverture par dialogue **ajoutee aux
+recents** ; `APP_VERSION` alignee sur `package.json` (test de coherence) ; CI declenchee
+sur **toutes les branches** ; messages **BE-06/BE-09 lisibles** ; cles `localStorage`
+renommees `elexio.*` avec reprise (sans suppression) des anciennes `elecschema.*`.
+
+---
+
+### Etape 17 - Node parallele (0.5.0)
+
+Nouveau pseudo-symbole **node parallele** (`node_parallel`, palette « Cables ») :
+barre fine a l'epaisseur d'un fil, **orientable**, avec 2 sorties par defaut et une
+sortie vierge ajoutee a chaque element (comme le tableau, mais sans sortie bas et
+en acceptant **tout** type). Barre qui s'arrete a la derniere sortie occupee
+(son tiret cloture le node), « + » vert juste apres le bout ; proportions reprises
+de `symbols/node_parallel.svg`.
+
+Layout : les elements sont **nettement resserres** (ecart = demi-parent + demi-enfant
++ 10 px, au lieu d'un pas fixe) ; les symboles redessines suivent leur `viewBox`
+(prises par type via `defOf`/`socketSize`).
+
+---
+
 ## Suite possible
 
-- Page **schema d'implantation** (onglet desactive pour l'instant).
 - Icone et metadonnees de version signees.
-- Tests automatises : `node --test` sur modele/regles/layout (fait) ; tests d'UI (Playwright) a faire.
+- Tests automatises : `node --test` sur modele/regles/layout/plan (fait) ; tests d'UI (Playwright) a faire.
 - Recherche dans la palette, renommage en masse.
+- Schema d'implantation : liaisons entre symboles, cotes automatiques, export DXF.

@@ -30,6 +30,14 @@ export function isProtection(symbolType) {
 /** Directions cardinales des points d'ancrage. */
 export const ANCHOR_DIRECTIONS = ['right', 'top', 'left', 'bottom'];
 
+/* ---------- plan d'implantation ---------- */
+/** Éléments jamais posés sur le plan (liaisons de schéma, pas d'appareillage). */
+export const PLAN_EXCLUDED = ['node', 'node_parallel', 'fil', 'breaker', 'rcd', 'fuse', 'sectionneur'];
+/** Échelles normalisées 1:N, de la plus grande (1:20) à la plus petite (1:500). */
+export const PLAN_SCALES = [20, 25, 50, 75, 100, 125, 150, 200, 250, 500];
+/** Taille d'un symbole sur papier, en mm (constante quelle que soit l'échelle). */
+export const PLAN_SYMBOL_MM = 4;
+
 /** Tableau : une entrée (ancrage à gauche, occupée par le parent), des sorties en haut.
  *  Chaque sortie occupée ouvre une sortie vierge : le tableau s'élargit. */
 export const TABLEAU_OUTPUTS = 2;
@@ -37,9 +45,26 @@ export const TABLEAU_OUTPUT_TYPES = ['rcd', 'breaker', 'sectionneur', 'fil'];
 
 /** Clés d'ancrage utilisables d'un élément (clés de `children`). */
 export function anchorKeysOf(node) {
+  if (node.symbolType === 'node_parallel') {
+    const tops = Array.from({ length: node.outputs || TABLEAU_OUTPUTS }, (_, i) => 'top-' + (i + 1));
+    return [...tops];
+  }
   if (node.symbolType === 'tableau') {
     const tops = Array.from({ length: node.outputs || TABLEAU_OUTPUTS }, (_, i) => 'top-' + (i + 1));
     return [...tops, 'bottom'];
+  }
+  // Aucun point d'ancrage.
+  const NONE = ['earth', 'light', 'fridge', 'freezer', 'oven', 'microwave', 'dishwasher',
+    'washing_machine', 'dryer', 'kitchenette', 'heater', 'boiler', 'fan', 'bell', 'appliance'];
+  if (NONE.includes(node.symbolType)) return [];
+  // Un seul point d'ancrage fixe.
+  if (node.symbolType === 'fuse') return ['top'];
+  if (['timer', 'clock_switch', 'contactor', 'thermostat', 'motion'].includes(node.symbolType)) return ['top'];
+  // Un seul point d'ancrage, en face du point d'entree.
+  const SINGLE = ['socket', 'switch', 'switch_pilot', 'push', 'motor', 'sectionneur'];
+  if (SINGLE.includes(node.symbolType)) {
+    const d = node.dir ? baseDir(node.dir) : 'bottom';
+    return ANCHOR_DIRECTIONS.includes(d) ? [d] : ['bottom'];
   }
   return ANCHOR_DIRECTIONS;
 }

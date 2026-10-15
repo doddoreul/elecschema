@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30" height="30" viewBox="0 0 30 30">
+  <title>oven.svg</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <g>
+      <path d="M15 -5 L15 1 M15 29 L15 35" fill="none" stroke="#111827" stroke-width="2"/>
+      <path d="M1 1 L29 1 L29 29 L1 29 Z" fill="#ffffff" stroke="#111827" stroke-width="2"/>
+      <path d="M1 1 L29 1 L29 29 L1 29 Z" fill="#ffffff" stroke="#111827" stroke-width="2"/>
+      <path d="M10.471 19.383 C10.471 16.882 12.499 14.854 15 14.854 C17.501 14.854 19.529 16.882 19.529 19.383 C19.529 21.884 17.501 23.911 15 23.911 C12.499 23.911 10.471 21.884 10.471 19.383 Z" fill="#000000"/>
+    </g>
+  </g>
+</svg>

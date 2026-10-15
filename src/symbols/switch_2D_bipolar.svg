@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30" height="30" viewBox="0 0 30 30">
   <title>switch_2D_bipolar.svg</title>
   <g id="Layer_1" data-name="Layer 1">
-    <path d="M20.006 19.986 L8.244 8.223" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-    <path d="M9.51 8.371 L12.682 5.199" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-    <path d="M13.51 12.371 L16.682 9.199" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-    <path d="M19.994 20.014 L31.756 31.777" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-    <path d="M30.49 31.629 L27.318 34.801" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-    <path d="M26.49 27.629 L23.318 30.801" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
-    <path d="M16.352 20.057 C16.352 18.066 17.966 16.452 19.956 16.452 C21.947 16.452 23.561 18.066 23.561 20.057 C23.561 22.047 21.947 23.661 19.956 23.661 C17.966 23.661 16.352 22.047 16.352 20.057 Z" fill="#ffffff" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+    <g>
+      <path d="M15.006 14.986 L3.244 3.223" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M4.51 3.371 L7.682 0.199" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M8.51 7.371 L11.682 4.199" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M14.994 15.014 L26.756 26.777" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M25.49 26.629 L22.318 29.801" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M21.49 22.629 L18.318 25.801" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+      <path d="M11.352 15.057 C11.352 13.066 12.966 11.452 14.956 11.452 C16.947 11.452 18.561 13.066 18.561 15.057 C18.561 17.047 16.947 18.661 14.956 18.661 C12.966 18.661 11.352 17.047 11.352 15.057 Z" fill="#ffffff" stroke="#000000" stroke-width="2" stroke-miterlimit="10"/>
+    </g>
   </g>
 </svg>

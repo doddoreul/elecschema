@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30" height="30" viewBox="0 0 30 30">
+  <title>dryer.svg</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <g>
+      <path d="M15 -5 L15 1 M15 29 L15 35" fill="none" stroke="#111827" stroke-width="2"/>
+      <path d="M1 1 L29 1 L29 29 L1 29 Z" fill="#ffffff" stroke="#111827" stroke-width="2"/>
+      <path d="M1 1 L29 1 L29 29 L1 29 Z" fill="#ffffff" stroke="#111827" stroke-width="2"/>
+      <path d="M10.471 21 C10.471 18.499 12.499 16.471 15 16.471 C17.501 16.471 19.529 18.499 19.529 21 C19.529 23.501 17.501 25.529 15 25.529 C12.499 25.529 10.471 23.501 10.471 21 Z" fill="#000000"/>
+      <g>
+        <path d="M5.971 10 C5.971 7.499 7.999 5.471 10.5 5.471 C13.001 5.471 15.029 7.499 15.029 10 C15.029 12.501 13.001 14.529 10.5 14.529 C7.999 14.529 5.971 12.501 5.971 10 Z" fill="none" stroke="#000000" stroke-miterlimit="10"/>
+        <path d="M14.971 10 C14.971 7.499 16.999 5.471 19.5 5.471 C22.001 5.471 24.029 7.499 24.029 10 C24.029 12.501 22.001 14.529 19.5 14.529 C16.999 14.529 14.971 12.501 14.971 10 Z" fill="none" stroke="#000000" stroke-miterlimit="10"/>
+      </g>
+    </g>
+  </g>
+</svg>

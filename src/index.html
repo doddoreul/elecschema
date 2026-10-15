@@ -8,17 +8,15 @@
 </head>
 <body>
   <header class="toolbar">
-    <strong class="brand">Elexio</strong>
-    <span class="scope">Domestique · Belgique · RGIE/AREI</span>
+    <strong class="brand">🗲 Elexio</strong>
     <span class="spacer"></span>
+    <span id="norm-display" class="scope"></span>
     <button id="btn-new" title="Nouveau projet (Ctrl+N)">Nouveau</button>
     <button id="btn-open" title="Ouvrir un projet (Ctrl+O)">Ouvrir…</button>
     <button id="btn-save" title="Enregistrer dans le stockage local (Ctrl+S)">Enregistrer</button>
     <button id="btn-undo" title="Annuler (Ctrl+Z)" disabled>↶</button>
     <button id="btn-redo" title="Rétablir (Ctrl+Maj+Z)" disabled>↷</button>
     <span class="spacer"></span>
-    <span id="recent-label" class="recents-label">Récents</span>
-    <select id="recent-select" class="recents" title="Projets récents"></select>
     <button id="btn-export" title="Exporter le schéma en JSON">Exporter…</button>
     <button id="btn-pdf" title="Exporter le schéma en PDF">PDF…</button>
   </header>
@@ -26,7 +24,7 @@
   <nav class="tabs" role="tablist">
     <button class="tab active" role="tab" data-tab="info" aria-selected="true">Informations sur l'installation</button>
     <button class="tab" role="tab" data-tab="schema" aria-selected="false">Schéma unifilaire</button>
-    <button class="tab disabled" role="tab" data-tab="plan" aria-selected="false" disabled title="Prévu dans une version ultérieure">Schéma d'implantation</button>
+    <button class="tab" role="tab" data-tab="plan" aria-selected="false">Schéma d'implantation</button>
     <button class="tab" role="tab" data-tab="bom" aria-selected="false">Liste des composants</button>
   </nav>
 
@@ -54,6 +52,12 @@
             <select data-info="projet.typeAlim">
               <option value="MONO">Monophasé</option>
               <option value="TRI">Triphasé 400 V 3N~</option>
+            </select>
+          </label>
+          <label>Norme
+            <select data-info="projet.norme">
+              <option value="RGIE">RGIE / AREI (belgique)</option>
+              <option value="NFC15-100">NFC15-100 (france)</option>
             </select>
           </label>
           <div class="row">
@@ -136,6 +140,7 @@
             <span id="zoom-label">100 %</span>
             <button id="btn-zoom-in">+</button>
             <button id="btn-zoom-reset">Ajuster</button>
+            <button id="btn-recenter">Recentrer</button>
           </div>
         </aside>
         <main class="canvas-wrap">
@@ -169,6 +174,7 @@
             <label id="e-label-lbl">Repère<input id="e-label" type="text" maxlength="20"></label>
             <label class="check" id="e-locked-lbl"><input id="e-locked" type="checkbox"> Verrouiller le repère</label>
             <label class="check" id="e-showlabel-lbl"><input id="e-showlabel" type="checkbox"> Afficher le repère sur le schéma</label>
+            <label class="check" id="e-circuit-lbl"><input id="e-circuit" type="checkbox"> Circuit propre</label>
             <label id="e-count-lbl">Nombre de prises
               <input id="e-count" type="number" min="1" max="12">
               <output id="e-count-val"></output>
@@ -177,19 +183,16 @@
             <label id="e-orient-lbl">Orientation<select id="e-orient">
               <option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="-90">-90°</option>
             </select></label>
-            <label id="e-labelpos-lbl">Position du texte<select id="e-labelpos">
-              <option value="right">Droite</option><option value="left">Gauche</option><option value="top">Haut</option><option value="bottom">Bas</option>
-            </select></label>
-            <label id="e-labeloffset-lbl">Distance du texte
-              <input id="e-labeloffset" type="range" min="-24" max="60" step="1" value="-5">
+            <label id="e-labeloffset-lbl">Distance du repère<input id="e-labeloffset" type="range" min="-24" max="60" step="1" value="-5">
               <output id="e-labeloffset-val">-5 px</output>
             </label>
-            <label id="e-labelrot-lbl">Orientation du texte<select id="e-labelrot">
-              <option value="auto">Automatique</option><option value="0">0 deg</option><option value="90">90 deg</option><option value="180">180 deg</option><option value="-90">-90 deg</option>
-            </select></label>
+            <label id="e-detailoffset-lbl">Distance du libellé
+              <input id="e-detailoffset" type="range" min="-24" max="60" step="1" value="9">
+              <output id="e-detailoffset-val">9 px</output>
+            </label>
             <label id="e-detail-lbl">Désignation<input id="e-detail" type="text" maxlength="30" placeholder="ex. Compteur kWh"></label>
-            <fieldset class="mini" id="e-prot-box" hidden>
-              <legend>Protection</legend>
+            <div class="mini" id="e-prot-box" hidden>
+              <h3>Protection</h3>
               <label id="e-rating-lbl">Calibre (A)<select id="e-rating"></select></label>
               <label id="e-poles-lbl">Nombre de pôles<select id="e-poles">
                 <option value="1P">1P</option><option value="2P">2P</option><option value="3P">3P</option><option value="4P">4P</option>
@@ -200,7 +203,7 @@
               <label id="e-diff-lbl">Sensibilité<select id="e-diff"></select></label>
               <label id="e-curve-lbl">Courbe<select id="e-curve"><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></label>
               <label id="e-icb-lbl">Pouvoir de coupure (A)<input id="e-icb" type="number"></label>
-            </fieldset>
+            </div>
             <label id="e-switchtype-lbl">Type d'interrupteur<select id="e-switchtype"></select></label>
             <fieldset class="mini" id="e-fil-box" hidden>
               <legend>Fil / câble</legend>
@@ -223,35 +226,166 @@
       </div>
     </section>
 
-    <!-- ONGLET 3 : IMPLANTATION (plus tard) -->
+    <!-- ONGLET 3 : SCHÉMA D'IMPLANTATION -->
     <section class="pane" data-pane="plan">
-      <div class="placeholder">
-        <h2>Schéma d'implantation</h2>
-        <p>Fonction prévue dans une version ultérieure. Contient le plan de position des appareillages dans l'habitation.</p>
+      <div class="plan-workspace">
+        <div class="plan-bar">
+          <div class="plan-bar-row">
+            <div id="plan-levels" class="plan-levels" role="tablist"></div>
+            <button id="plan-level-add" title="Ajouter un étage">+ Étage</button>
+            <button id="plan-level-rename" title="Renommer l'étage actif">Renommer…</button>
+            <button id="plan-level-up" title="Monter l'étage">◀</button>
+            <button id="plan-level-down" title="Descendre l'étage">▶</button>
+            <button id="plan-level-del" title="Supprimer l'étage (les éléments du schéma sont conservés)">Supprimer l'étage</button>
+            <span class="plan-sep"></span>
+            <button id="plan-tool-select" class="plan-icon-btn" title="Sélectionner et déplacer" aria-label="Sélection"><img class="plan-icon" src="assets/selection.png" alt=""></button>
+            <button id="plan-tool-wall" class="plan-icon-btn" title="Tracer des murs" aria-label="Mur"><img class="plan-icon" src="assets/firewall.png" alt=""></button>
+            <button id="plan-tool-door" class="plan-icon-btn" title="Poser une porte sur un mur" aria-label="Porte"><img class="plan-icon" src="assets/opened-door-aperture.png" alt=""></button>
+            <button id="plan-tool-window" class="plan-icon-btn" title="Poser une fenêtre sur un mur" aria-label="Fenêtre"><img class="plan-icon" src="assets/window.png" alt=""></button>
+            <button id="plan-tool-room" class="plan-icon-btn" title="Poser un texte sur le plan" aria-label="Texte"><img class="plan-icon" src="assets/text.png" alt=""></button>
+            <span class="spacer"></span>
+          </div>
+          <div class="plan-bar-row" id="plan-options-row" hidden>
+            <label id="plan-opening-w-wrap" class="plan-bar-field" hidden>Largeur (cm)
+              <input id="plan-opening-w" type="number" min="1" step="1" value="90">
+            </label>
+            <div id="plan-door-panel" class="plan-bar-group" hidden>
+              <button id="plan-opening-hinge" class="plan-icon-btn" title="Miroir horizontal : bascule la porte le long du mur (inverse la charnière)" aria-label="Miroir horizontal"><img class="plan-icon" src="assets/flip.png" alt=""></button>
+              <button id="plan-opening-swing" class="plan-icon-btn" title="Miroir vertical : bascule la porte de l'autre côté du mur" aria-label="Miroir vertical"><img class="plan-icon" src="assets/flip.png" alt=""></button>
+            </div>
+          </div>
+          <div class="plan-bar-row">
+            <button id="plan-toggle-elements" title="Tout masquer pour ne garder que l'arrière-plan, ou tout réafficher">Afficher / masquer le dessin</button>
+            <label class="plan-bar-check"><input id="plan-frame-show" type="checkbox" checked> Afficher le cadre A4</label>
+            <button id="plan-recenter" title="Cadrer toute la feuille A4 dans la fenêtre">Recentrer</button>
+            <button id="plan-frame-center" title="Centrer le cadre dans la fenêtre (sans changer le zoom)">Centrer le cadre</button>
+            <button id="plan-fit-drawing" title="Choisir l'échelle qui ajuste le dessin à la page et recentrer">Ajuster au dessin</button>
+            <span class="plan-sep"></span>
+            <button id="plan-zoom-out" title="Dézoomer">−</button>
+            <button id="plan-zoom-in" title="Zoomer">+</button>
+            <label class="plan-bar-field">Opacité des éléments
+              <input id="plan-elements-opacity" type="range" min="0" max="100" value="100">
+            </label>
+          </div>
+        </div>
+        <div id="plan-text-bar" class="plan-text-bar" hidden>
+          <span class="plan-text-bar-title">Texte</span>
+          <label class="plan-bar-field">Taille
+            <select id="plan-text-size">
+              <option value="0.75">Petite</option>
+              <option value="1">Normale</option>
+              <option value="1.5">Grande</option>
+              <option value="2">Très grande</option>
+            </select>
+          </label>
+          <button id="plan-text-bold" type="button" class="plan-fmt" title="Gras" aria-label="Gras" aria-pressed="false"><b>G</b></button>
+          <button id="plan-text-italic" type="button" class="plan-fmt" title="Italique" aria-label="Italique" aria-pressed="false"><i>I</i></button>
+          <button id="plan-text-underline" type="button" class="plan-fmt" title="Souligné" aria-label="Souligné" aria-pressed="false"><u>S</u></button>
+        </div>
+        <div class="plan-body">
+          <aside class="plan-palette">
+            <h3>Non placés</h3>
+            <p class="count">Éléments du schéma à poser (glisser-déposer ou cliquer puis cliquer le plan).</p>
+            <div id="plan-unplaced"></div>
+          </aside>
+          <div id="plan-host" class="canvas-host plan-host">
+            <svg id="plan-canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+          </div>
+          <aside class="plan-side">
+            <h3>Mise en page</h3>
+            <label class="plan-field">Échelle 1:
+              <input id="plan-scale-input" type="number" min="10" max="1000" step="1" value="100" list="plan-scale-list">
+            </label>
+            <datalist id="plan-scale-list"></datalist>
+            <div class="plan-scale-row">
+              <button id="plan-scale-dec" title="Réduire le numéro d'échelle (1:N plus petit, dessin plus grand)">−</button>
+              <button id="plan-scale-inc" title="Augmenter le numéro d'échelle (1:N plus grand, dessin plus petit)">+</button>
+            </div>
+            <p id="plan-scale-eff" class="plan-scale-eff"></p>
+            <div class="plan-checks">
+              <label><input id="plan-frame-lock" type="checkbox"> Verrouiller la mise en page</label>
+            </div>
+            <h3>Fond de plan</h3>
+            <p class="count">Image temporaire : tracez par-dessus, puis supprimez-la.</p>
+            <button id="plan-bg-import">Importer un fond…</button>
+            <div id="plan-bg-panel" class="plan-bg-panel" hidden>
+              <p id="plan-bg-state" class="count"></p>
+              <button id="plan-bg-calib">Calibrer…</button>
+              <label class="plan-field">Opacité de l'arrière-plan <input id="plan-bg-opacity" type="range" min="0" max="100" value="50"></label>
+              <div class="plan-checks">
+                <label><input id="plan-bg-visible" type="checkbox" checked> Afficher le fond</label>
+                <label><input id="plan-bg-lock" type="checkbox" checked> Verrouillé</label>
+              </div>
+              <div class="plan-bg-zoom">
+                <span>Taille de l'arrière-plan</span>
+                <button id="plan-bg-smaller" title="Rétrécir l'arrière-plan (fond déverrouillé)">−</button>
+                <button id="plan-bg-bigger" title="Agrandir l'arrière-plan (fond déverrouillé)">+</button>
+              </div>
+              <button id="plan-bg-del">Supprimer le fond</button>
+            </div>
+            <div id="plan-opening-panel" class="plan-bg-panel" hidden>
+              <h3>Ouverture sélectionnée</h3>
+              <p id="plan-opening-info" class="count"></p>
+              <button id="plan-opening-del">Supprimer l’ouverture</button>
+            </div>
+            <div id="plan-room-panel" class="plan-bg-panel" hidden>
+              <h3>Texte sélectionné</h3>
+              <label class="plan-field">Contenu <input id="plan-room-name" type="text" placeholder="Note, repère…"></label>
+              <button id="plan-room-del">Supprimer le texte</button>
+            </div>
+            <div id="plan-wall-panel" class="plan-bg-panel" hidden>
+              <h3>Mur sélectionné</h3>
+              <p id="plan-wall-info" class="count"></p>
+              <label class="plan-field">Épaisseur (cm) <input id="plan-wall-t" type="number" min="1" step="1" value="20"></label>
+              <button id="plan-wall-del">Supprimer le mur</button>
+            </div>
+            <div id="plan-place-panel" class="plan-bg-panel" hidden>
+              <h3>Symbole sélectionné</h3>
+              <p id="plan-place-info" class="count"></p>
+              <label class="plan-field">Rotation (°) <input id="plan-place-rot" type="number" step="90" value="0"></label>
+              <button id="plan-place-del">Retirer du plan</button>
+            </div>
+            <p id="plan-hint" class="count"></p>
+          </aside>
+        </div>
       </div>
     </section>
+
+    <dialog id="plan-dialog" class="prop-dialog">
+      <form method="dialog" id="plan-dialog-form">
+        <h3 id="plan-dialog-title"></h3>
+        <label class="plan-field"><span id="plan-dialog-label"></span>
+          <input id="plan-dialog-input" type="text" autocomplete="off">
+        </label>
+        <menu class="prop-actions">
+          <button type="submit" value="cancel" formnovalidate>Annuler</button>
+          <button type="submit" value="ok" class="primary">OK</button>
+        </menu>
+      </form>
+    </dialog>
 
   <!-- ONGLET 4 : LISTE DES COMPOSANTS -->
     <section class="pane" data-pane="bom">
       <div class="bom-head">
-        <h2>Liste des composants</h2>
+        <h2>Liste des circuits</h2>
         <div>
-          <button id="btn-bom-csv">Exporter CSV…</button>
           <span id="bom-count" class="count"></span>
           <span id="bom-groups" class="count"></span>
         </div>
       </div>
+      <h3 class="bom-sub">Liste des circuits</h3>
       <div class="table-wrap">
-        <table id="bom-table">
+        <table id="bom-circuits">
           <thead>
-            <tr><th>Repère</th><th>Emplacement</th><th>Symbole</th><th>Caractéristique</th><th>Type</th></tr>
+            <tr><th>Circuit</th><th>Parent</th><th>Enfants</th></tr>
           </thead>
           <tbody></tbody>
         </table>
-        <p id="bom-empty" class="hint">Aucun composant.</p>
+        <p id="bom-circuits-empty" class="hint">Aucun circuit.</p>
       </div>
 
-      <h3 class="bom-sub">Matériel regroupé</h3>
+      <h3 class="bom-sub">Liste du matériel</h3>
+
       <div class="table-wrap">
         <table id="bom-grouped">
           <thead>

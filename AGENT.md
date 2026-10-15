@@ -26,13 +26,13 @@ Un groupe sous différentiel peut être placé sous un différentiel, et ainsi d
 
 ## Stack
 
-Electron 33 + JS natif (aucune lib lourde). Node 24. Windows 10/11.
+Electron 44 + JS natif (aucune lib lourde). Node 24. Windows 10/11.
 
 ## Commandes
 
 ```
 npm start                                      lancer
-npm test                                       tests auto (node --test : modele, regles, layout)
+npm test                                       tests auto (node --test : modele, regles, layout, plan, format)
 npm run check                                  syntaxe (node --check sur tout le JS)
 npm run build                                  NSIS + portable -> dist/
 npm version X.Y.Z --no-git-tag-version         bumper version
@@ -48,25 +48,30 @@ node_modules\electron\dist\electron.exe . --enable-logging=stderr > rc.out 2>&1
 
 ```
 index.html        redirection (Pages) vers src/
-main.js           processus principal : fenetres, ouverture, PDF, CSV, recents
+main.js           processus principal : fenetres, ouverture, PDF, recents
 preload.js        pont isole (contextBridge -> window.elexio, sandbox:true)
 print-assets.js   inlining des SVG du PDF (file: -> data:), pur/CJS
 src/
-  index.html      4 onglets + panneaux proprietes (1 onglet desactive : implantation)
+  index.html      4 onglets + panneaux proprietes (dont implantation)
   styles.css
-  model.js        modele de donnees (arbre d'elements, migrations, reperage circuits)
-  format.js       format de fichier .elx (JSON enveloppe + base64, versionne)
+  model.js        modele de donnees (arbre d'elements, migrations, reperage circuits, ensurePlan)
+  format.js       format de fichier .elx (JSON enveloppe + base64, versionne, images)
   default-schema.js  schema pre-rempli a la creation
   symbols.js      31 symboles + SOCKET_TYPES (10) + SWITCH_TYPES (7)
   symbols/        52 fichiers SVG autonomes (dessins, pas de JS)
-  standards.js    valeurs normalisees (calibres, sections, delta, courbes, pages A4)
-  render.js       rendu SVG + mise en page A4 + cartouche
-  rules-be.js     6 regles de validation
+  standards.js    valeurs normalisees (calibres, sections, delta, courbes, pages A4, PLAN_*)
+  render.js       rendu SVG + mise en page A4 + cartouche (symbolHref partage)
+  plan-model.js   plan d'implantation : modele pur (niveaux, murs, ouvertures, pieces, placements)
+  plan-render.js  rendu SVG d'un niveau de plan (ecran + mode print N&B)
+  plan-ui.js      interactions de l'onglet implantation (outils, zoom, panneau « Non places »)
+  plan-assets.js  images de fond de plan, hors du projet (memoire + IndexedDB)
+  plan-print.js   pages A4 du plan dans le dossier PDF (titre, echelle, legende, cartouche)
+  rules-be.js     7 regles de validation
   ui.js           onglets, formulaires, interactions
-  platform.js     shim web de window.elexio (hors Electron : CSV/PDF/ouverture)
+  platform.js     shim web de window.elexio (hors Electron : PDF/ouverture)
 tools/serve-browser.js    serveur de test navigateur
 tools/check-syntax.mjs    verificateur de syntaxe (npm run check)
-test/                     tests automatises node:test (model, rules-be, layout, format)
+test/                     tests automatises node:test (model, plan-model, rules-be, layout, format)
 .github/workflows/pages.yml  deploiement Pages
 .github/workflows/ci.yml     syntaxe + tests (node --test)
 TESTS.md          cas de test manuels
@@ -90,6 +95,7 @@ cable          { n, terre, section, type, montage }, fil uniquement
 ```
 
 Decisions actees :
+
 - **Arbre unique d'elements** ancres par points d'ancrage. Les anciens concepts
   `circuits` / `difs` sont **supprimes** (migration legacy -> nodes, voir `migrateProject`).
 - **Compteur : un seul point d'ancrage, a droite** (`freeAnchorDirs`, `drawAnchors`) ;
@@ -123,7 +129,7 @@ Decisions actees :
   de texte vaut `spinRot = rot - orient`. À `orient = -90` : repère en bas et horizontal.
   Champ masqué pour un node (aucune propriété) et pour le compteur (texte fixe).
 - **Favoris & menu contextuel** : chaque symbole de la palette a une **étoile** (`.fav-star`, `bindStar`)
-  qui bascule le favori (`localStorage 'elecschema.favorites'`, `toggleFavorite`, `favoriteKeys`).
+  qui bascule le favori (`localStorage 'elexio.favorites'`, `toggleFavorite`, `favoriteKeys`).
   Section **« Favoris »** en tête de palette (`renderFavorites`, reconstruite par `renderPalette`).
   Les anciens « Récents » (fréquence) sont supprimés.
   Clic sur un « + » d'ancrage -> **menu contextuel** `#anchor-menu` (position fixe au point
@@ -143,18 +149,38 @@ Decisions actees :
   **Un node n'a aucune propriété** : pas de repère (aucun label auto), pas de désignation,
   pas d'orientation ni position de texte dans le panneau (seuls « Node » et « Supprimer »
   restent affichés), aucun texte dessiné sur le schéma, exclu du BOM.
+  Le fichier `symbols/carrefour.svg` est un simple **point de dérivation** dans un carré **5×5**
+  (viewBox `0 0 5 5`), centré sur le conducteur : sa définition `SYMBOLS.node` (`w: 5, h: 5`)
+  reprend cette taille réelle, qui pilote la place réservée (grille), la hitbox et les « + ».
   `normalizeTypes` nettoie les anciens champs hérités (label, labelPos, showLabel, poles…).
+- **Catégories & sous-catégories de la palette** : `SYMBOL_CATEGORIES` (`symbols.js`) liste les
+  groupes affichés (`<h4>`) ; un groupe peut porter des `subs` (sous-groupes `<h5>` avec leur
+  propre `id`). `renderPalette` répartit les symboles par `s.category === id` (`symItemsHtml`).
+  La sous-catégorie **« Électroménager »** (id `electromenager`, sous « Appareils d’utilisation (G) »)
+  regroupe 8 appareils dessinés en **30 × 30** : `fridge` (FR), `freezer` (CG), `oven` (FO),
+  `microwave` (MO), `dishwasher` (LV), `washing_machine` (LL),
+  `dryer` (SL), `kitchenette` (KT). Repères auto (`PREFIXES`, `model.js`) et libellé BOM
+  (`TYPE_LABELS`, `ui.js`) ajoutés pour chacun.
 - Suppression d'un element : le **parent** est sélectionné ensuite (`selectOnly`). Ses enfants remontent au parent (1er ancrage libre), sinon au
   frere promu, sinon le sous-arbre est supprime.
 - Compteur = racine, unique, **en bas a gauche**, editable au clic.
 - Reperes auto par prefixe (Q, X, E, F, D...), globaux au projet.
 - Unifilaire uniquement : jamais de schema developpe.
 - **Autosave permanent** : le projet courant est serialise dans `localStorage`
-  (`elecschema.autosave`) a *chaque* modification (`markDirty`/`restore`/`clearDirty`) et
+  (`elexio.autosave`) a *chaque* modification (`markDirty`/`restore`/`clearDirty`) et
   restaure au demarrage (`restoreAutosave()`). En bureau, un **miroir disque** est ecrit
   en plus (`autosave:write`, debounce 400 ms, `userData/autosave.json`, ecriture atomique)
   et sert de repli si le `localStorage` est vide (profil efface). Enregistrer (Ctrl+S)
   ecrit dans le stockage local.
+- **Onglet actif** : memorise a chaque bascule (`switchTab`, `localStorage 'elexio.tab'`)
+  et restaure au chargement (`savedTabName()` dans `DOMContentLoaded`, puis re-applique apres
+  « Reprendre » pour ne pas retomber sur « Informations »).
+- **Cles `localStorage`** : prefixe **`elexio.*`** (`elexio.autosave`, `elexio.tab`,
+  `elexio.printPreview`, `elexio.favorites`, `elexio.planFrame`). `lsGet()` reprend a la
+  lecture l'ancienne cle `elecschema.*` et la recopie (migration douce, **rien supprime**).
+- **Clavier** (`ui.js`, `keydown`) : `Ctrl+Z/Y` annuler/retablir, `Ctrl+S` enregistrer,
+  `Ctrl+N` nouveau, `Ctrl+A` **ne selectionne plus tout le texte** de la page (sauf dans un
+  champ de saisie, ou le comportement natif est conserve).
 - **Format de fichier `.elx`** (`src/format.js`) : JSON enveloppe (`format`,
   `formatVersion`, `schemaVersion`, `app`, `exportedAt`, `project`) puis **encode en
   base64**. « Exporter » telecharge un `.elx` ; « Ouvrir » le decode et verifie la
@@ -166,7 +192,9 @@ Decisions actees :
   (`socketType`, defaut `earth_childproof`) choisit le fichier SVG parmi `SOCKET_TYPES`
   (`symbols.js`). 10 types : generic, waterproof, earth, childproof, earth_childproof,
   earth_childproof_double, earth_childproof_triple, switch, switch_lock, transformer.
-  Rendu : `socketUrl(node.socketType)`.
+  Rendu : `socketUrl(node.socketType)`. La **taille** (`defOf`, `socketSize`, `symbols.js`) suit le
+  `viewBox` du fichier du type : 30×25 (generic, waterproof, earth_childproof_double, switch,
+  switch_lock, transformer), 30×20 (earth, childproof, earth_childproof), 30×30 (earth_childproof_triple).
   `normalizeSockets()` convertit les anciens types eclates (socket_earth, ...) a l'ouverture.
 - **Interrupteurs** : un seul symbole palette `switch` ; la propriete **type d'interrupteur**
   (`switchType`, defaut `simple`) choisit le fichier SVG parmi `SWITCH_TYPES` (`symbols.js`).
@@ -210,14 +238,152 @@ Decisions actees :
   - Accepte `rcd`, `breaker`, `sectionneur` et `fil` (`TABLEAU_OUTPUT_TYPES`, en tête de `canAccept`).
   - Disposition (`computeLayout` dans `render.js`) : routage orthogonal. Chaque enfant part de son port (de préférence dans sa direction, sinon de biais avec pénalité), puis tourne au besoin. Un tracé est refusé s'il touche un élément ou un autre fil (`routeFree`, `segHit`). Les branches rectilignes sont posées avant les détours. Quand un détour est nécessaire, la branche bloquante est décalée (`bias`, `blockerOf`) et tout est recalculé (plafonné à 6 décalages par branche, 30 itérations). Résultat mis en cache (`layoutMemo`).
   - **Limite connue** : dans les configurations très denses (élément entouré de ses propres enfants sur ses 4 ancrages), le plafond peut laisser un passage forcé. Cas rares, pas de garantie formelle. Le layout renvoie `bump != null` quand le plafond est atteint ; `layoutForced()` l'expose et `ui.js` (panneau Controles) affiche alors un **avertissement « trace contraint »**.
-  - Migration à l'ouverture (`normalizeTypes`) : clé `top` → `top-1`, autres clés renumérotées.
+  - **Node parallèle** (`node_parallel`) :
+  - Barre fine (épaisseur de fil, 2 px), orientable comme tout autre élément ; même mécanique de sorties qu'un tableau : 2 sorties par défaut (`top-1`, `top-2` … ), toujours une sortie vierge après la dernière occupée (`syncOutputs`).
+  - Palette uniquement (catégorie « Câbles »). Clé `node_parallel`, fichier `symbols/node_parallel.svg` (vignette).
+  - Comportement comme le tableau : `anchorKeysOf` (sorties `top-1…top-N` **sans `bottom`** : pas de « + » sous la barre), `canAccept` (Accepte **tout** type sur n'importe quelle sortie, comme un point de dérivation), `removeOutput`, `outputs` recalculés. Exclu de la **BOM**, des **circuits**, du **plan d'implantation** et des règles BE (`PLAN_EXCLUDED`, liste skip `renumberCircuits`).
+   - **Croissance des colonnes** (`barAxis` dans `render.js`) : horizontale -> **a droite** ; verticale -> **vers le haut** (colonne 0 = point d arrivee du parent). Les sorties partent perpendiculairement (`anchorDir` pivote la direction logique : haut -> droite a 90).
+   - **Barre** : colonne 0 = entree (arrivee du parent, sans tiret), puis une colonne par sortie (`colOf` renvoie `1 + k`). La barre s arrete a la **derniere sortie occupee** (`npBarCols` ; son tiret fait office de cloture) : longueur = colonnes occupees * BAR_PITCH + NP_END.
+   - **Emplacements libres** : pas de tiret (le fil recouvre celui des sorties occupees) ; le « + » vert se pose **juste apres le bout de la barre** (`NP_PLUS` px dans le sens de la barre, un cran de plus par emplacement libre). Le layout reserve, lui, jusqu a la derniere colonne (`spanOf`).
+   - Dessin : `drawNodeParallel` (barre thin + ticks par sortie, ancres sur le point d arrivee). `halfOf` passe par `sizeOf` : la taille reelle d une barre (dependante du nombre de sorties) sert au « + » d insertion sur les fils.
+  - Aucun repère auto (`NO_AUTO_LABEL`) ; champ Orientation éditable, autres propriétés masquées.
+
+## Plan d'implantation (plan-*.js)
+
+Onglet **Schéma d'implantation** : dessin par **etage**, coordonnees en **cm** (Y vers le bas).
+
+Modele (`plan-model.js`, pur) : `plan { seq, levels[] }` ;
+`level { id, name, bg, walls[], openings[], rooms[], placements[], printScale, printCenter }`.
+- `wall { id, x1, y1, x2, y2, t }` ;
+  `opening { id, kind:'door'|'window', wall, pos(0..1), w, hinge, open }` ;
+  `room { id, name, x, y }` ; `placement { elementId, x, y, rot }`.
+- **Porte** : `hinge` (-1 bord gauche / +1 bord droit de l'ouverture) et `open` (-1 / +1 cote du
+  mur) orientent le battant et l'arc. Defauts `DEFAULT_DOOR = { hinge:-1, open:1 }` (migration
+  idempotente dans `normalizePlan`). L'arc est **centre sur la charniere** et rejoint l'autre
+  bord de l'ouverture (drapeau `sweep = hinge*open > 0 ? 1 : 0`). Reglable dans le panneau
+  « Ouverture selectionnee » (boutons visibles pour une porte uniquement).
+- Un placement est une **instance d'un element du schema** (`elementId`) : aucun nouvel
+  equipement. Un `elementId` n'est pose qu'**une fois**, tous niveaux confondus.
+- **Non placeables** : `PLAN_EXCLUDED` (`node`, `fil`, `breaker`, `rcd`, `fuse`, `sectionneur`).
+  `compteur` et `tableau` sont placeables. Le compteur doit etre pose sur le plan (sinon BE-09).
+- **Taille des symboles** : `symbolSideCm(n) = PLAN_SYMBOL_MM * n / 10` — 4 mm sur papier a 1:N
+  (donc 40 cm reels a 1:100). Constante sur papier, variable a l'ecran.
+- **Echelle** : `printScale` = entier **10…1000** (defaut 100 ; gamme `PLAN_SCALES` proposee).
+  `effectiveScale(lv)` borne l'entier. Plus de mode `'auto'` : la migration 4->5 remplace
+  `'auto'` par l'echelle qui cadrait le dessin (`fitScale`). Les nouveaux etages naissent a 1:100.
+- **Centre d'impression** : `printCenter {x,y}` ou `null` (defaut = centre du contenu, non
+  stocke). `normPrintCenter` le normalise ; la poignee de deplacement du cadre le regle.
+- **Geometrie de page (mm)** — constantes pour que l'ecran et le PDF coincident exactement :
+  `PLAN_PAGE_MM {297,210}`, `PLAN_MARGIN_MM 10`, `PLAN_PRINTABLE_MM`, `PLAN_PLOT_MM {10,22,277,140}`,
+  `PLAN_LEGEND_MM`, `PLAN_CART_MM {162,165,125,31}` ; `cmToPaperMm(cm,n)=cm*10/n`,
+  `paperMmToCm`, `symbolSideCm(n)=4n/10`. `planFrame(lv)` renvoie `{n, center, sheet, printable,
+  plot, legend, cartouche}` en **cm monde** (le centre du contenu est pose au centre de la zone
+  de trace). `fitScale(bounds, plot)` choisit l'echelle entiere qui tient ; `frameOverflow`
+  detecte un dessin trop grand (confirmation a l'export). `scaleBar`/`niceBarCm` calent une
+  barre graphique de ~15 mm sur papier (a 1:100 : 1 m = 10 mm).
+- `SCHEMA_VERSION = 5` : `migratePlan` / `normalizePlan` (idempotents) ; projet sans plan -> un
+  niveau vide. Integrite : placements orphelins / non posables / doublons retires, ouvertures
+  sans mur supprimees, position bornee.
+
+Rendu (`plan-render.js`) : `renderPlanLevel(svg, level, view, opts)` dessine fond, murs,
+placements (repère non tourne + image pivitee), ouvertures (arc porte / double trait fenetre,
+mur interrompu), pieces. `opts.print` : fond blanc opaque, pas de grille, pas d'overlay
+(pour le PDF). `opts.frame` (ecran) : rectangle blanc de la feuille A4 sous le dessin.
+`planLabel` = repère de l'element, sinon repère du debut de circuit.
+
+Interactions (`plan-ui.js`) : outils **Selection / Mur / Porte / Fenetre / Texte**, presentes
+par des **icones** (`assets/selection.png`, `firewall.png`, `opened-door-aperture.png`,
+`window.png`, `text.png` ; icone inversee sur le bouton actif via `button.active .plan-icon`).
+L'outil
+« Texte » reutilise l'entite `rooms` (libelle positionnable, rendu `.plan-room`) ; le contenu
+se saisit par le dialogue commun (`askValue`, boite « Contenu ») a la pose et au **double-clic**
+pour modification ; la mise en forme (taille, gras, italique, souligne) se fait dans une barre
+**dediee** (`.plan-text-bar`, `#plan-text-bar`) qui n'apparait **que** lorsqu'un texte est
+selectionne ; champs `size` (« Normale » = cote d'un symbole, 4 mm sur papier a 1:N ;
+multiples 0.75 / 1 / 1.5 / 2), `bold`, `italic`, `underline`.
+
+Zoom molette, pan milieu ou espace ; volet **gauche** **« Non places »** (glisser-deposer ou
+clic-armer) ; deplacement (grille 5 cm), rotation (champ + `R`), retrait (`Suppr`/bouton ;
+element schema conserve) ; selection partagee (clic symbole plan -> `selectElement` schema).
+Etages : ajout / renommage (double-clic) / monter / descendre / suppression.
+
+Barre d'outils du plan sur **trois lignes** (`.plan-bar-row`) : (1) etages puis, apres un
+**separateur** (`.plan-sep`), les outils **Selection / Mur / Porte / Fenetre / Texte** ;
+(2) reglages d'ouverture — ligne `#plan-options-row`, **masquee** quand aucune ouverture n'est
+selectionnee
+(largeur, miroirs : boutons a icone `assets/flip.png`, `aria-label` Miroir horizontal /
+vertical ; l'icone du miroir horizontal est pivotee de 90° via `#plan-opening-hinge .plan-icon`) ;
+(3) bouton **Afficher / masquer le dessin** (ne garde que
+l'arriere-plan ; murs, ouvertures, textes, symboles et grille disparaissent ; etat visible
+via `aria-pressed`), case **Afficher le cadre A4** (`#plan-frame-show`, memorisee dans
+`localStorage 'elexio.planFrame'`), bouton **Recentrer** (`fitViewToSheet()`, cadre la feuille
+entiere), **Centrer le cadre** (`centerViewOnFrame()`, centrage sans changer le zoom),
+**Ajuster au dessin** (`fitDrawing()` : choisit l'echelle qui tient le trace et recentre),
+boutons **zoom − / +** de la vue (`zoomCenter()`) et curseur **opacite des elements**
+(groupe `.plan-elements` en SVG ; vue seule, non enregistree). Le fond a son propre curseur
+« opacite de l'arriere-plan » (`bg.opacity`, enregistre dans le projet) et des boutons
+**« − » / « + »** dans le panneau de droite (« Taille de l'arriere-plan ») qui l'agrandissent /
+le retrecissent autour de son centre (`scaleBg()`) ; ces boutons ne sont actifs que fond
+**deverrouille**.
+
+**Panneau de droite « Mise en page »** : l'**echelle 1:N** (champ numerique `#plan-scale-input`,
+bornes 10…1000, suggestions `PLAN_SCALES` via `#plan-scale-list`, boutons
+`#plan-scale-dec`/`#plan-scale-inc` ; changer N recale la vue sur la feuille) et la case
+**« Verrouiller la mise en page »** (`#plan-frame-lock`). Verrouillee : l'echelle (champ et
+boutons desactives), « Ajuster au dessin » et le **deplacement du cadre A4** (poignee masquee) ;
+les commandes de vue (Recentrer, Centrer le cadre, zoom) restent actives. Verrou en memoire
+(pas dans le projet, non memorise).
+
+**Cadre A4 a l'ecran** (`drawFrame`, `planFrame`) : feuille blanche, zones imprimable / de
+trace, cartouche, etiquette « {etage} — 1:N », **voile** grisant tout ce qui est hors zone de
+trace (non imprime) et **poignee** au centre de la zone de trace qui regle `printCenter`
+(glisser = le cadre suit le curseur ; masquee si la mise en page est verrouillee). Traits en
+`vector-effect: non-scaling-stroke` (epaisseur constante au zoom) ; calque d'ecran marque
+`ui-only`. WYSIWYG avec le PDF (hors zone : attenue a l'ecran, coupe dans le PDF).
+
+Origine/licence des icones `src/assets/*.png` (selection, firewall, opened-door-aperture,
+window, text, flip) : **telechargees d'une source libre**, mais la **reference exacte
+n'a pas ete conservee** (voir `src/assets/README.md`) — a confirmer avant toute
+redistribution ; ne pas les considerer comme couvertes par la licence MIT du code.
+
+Panneau de droite « Ouverture selectionnee » : info + suppression. Le champ
+**Largeur (cm)** et les deux boutons **Miroir horizontal / Miroir vertical** sont dans la
+**barre d'outils du haut** (`#plan-opening-w-wrap` et `#plan-door-panel`, affiches selon la
+selection : largeur pour toute ouverture, miroirs pour une porte), pour un reglage rapide.
+Les miroirs agissent dans le repere local du mur : horizontal = le long du mur (champ
+`hinge`), vertical = de l'autre cote du mur (champ `open`).
+
+Fond de plan (`plan-assets.js`) : image **hors du projet** (le projet ne garde que la cle
+`bg.asset`). Reduite (<= 2400 px, JPEG 0,85), refus > 20 Mo. Calibrable (2 points + distance
+reelle). **Deverrouille** (`bg.locked === false`), il se deplace au glisser (sur l'image) et se
+redimensionne (boutons « − »/« + ») ; les **autres elements restent selectionnables et
+modifiables** (murs, ouvertures, pieces, symboles), le fond etant dessine sous eux.
+Autosave : miroir disque (Electron, `assets` de `autosave.json`) **et** IndexedDB
+(les deux plateformes), **jamais** `localStorage`. Ecriture **immediate** des images des que
+leur liste change (import/suppression) ; restauration = fusion IndexedDB + disque + autosave.
+Le `.elx` ne contient que les images **referencees** (`referencedAssets`).
+
+PDF (`plan-print.js`) : `buildPlanPages(project)` -> une page A4 paysage par etage non vide
+(`hasPlanContent`), apres le schema et avant les listes. **Rendu en mm** : un SVG
+`viewBox 0 0 277 186` (zone imprimable), contenu monde dans un `<g clip-path>` (hors zone
+coupe), transform `10/N`, cartouche `drawCartouche` a l'echelle 0,5, barre ~15 mm. Titre,
+echelle numerique, legende des symboles utilises. L'echelle est donc **exacte** : 1:N annonce
+= 1:N mesure (verifie au PDF : mur 1000 cm a 1:100 = 100,0 mm ; barre 1 m = 10,0 mm).
+`planOverflowLevels(project)` -> etages qui debordent, pour la confirmation avant export.
+CSS d'impression `.plan-*` dans `ui.js`.
+
+`ui.js` : `ensurePlan(project)` dans `refreshAll` (nettoie les placements orphelins) ;
+`initPlan(deps)` recoit `{ getProject, markDirty, status, activeTab, selectElement, refreshAll }`.
 
 ## Mise en page (render.js)
 
 Arbre d'ancrage sur une **grille** (1 element / cellule, sans recouvrement) :
 - Compteur racine place en bas a gauche ; le flux va a **droite** puis vers le **haut**.
-- Placement glouton recursif : l'enfant va dans la cellule voisine selon la direction de
-  l'ancrage ; si occupee, on avance tout droit jusqu'a une case libre (conducteur rectiligne).
+- Placement glouton recursif : l'ecart le long de la direction est **calcule d'apres la taille
+  reelle** des deux corps (`sizeOf` : demi-parent + demi-enfant + `GAP` = 10 px), converti en
+  cellules (`CW` = 40 / `CH` = 28 px de base) ; si la case est occupee, on avance tout droit
+  jusqu'a un passage libre (conducteur rectiligne). Les symboles se resserrent donc au plus
+  pres (ecart visuel ~10 px) au lieu d'un pas de grille fixe.
 - Conducteurs = segments entre centres de cellules (horizontal ou vertical).
 - **« + » vert** (`data-anchor="id:dir"`) = ancrage libre -> cliquez puis un symbole.
   **« + » gris** au milieu d'un conducteur (`data-link="id:dir"`) = insérer un node.
@@ -225,8 +391,13 @@ Arbre d'ancrage sur une **grille** (1 element / cellule, sans recouvrement) :
   (pendant un glisser-déposer depuis la palette : sur tous les éléments pour pouvoir déposer).
 - **Les « + » sont dessinés en dernier** (au-dessus des symboles) pour rester cliquables —
   indispensable pour le compteur, plus large qu'une cellule. Leur position dépasse le bord du
-  corps (`halfOf` : compteur 44×32 → +50/+38 px du centre). Le « + » gris d'insertion se
+  corps de 6 px, d'après la taille réelle du symbole (`halfOf`, **sans plancher**) : compteur
+  44×32 → +50/+38 px du centre, socket (30×20 ou 30×25 selon le type) → +21 en largeur et +16 à
+  +18,5 en hauteur, carrefour (node) 2,5×2,5 → +8,5 (ses « + »
+  restent ainsi collés au petit point). Le « + » gris d'insertion se
   décale vers l'enfant (`t` entre 0,5 et 0,85) pour sortir du corps du parent.
+- **Demi-taille** (`plusMark`) : fond `r=5`, barres ±2,5, zone cliquable `r=7,5` (les
+  épaisseurs de trait sont réduites d'autant).
 - Glisser-déposer : accepte **uniquement** sur un point d'ancrage (« + » vert), jamais sur
   le corps d'un élément ni sur le fond.
 - **Sélection multiple** : `selectedIds` (Set) + `selectedId` (élément primaire = dernier cliqué).
@@ -243,18 +414,25 @@ Arbre d'ancrage sur une **grille** (1 element / cellule, sans recouvrement) :
   - Défaut `labelPos = 'bottom'` (bas local → droite écran à 0°). Les textes sont toujours ancrés `middle`.
   - `showLabel` : false par défaut pour **breaker/rcd**, true pour les autres (case à cocher dans les propriétés). `poles` : `1P|2P|3P|4P` pour disjoncteurs (`1P`) et différentiels (`2P`).
   - **Distance réglable** `labelOffset` (px, défaut **-5**) : champ « Distance du texte » (`#e-labeloffset`, range −24…60) dans les propriétés, **un seul axe** (la normale au bord du symbole). Une valeur négative rapproche/chevauche l'élément. Masqué pour un node ; le compteur l'applique sur son axe vertical.
+  - **Fil** (`fil`, 40×80) : le libellé court le long du conducteur et se resserre contre lui. La distance perpendiculaire se prend sur la demi-largeur (`w2`, 20) et non `h2` (40) — qui l'écarterait de 20 px — et le texte est **centré sur la longueur** du fil (`placeLabel` : `across`).
   - **Prises** : aucun repère auto (`NO_AUTO_LABEL = ['node','socket']`) et aucun détail affiché (`deviceDetail` renvoie `''`) → le schéma reste muet ; un libellé n'apparaît que si l'utilisateur saisit le champ repère. `normalizeTypes` vide les anciens repères auto `^X\d+$`. Le BOM affiche « — » en détail.
   - Détail (`deviceDetail`) : breaker = `poles - courbe+calibre` (ex. « 2P - C16A »), rcd = **3 lignes** « ΔxmA », « 2P - 40A », « Type AC » (`.lbl-sm` en `white-space: pre-line`, tourne avec le bloc).
 - Canvas : svg plein cadre (CSS), zoom/pan = viewBox seulement (pas de re-rendu).
-  Molette = zoom curseur, bouton milieu ou clic fond = pan, Ajuster = fitView().
+  Molette = zoom curseur, bouton milieu ou clic fond = pan, Ajuster = fitView(),
+  Recentrer = `centerView()` (centrage sans changer le zoom).
 - `fitView()` apres chargement / nouveau projet.
 
 ## Regles
 
-`src/rules-be.js`, 6 regles : BE-01 schema sans element (erreur), BE-03 prise sans
+`src/rules-be.js`, 7 regles : BE-01 schema sans element (erreur), BE-03 prise sans
 delta 30 mA en amont, BE-04 protection sans calibre, BE-05 reperes en double,
-BE-06 symbole sans repere, BE-08 dossier incomplet.
+BE-06 symbole sans repere, BE-08 dossier incomplet, **BE-09 appareillage non place
+sur le plan** (info ; declenche uniquement si le plan contient au moins un placement).
 **Toutes ont `verified: false`** : jamais confrontees au texte officiel RGIE.
+Les messages BE-06/BE-09 nomment le symbole (`symbolName`) et, s'il existe, son repere.
+
+Le clic sur une alerte BE-09 ouvre l'onglet **Implantation** (les autres selectionnent
+l'element dans le schema).
 
 ## Pieges connus
 
@@ -270,6 +448,22 @@ BE-06 symbole sans repere, BE-08 dossier incomplet.
    ajout de code, surtout dans `ui.js` qui a ete beaucoup édite.
 5. **IDs** : le compteur porte l'ID fixe `1`. `idCounter` demarre a `2`. Sinon un element
    cree prend l'ID 1 et cree un cycle infini au parcours de l'arbre (stack overflow).
+6. **`src/platform.js` ne doit PAS definir `autosaveWrite`/`autosaveRead`.** `ui.js` s'en
+   sert pour distinguer le bureau (miroir disque) du navigateur (IndexedDB) : des no-op
+   dans le shim web font croire a un miroir disque et les images de fond ne sont plus
+   jamais ecrites (fonds perdus a l'actualisation).
+7. **Persistance des images de fond.** Ecrites dans le miroir disque (bureau, champ
+   `assets` de `autosave.json`) **et** dans IndexedDB (filet permanent, les deux
+   plateformes). Des que la *liste* des images referencees change (import ou suppression),
+   l'ecriture est **immediate** (pas de debounce), pour survivre a un rechargement ou une
+   fermeture rapide ; le reste est differe de 400 ms. A la reprise, les images sont
+   fusionnees depuis IndexedDB + miroir disque + `pending.assets` (le localStorage seul ne
+   les contient pas : il ne garde que la cle `bg.asset`).
+8. **Import manquant** : une fonction utilisee au rendu mais absente des `import` (`symbolOf`
+   dans `plan-ui.js`) ne se voit ni au `check-syntax` ni aux tests (ils n'executent pas le
+   DOM) ; le `ReferenceError` n'apparait qu'a l'affichage. Un clic qui declenche ce rendu
+   interrompt alors tout le traitement (impression que « rien n'est modifiable »). Verifier
+   tout symbole utilise dans un fichier est bien importe.
 
 ## Build des .exe
 
@@ -283,7 +477,7 @@ non signes -> SmartScreen "Editeur inconnu" au 1er lancement. Normal.
 
 Commandes :
 ```
-npm run build          # NSIS (dist/Elexio-Setup-0.3.0.exe) + portable (dist/Elexio-portable-0.3.0.exe)
+npm run build          # NSIS (dist/Elexio-Setup-0.5.0.exe) + portable (dist/Elexio-portable-0.5.0.exe)
 npm run build:portable # portable seul
 npm run build:dir      # version decompressee dist/win-unpacked (test rapide)
 ```
@@ -297,19 +491,35 @@ valide de `win` (schéma `WindowsConfiguration`).
 
 ## Etat actuel (oct. 2026)
 
-- Etapes 1-6 et 8-9 livrees. **Etape 7 (PDF) livree** : `buildPrintHtml()` +
+- **Audit 0.4.0 corrige** (branche `schema-implantation`) : PDF du plan **a l'echelle
+  exacte** (rendu en mm ; mesure : mur 1000 cm a 1:100 = 100,0 mm, barre 1 m = 10,0 mm),
+  export PDF via **fichier temporaire** (`loadFile` ; plus de plafond `data:` ~2 Mo),
+  ouverture par dialogue **ajoute aux recents**, `APP_VERSION`/`package.json` synchronises
+  (test), CI sur **toutes les branches**, messages **BE-06/BE-09 lisibles** (`symbolName` +
+  repere), cles `localStorage 'elexio.*'` (migration depuis `'elecschema.*'` a la lecture).
+  **Cadre A4 a l'ecran** (feuille, zones, cartouche, voile, poignee `printCenter`) et
+  **zoom general 1:N** (champ + `−`/`+`, `PLAN_SCALES`, Recentrer / Centrer le cadre /
+  Ajuster au dessin). Modeles **v5**.
+- Etapes 1-6, 8-9 et 14 livrees. **Etape 7 (PDF) livree** : `buildPrintHtml()` +
   handler `pdf:export`. Dossier : cartouche general, schema (une page A4 par page de
-  mise en page), liste des circuits, liste du materiel. En navigateur, `window.print()`.
-  Les SVG de symboles sont **inlines en `data:`** (`print-assets.js`) avant chargement :
-  le PDF ne depend plus de l'acces `file:` depuis la page `data:`.
+  mise en page), **plan d'implantation** (une page par etage non vide), liste des
+  circuits, liste du materiel. En navigateur, `window.print()`.
+  Les SVG de symboles sont **inlines en `data:`** (`print-assets.js`) ; l'export ecrit un
+  fichier temporaire (`os.tmpdir()`) puis `loadFile` (supprime en `finally`).
+- **Etape 15 (schema d'implantation) livree** : onglet **Implantation** (plan par etage,
+  murs, portes/fenetres, pieces, symboles, fond de plan calibrable) + pages PDF du plan.
+  Modeles v5 (`src/plan-model.js`), rendu `src/plan-render.js`, interactions
+  `src/plan-ui.js`, images `src/plan-assets.js`, PDF `src/plan-print.js`.
+  Regle **BE-09** (appareillage non place).
 - **Mise en page multi-pages** : cadres A4 paysage cote a cote, cartouche sur chaque
   page, zoom + liste des pages dans le panneau de droite, deplacement du dessin entier,
   panoramique a la barre d'espace (curseur main).
 - **Refonte ancrages** : modele en arbre d'elements + points d'ancrage ; nodes ;
   compteur en bas a gauche. Remplace circuits/difs. Legacy migre a l'ouverture.
-- Nom : **Elexio** (ex-ElecSchema). Version 0.3.0.
+- Nom : **Elexio** (ex-ElecSchema). Version 0.5.1 (tag v0.5.1, branche schema-implantation).
 - Electron **44** (supportee) + electron-builder **26** ; build NSIS + portable avec
-  icone `build/icon.ico`.
+  icone `build/icon.ico`. Derniere release publiee : v0.5.0 ; travail en cours : v0.5.1 (2 .exe,
+  hors du depot git). Release actuelle 0.5.0 : https://github.com/doddoreul/elexio/releases/tag/v0.5.0 (latest, tag `v0.5.0` → commit `fa36074`) ; artefacts locaux dans `dist/` (`Elexio-Setup-0.5.0.exe`, `Elexio-portable-0.5.0.exe`).
 - Depot : https://github.com/doddoreul/elexio (public). Pages :
   https://doddoreul.github.io/elexio/
 - Credential GitHub stocke via Git Credential Manager (chiffre, pas dans .git/config).

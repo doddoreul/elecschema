@@ -4,19 +4,64 @@
 //   Un « node » (4 ancrages) peut être inséré entre deux éléments.
 // Aucun rendu classique/développé : uniquement le schéma unifilaire.
 
-import { symbolOf, symbolUrl, socketUrl, switchUrl, filUrl } from './symbols.js';
+import { defOf, symbolUrl, socketUrl, switchUrl, filUrl } from './symbols.js';
 import { anchorKeysOf, baseDir, outputIndex } from './standards.js';
 import { nodeById } from './model.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 
-const CW = 80;          // pas horizontal entre deux cellules
-const CH = 56;          // pas vertical entre deux cellules
+const CW = 40;          // pas horizontal de base entre deux cellules
+const CH = 28;          // pas vertical de base entre deux cellules
+const GAP = 10;         // espace libre minimal (px) entre deux corps adjacents, horizontal
+const GAP_VERT = 3;    // espace libre minimal (px) vertical (réduction des vides verticaux)
 const MARGIN = 40;      // marge gauche/droite
 const TOP_PAD = 18;     // petite marge (tete/cartouche hors canvas, dans le PDF)
 const BOTTOM_PAD = 18;  // petite marge (pied hors canvas, dans le PDF)
 
 const DIR = { right: [1, 0], left: [-1, 0], top: [0, -1], bottom: [0, 1] };
+const BAR_PITCH = CW;                                    // pas d'une colonne de barre, horizontal ou vertical
+// Node parallèle : proportions reprises de `symbols/node_parallel.svg`
+// (viewBox 30.333 x 12 ; barre 26, tirets de 4 tous les 24, épaisseur 2) :
+//   tiret = pas * 4/24, débord de barre = pas * 1/24.
+const NP_TICK = Math.round((BAR_PITCH * 4) / 24);        // longueur d'un tiret de sortie (px)
+const NP_END = Math.round((BAR_PITCH * 1) / 24);         // débord de barre après la dernière colonne (px)
+const NP_PLUS = 12;                                      // décalage du « + » libre, dans le sens de la barre (px)
+const NP_THICK = 12;                                     // épaisseur réservée (hitbox + espacement) d'un node parallèle
+const isBarType = (t) => t === 'tableau' || t === 'node_parallel';
+const quarterTurns = (node) => { const n = Math.round(Number(node?.orient || 0) / 90); return ((n % 4) + 4) % 4; };
+const barVertical = (node) => quarterTurns(node) % 2 === 1;
+const barReversed = (node) => quarterTurns(node) >= 2;
+/** Ordre horaire des directions (y vers le bas). */
+const CARD_CLOCK = ['right', 'bottom', 'left', 'top'];
+const anchorDir = (node, key) => {
+  const d = baseDir(key);
+  const t = (node && node.symbolType === 'node_parallel') ? quarterTurns(node) : 0;
+  if (!t) return d;
+  const i = CARD_CLOCK.indexOf(d);
+  return i < 0 ? d : CARD_CLOCK[(i + t) % 4];
+};
+
+/** Colonnes couvertes par la barre d'un node parallèle : jusqu'à la dernière sortie
+ *  OCCUPÉE (au moins 1 colonne). La barre s'arrête là : l'emplacement libre est au-delà.
+ *  `col` = L.col (colonne réelle d'une sortie, décalages compris). */
+const npBarCols = (node, col) => {
+  let k = 0;
+  for (const key of Object.keys(node.children || {})) {
+    if (node.children[key] == null || outputIndex(key) < 0) continue;
+    k = Math.max(k, col(node, key));
+  }
+  return Math.max(1, k);
+};
+/** Rang d'un emplacement libre parmi les emplacements libres d'un élément (0, 1, …). */
+const freeRank = (node, dir) => anchorKeysOf(node).filter((d) => (node.children || {})[d] == null).indexOf(dir);
+
+/** Sens de croissance des colonnes d'une barre (unitaire, écran y vers le bas) :
+ *  horizontale -> a droite (gauche si 180°), verticale -> en haut (bas si 270°).
+ *  C'est le cote ou apparaissent les nouvelles sorties (« + » de fin de barre). */
+const barAxis = (node) => {
+  const rev = barReversed(node) ? -1 : 1;
+  return barVertical(node) ? { x: 0, y: -rev } : { x: rev, y: 0 };
+};
 
 /** Format de page de mise en page : A4 paysage (297 x 210 mm à 2 px/mm), pages côte à côte. */
 export const PAGE = { w: 594, h: 420, gap: 0 };
@@ -38,13 +83,24 @@ function txt(parent, x, y, content, cls = 'lbl', anchor = 'start') {
 
 /** Dimensions réelles (px) d'un élément, orientation comprise : un symbole
  *  pivoté (ex. fil 40x80 à l'horizontale) occupe plus que sa cellule. */
-/** Tableau : la barre couvre une colonne par sortie (une entrée à gauche). */
-const tabSpan = (node) => (node && node.symbolType === 'tableau' ? (node.outputs || 2) - 1 : 0);
+/** Tableau : la barre couvre une colonne par sortie (une entrée à gauche).
+ *  Node parallèle : colonne 0 = entrée, puis une colonne par sortie. */
+const tabSpan = (node) => {
+  if (!node) return 0;
+  if (node.symbolType === 'node_parallel') return node.outputs || 2;
+  if (node.symbolType === 'tableau') return (node.outputs || 2) - 1;
+  return 0;
+};
 
 function sizeOf(node, span = tabSpan(node)) {
   if (!node || node.symbolType === 'compteur') return { w: 88, h: 64 };
   if (node.symbolType === 'tableau') return { w: span * CW + 64, h: 24 };
-  const def = symbolOf(node.symbolType);
+  if (node.symbolType === 'node_parallel') {
+    // colonne 0 = point d'entrée : la barre part de là, sans débord avant lui
+    const len = span * BAR_PITCH + NP_END;
+    return barVertical(node) ? { w: NP_THICK, h: len } : { w: len, h: NP_THICK };
+  }
+  const def = defOf(node);
   const w = def.w || 40, h = def.h || 40;
   // quart de tour impair => largeur et hauteur échangées
   const quarter = Math.abs(Number(node.orient || 0) / 90) % 2 === 1;
@@ -52,9 +108,10 @@ function sizeOf(node, span = tabSpan(node)) {
 }
 
 /** Place l'arbre sur une grille : un élément par cellule, **sans chevauchement**.
- *  Le pas de grille (64x56) est plus petit que certains symboles (compteur 88x64,
- *  fil 40x80, board 120x40) : l'occupation est donc testée au pixel près, sur le
- *  rectangle réellement occupé, et non case par case. */
+ *  L'écart le long de la direction suit la taille réelle des deux corps
+ *  (demi-parent + demi-enfant + `GAP`), converti en cellules de `CW`/`CH` px : les
+ *  symboles se resserrent au plus près sans se recouvrir. Le compteur (88x64), le fil
+ *  (40x80) et le tableau restent testés au pixel près, sur le rectangle réellement occupé. */
 /** Disposition complète. Une branche qui bloque un tracé est décalée (latéralement pour une
  *  sortie de tableau, vers l'extérieur sinon) puis tout est recalculé, jusqu'à ce que chaque
  *  fil trouve son passage. Les fils ne se croisent jamais. */
@@ -82,7 +139,8 @@ function layoutOnce(project, bias) {
   const wires = [];               // { a, b } : tronçons de fil occupés (cellules)
   let bump = null;                // branche à décaler pour débloquer un tracé
 
-  // colonne (décalée) d'une sortie de tableau : un décalage pousse aussi les sorties suivantes
+  // colonne (décalée) d'une sortie de barre : un décalage pousse aussi les sorties suivantes.
+  // node parallèle : la colonne 0 est réservée à l'entrée, les sorties commencent en 1.
   const colOf = (node, key) => {
     const k = outputIndex(key);
     // sortie terre (bottom) : au milieu de la barre
@@ -92,16 +150,26 @@ function layoutOnce(project, bias) {
       const cid = (node.children || {})['top-' + (i + 1)];
       if (cid != null) shift += bias.get(cid) || 0;
     }
-    return k + shift;
+    return (node?.symbolType === 'node_parallel' ? 1 : 0) + k + shift;
   };
   // largeur (en colonnes) d'un tableau : jusqu'à sa dernière sortie vierge
-  const spanOf = (node) => (node.symbolType !== 'tableau' ? 0 : colOf(node, 'top-' + (node.outputs || 2)));
+  const spanOf = (node) => (isBarType(node?.symbolType) ? colOf(node, 'top-' + (node.outputs || 2)) : 0);
 
   // rectangle occupé par `node` posé sur la cellule (x, y), centre inclus
   const rectAt = (node, x, y) => {
     const span = spanOf(node);
     const s = sizeOf(node, span);
-    const cx = x * CW + CW / 2 + span * CW / 2, cy = y * CH + CH / 2;
+    let cx = x * CW + CW / 2, cy = y * CH + CH / 2;
+    if (isBarType(node?.symbolType)) {
+      const u = barAxis(node);
+      // tableau : barre centrée sur la première colonne + NP_END de chaque côté ;
+      // node_parallel : barre qui part de l'entrée (aucun débord avant elle)
+      const half = node.symbolType === 'node_parallel'
+        ? (span * BAR_PITCH + NP_END) / 2
+        : (span / 2) * BAR_PITCH + NP_END;
+      cx += u.x * half;
+      cy += u.y * half;
+    }
     return { x0: cx - s.w / 2, x1: cx + s.w / 2, y0: cy - s.h / 2, y1: cy + s.h / 2 };
   };
   const overlap = (r, o) => r.x0 < o.x1 && o.x0 < r.x1 && r.y0 < o.y1 && o.y0 < r.y1;
@@ -192,12 +260,24 @@ function layoutOnce(project, bias) {
       const next = [];
       for (const key of todo) {
         const child = nodeById(project, node.children[key]);
-        const dir = DIR[baseDir(key)];
-        const isOut = node.symbolType === 'tableau';
-        // une sortie de tableau part de sa propre colonne (décalée si nécessaire)
+        const isOut = isBarType(node?.symbolType);
+        // une sortie de tableau/barre parallèle part de sa propre colonne (décalée si nécessaire),
+        // selon son orientation (axe horizontal ou vertical, sens direct ou inversé)
         const extra = bias.get(child.id) || 0;
-        const P = { x: x + (isOut ? colOf(node, key) : 0), y };
-        const tMin = isOut ? 1 : 1 + extra;
+        const P = isOut ? (() => {
+          const k = colOf(node, key);
+          const u = barAxis(node);
+          return { x: x + u.x * k * (BAR_PITCH / CW), y: y + u.y * k * (BAR_PITCH / CH) };
+        })() : { x, y };
+        const dir = DIR[anchorDir(node, key)];
+        // écart minimal le long de la direction : les deux corps ne se chevauchent pas
+        const pitch = dir[0] ? CW : CH;
+        const sp = sizeOf(node, spanOf(node));
+        const sc = sizeOf(child, spanOf(child));
+        const halfP = (dir[0] ? sp.w : sp.h) / 2;
+        const halfC = (dir[0] ? sc.w : sc.h) / 2;
+        const gap = dir[0] ? GAP : GAP_VERT;
+        const tMin = (halfP + halfC + gap) / pitch + extra;
         let pts = findRoute(child, P, dir, node.id, tMin, detour);
         if (!pts) {
           if (!detour) { next.push(key); continue; }
@@ -285,7 +365,7 @@ export function deviceDetail(node) {
  *  rotation du bloc = orient - 90° (à 0° : à droite, texte -90° ; à 90° : en bas, texte 0° ;
  *  à 180° : à gauche, texte 90° ; à -90° : au-dessus, texte 180°). */
 function placeLabel(g, node, def, cls = 'lbl') {
-  if (node.symbolType === 'node') return;   // un node n'a aucune propriété affichée
+  if (node.symbolType === 'node' || node.symbolType === 'node_parallel') return;   // un node n'a aucune propriété affichée
   const det = deviceDetail(node);
   // Repère masqué par défaut : ne s'affiche que si l'option est explicitement activée.
   const showRep = node.showLabel === true;
@@ -293,7 +373,8 @@ function placeLabel(g, node, def, cls = 'lbl') {
   if (!lab && !det) return;
   const pos = node.labelPos || 'bottom';
   // Distance réglable du bloc de texte au bord du symbole, sur un seul axe (pixels).
-  const off = node.labelOffset == null ? -5 : Number(node.labelOffset);
+  const off = node.labelOffset == null ? (node.symbolType === 'fil' ? -24 : node.symbolType === 'rcd' ? -16 : -5) : Number(node.labelOffset);
+  const detailOff = node.detailOffset == null ? off + 14 : Number(node.detailOffset);
   const w2 = def.w / 2, h2 = def.h / 2;
   // Orientation du bloc de texte : la position suit l'element, la rotation est normale.
   // Automatique : orient - 90°, normalise pour ne jamais 'retourner' le texte.
@@ -302,22 +383,33 @@ function placeLabel(g, node, def, cls = 'lbl') {
   const manuel = node.labelRot != null && node.labelRot !== 'auto';
   if (manuel) rot = Number(node.labelRot);
   else { rot = orient - 90; if (rot < -90) rot += 180; }
-  // un fil : le libellé est remonté de 15 px vers le haut de l'écran
-  // (le bloc est pivoté de `rot` : on convertit le décalage écran en coordonnées locales)
-  let liftX = 0, liftY = 0;
-  if (node.symbolType === 'fil') {
-    const a = rot * Math.PI / 180;
-    liftX = -30 * Math.sin(a);
-    liftY = -30 * Math.cos(a);
-  }
+  // Un fil est bien plus long que large : son libellé court le long du conducteur et se
+  // resserre contre lui. La distance perpendiculaire se prend donc sur la demi-largeur `w2`
+  // (et non `h2`, qui l'écarterait de 20 px), et rien n'est décalé le long du fil.
+  const across = node.symbolType === 'fil' ? w2 : h2;
   let lx, ly, dx, dy;
-  if (pos === 'left') { lx = -(w2 + off) + liftX; ly = liftY; dx = lx; dy = liftY + 14; }
-  else if (pos === 'top') { lx = liftX; ly = -(h2 + off) + liftY; dx = liftX; dy = -(h2 + off) - 14 + liftY; }
-  else { lx = liftX; ly = h2 + off + liftY; dx = liftX; dy = h2 + off + 14 + liftY; }
+  if (pos === 'left') { lx = -(w2 + off); ly = 0; dx = lx; dy = 14; }
+  else if (pos === 'top') { lx = 0; ly = -(across + off); dx = 0; dy = -(across + detailOff); }
+  else { lx = 0; ly = across + off; dx = 0; dy = across + detailOff; }
+  // disjoncteur circuit : lettre un peu a gauche et au-dessus, libelle en bas.
+  if (node.symbolType === 'breaker' && node.circuit !== false) {
+    lx = -6;
+    ly = -(h2 + off);
+    dx = 0;
+    dy = h2 + detailOff;
+  }
   const spinRot = rot - orient;
   const spin = el('g', { transform: 'rotate(' + spinRot + ')' }, g);
   if (lab) txt(spin, lx, ly, lab, cls, 'middle');
   if (det) txt(spin, dx, dy, det, 'lbl-sm', 'middle');
+}
+
+/** URL du fichier SVG d'un élément (même résolution pour le schéma et le plan d'implantation). */
+export function symbolHref(node) {
+  return node.symbolType === 'socket' ? socketUrl(node.socketType)
+    : node.symbolType === 'switch' ? switchUrl(node.switchType)
+    : node.symbolType === 'fil' ? filUrl(node)
+    : symbolUrl(node.symbolType);
 }
 
 function symbolGroup(svg, def, href, cx, cy, selected, attrs, orient = 0) {
@@ -333,19 +425,21 @@ function symbolGroup(svg, def, href, cx, cy, selected, attrs, orient = 0) {
 /** Petite croix cliquable (« + ») pour un point d'ancrage ou une insertion. */
 function plusMark(svg, cx, cy, cls, attrs) {
   const g = el('g', { class: 'plus ' + cls, transform: `translate(${cx},${cy})`, ...attrs }, svg);
-  el('circle', { r: 15, class: 'plus-hit', fill: 'transparent' }, g);
-  el('circle', { r: 10, class: 'plus-bg' }, g);
-  el('line', { x1: -5, y1: 0, x2: 5, y2: 0, class: 'plus-bar' }, g);
-  el('line', { x1: 0, y1: -5, x2: 0, y2: 5, class: 'plus-bar' }, g);
+  el('circle', { r: 7.5, class: 'plus-hit', fill: 'transparent' }, g);
+  el('circle', { r: 5, class: 'plus-bg' }, g);
+  el('line', { x1: -2.5, y1: 0, x2: 2.5, y2: 0, class: 'plus-bar' }, g);
+  el('line', { x1: 0, y1: -2.5, x2: 0, y2: 2.5, class: 'plus-bar' }, g);
   return g;
 }
 
-/** Demi-dimensions du corps d'un symbole (le compteur est plus large qu'une cellule). */
+/** Demi-dimensions du corps d'un symbole (le compteur est plus large qu'une cellule).
+ *  Passe par `sizeOf` : suit l'orientation ET la taille réelle d'une barre
+ *  (tableau / node parallèle), dont la largeur grandit avec ses sorties. */
 function halfOf(project, id) {
   const n = nodeById(project, id);
   if (!n || n.symbolType === 'compteur') return { w: 44, h: 32 };
-  const def = symbolOf(n.symbolType);
-  return { w: (def.w || 40) / 2, h: (def.h || 40) / 2 };
+  const s = sizeOf(n);
+  return { w: s.w / 2, h: s.h / 2 };
 }
 
 /** Mise en page : cadres A4 paysage (2 px/mm), alignés à droite, + cartouche par page.
@@ -389,6 +483,34 @@ export function drawCartouche(parent, project, ox) {
     y += 11;
   }
   return g;
+}
+
+function drawNodeParallel(node, L, svg, c, sel, px, py) {
+  const span = npBarCols(node, L.col);                        // jusqu'à la dernière sortie occupée
+  const u = barAxis(node);                                    // sens de la barre (colonnes)
+  const [wx, wy] = DIR[anchorDir(node, 'top-1')];             // cote des sorties
+  const rx = px(c.x), ry = py(c.y);                          // racine = colonne 0 (arrivée du parent)
+  // point de la barre : d = décalage le long de l'axe (px), o = décalage côté sorties (px)
+  const pt = (d, o) => ({ x: rx + u.x * d + wx * o, y: ry + u.y * d + wy * o });
+  const g = el('g', { class: 'sym-wrap' + (sel ? ' selected' : ''), 'data-el': node.id }, svg);
+  // barre fine : du point d'entrée (colonne 0, arrivée du parent) jusqu'à la dernière
+  // sortie occupée. Aucun débord avant l'entrée ni après la clôture.
+  const a = pt(0, 0), b = pt(span * BAR_PITCH + NP_END, 0);
+  el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'bus' }, g);
+  // une petite barre par sortie OCCUPÉE seulement : un emplacement libre n'a que son « + »
+  // (sinon le tiret du haut, non recouvert par un fil, apparaît en trop).
+  for (const key of Object.keys(node.children || {})) {
+    if (node.children[key] == null || outputIndex(key) < 0) continue;
+    const d = L.col(node, key) * BAR_PITCH;
+    const p0 = pt(d, 0), p1 = pt(d, NP_TICK);
+    el('line', { x1: p0.x, y1: p0.y, x2: p1.x, y2: p1.y, class: 'bus' }, g);
+  }
+  // zone cliquable : enveloppe de la barre et de ses sorties
+  const pts = [a, b, pt(0, NP_TICK), pt(span * BAR_PITCH, NP_TICK)];
+  const x0 = Math.min(...pts.map((p) => p.x)), x1 = Math.max(...pts.map((p) => p.x));
+  const y0 = Math.min(...pts.map((p) => p.y)), y1 = Math.max(...pts.map((p) => p.y));
+  el('rect', { class: 'outline', x: x0 - 4, y: y0 - 4, width: x1 - x0 + 8, height: y1 - y0 + 8, fill: 'transparent', stroke: 'transparent' }, g);
+  placeLabel(g, { ...node, labelPos: 'bottom', labelRot: 0, labelOffset: node.labelOffset ?? 8 }, { w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) });
 }
 
 export function renderSchema(root, project, opts = {}) {
@@ -458,12 +580,9 @@ export function renderSchema(root, project, opts = {}) {
     const cx = px(c.x), cy = py(c.y);
     const sel = opts.selectedIds ? opts.selectedIds.has(node.id) : opts.selectedId === node.id;
     if (node.symbolType === 'tableau') { drawBar(node, c, sel); continue; }
-    const def = symbolOf(node.symbolType);
-    const href = node.symbolType === 'socket' ? socketUrl(node.socketType)
-      : node.symbolType === 'switch' ? switchUrl(node.switchType)
-      : node.symbolType === 'fil' ? filUrl(node)
-      : symbolUrl(node.symbolType);
-    const { g, rot } = symbolGroup(svg, def, href, cx, cy, sel, { 'data-el': node.id }, node.orient || 0);
+    if (node.symbolType === 'node_parallel') { drawNodeParallel(node, L, svg, c, sel, px, py); continue; }
+    const def = defOf(node);
+    const { g, rot } = symbolGroup(svg, def, symbolHref(node), cx, cy, sel, { 'data-el': node.id }, node.orient || 0);
     placeLabel(rot, node, def);
   }
 
@@ -502,7 +621,7 @@ export function renderSchema(root, project, opts = {}) {
     if (!anchorsShown(node)) return;
     const hasChild = node.children && Object.values(node.children).some((v) => v != null);
     // node et compteur restent ramifiables : leurs points d'ancrage libres restent visibles
-    const ramifiable = node.symbolType === 'node' || node.symbolType === 'tableau';
+    const ramifiable = node.symbolType === 'node' || node.symbolType === 'tableau' || node.symbolType === 'node_parallel';
     if (hasChild && !ramifiable) return;
     if (opts.accepts && !opts.accepts(node)) return;
     const c = pos.get(node.id);
@@ -512,20 +631,28 @@ export function renderSchema(root, project, opts = {}) {
     const dirs = node.symbolType === 'compteur' ? ['right'] : anchorKeysOf(node);
     for (const dir of dirs) {
       if ((node.children || {})[dir] != null) continue;
-      if (node.symbolType === 'tableau') {
-        if (dir === 'bottom') {
-          // sortie terre : sous la barre, au milieu de la barre
-          plusMark(svg, px(c.x + L.col(node, dir)), py(c.y) + 18, 'ui-only anchor', { 'data-anchor': `${node.id}:${dir}` });
+      if (isBarType(node.symbolType)) {
+        const u = barAxis(node);
+        const pitch = barVertical(node) ? CH : CW;
+        let along, side = null;               // along = cellules le long de la barre
+        if (node.symbolType === 'node_parallel') {
+          // juste après le bout de la barre (qui s'arrête à la dernière sortie occupée),
+          // puis un cran par emplacement libre supplémentaire
+          along = npBarCols(node, L.col) * (BAR_PITCH / pitch) + (NP_PLUS / pitch) + freeRank(node, dir) * (BAR_PITCH / pitch);
         } else {
-          // sortie vierge : au-dessus de la barre, dans sa colonne
-          plusMark(svg, px(c.x + L.col(node, dir)), py(c.y) - 18, 'ui-only anchor', { 'data-anchor': `${node.id}:${dir}` });
+          along = L.col(node, dir) * (BAR_PITCH / pitch);
+          side = DIR[anchorDir(node, dir)];   // perpendiculaire à la barre (au-dessus)
         }
+        const ax = px(c.x + u.x * along) + (side ? side[0] * 18 : 0);
+        const ay = py(c.y + u.y * along) + (side ? side[1] * 18 : 0);
+        plusMark(svg, ax, ay, 'ui-only anchor', { 'data-anchor': `${node.id}:${dir}` });
         continue;
       }
       const [dx, dy] = DIR[dir];
-      // juste au-delà du bord du symbole (le compteur est plus large qu'une cellule)
-      const ox = Math.max(CW * 0.3, half.w + 6);
-      const oy = Math.max(CH * 0.3, half.h + 6);
+      // juste au-delà du bord du symbole, d'après sa taille réelle (compteur 44×32 -> +50/+38).
+      // Aucun plancher : un petit élément (carrefour 5×5) garde ses « + » contre lui.
+      const ox = half.w + 6;
+      const oy = half.h + 6;
       plusMark(svg, px(c.x) + dx * ox, py(c.y) + dy * oy, 'ui-only anchor', { 'data-anchor': `${node.id}:${dir}` });
     }
   };

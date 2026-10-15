@@ -10,12 +10,16 @@ export const SYMBOL_CATEGORIES = [
   { id: 'interrupteurs', name: 'Interrupteurs (E)' },
   { id: 'prises', name: 'Socles de prise (F)' },
   { id: 'eclairage', name: 'Éclairage (G)' },
-  { id: 'appareils', name: 'Appareils d’utilisation (G)' },
+  {
+    id: 'appareils', name: 'Appareils d’utilisation (G)',
+    // Sous-catégories affichées sous le titre, après les symboles de la catégorie.
+    subs: [{ id: 'electromenager', name: 'Électroménager' }],
+  },
   { id: 'sources', name: 'Sources (H)' },
   { id: 'cables', name: 'Câbles (lignes)' },
 ];
 
-const SYMBOLS = {
+export const SYMBOLS = {
   board: {
     name: 'Tableau de répartition', ref: 'B', category: 'tableaux', prefix: 'TD',
     w: 120, h: 40, file: 'symbols/board.svg',
@@ -28,66 +32,66 @@ const SYMBOLS = {
 
   fuse: {
     name: 'Coupe-circuit à fusible', ref: 'D', category: 'protection', prefix: 'F',
-    w: 40, h: 40, file: 'symbols/fuse.svg',
+    w: 30, h: 35, file: 'symbols/fuse.svg',
   },
   breaker: {
     name: 'Disjoncteur', ref: 'D', category: 'protection', prefix: 'Q',
-    w: 40, h: 40, file: 'symbols/breaker.svg',
+    w: 30, h: 30, file: 'symbols/breaker.svg',
   },
   rcd: {
     name: 'Différentiel', ref: 'D', category: 'protection', prefix: 'Q',
-    w: 40, h: 40, file: 'symbols/differentiel.svg',
+    w: 30, h: 30, file: 'symbols/differentiel.svg',
   },
   sectionneur: {
     name: 'Sectionneur (coupe à vide)', ref: 'D', category: 'protection', prefix: 'Q',
-    w: 40, h: 40, file: 'symbols/sectionneur.svg',
+    w: 30, h: 30, file: 'symbols/sectionneur.svg',
   },
   earth: {
     name: 'Prise de terre', ref: 'D', category: 'protection', prefix: 'PE',
-    w: 40, h: 40, file: 'symbols/earth.svg',
+    w: 30, h: 30, file: 'symbols/earth.svg',
   },
 
   switch: {
     name: 'Interrupteur', ref: 'E', category: 'interrupteurs', prefix: 'S',
-    w: 40, h: 40, file: 'symbols/switch.svg',
+    w: 30, h: 30, file: 'symbols/switch.svg',
   },
   switch_pilot: {
     name: 'Interrupteur à lampe témoin', ref: 'E', category: 'interrupteurs', prefix: 'S',
-    w: 40, h: 40, file: 'symbols/switch_pilot.svg',
+    w: 30, h: 30, file: 'symbols/switch_pilot.svg',
   },
   push: {
     name: 'Bouton-poussoir', ref: 'E', category: 'interrupteurs', prefix: 'B',
-    w: 40, h: 40, file: 'symbols/push.svg',
+    w: 14, h: 14, file: 'symbols/push.svg',
   },
   timer: {
     name: 'Minuterie', ref: 'E', category: 'interrupteurs', prefix: 'K',
-    w: 40, h: 40, file: 'symbols/timer.svg',
+    w: 40, h: 30, file: 'symbols/timer.svg',
   },
   clock_switch: {
     name: 'Interrupteur horaire', ref: 'E', category: 'interrupteurs', prefix: 'K',
-    w: 40, h: 40, file: 'symbols/clock_switch.svg',
+    w: 40, h: 30, file: 'symbols/clock_switch.svg',
   },
   contactor: {
     name: 'Télérupteur', ref: 'E', category: 'interrupteurs', prefix: 'K',
-    w: 40, h: 40, file: 'symbols/contactor.svg',
+    w: 40, h: 30, file: 'symbols/contactor.svg',
   },
   thermostat: {
     name: 'Thermostat', ref: 'E', category: 'interrupteurs', prefix: 'TH',
-    w: 40, h: 40, file: 'symbols/thermostat.svg',
+    w: 40, h: 30, file: 'symbols/thermostat.svg',
   },
   motion: {
     name: 'Détecteur de mouvement', ref: 'E', category: 'interrupteurs', prefix: 'DM',
-    w: 40, h: 40, file: 'symbols/motion.svg',
+    w: 30, h: 30, file: 'symbols/motion.svg',
   },
 
   socket: {
     name: 'Prise de courant', ref: 'F', category: 'prises', prefix: 'X',
-    w: 40, h: 40, file: 'symbols/socket_earth_childproof.svg',
+    w: 30, h: 20, file: 'symbols/socket_earth_childproof.svg',
   },
 
   light: {
     name: 'Point lumineux', ref: 'G', category: 'eclairage', prefix: 'E',
-    w: 40, h: 40, file: 'symbols/light.svg',
+    w: 16, h: 16, file: 'symbols/light.svg',
   },
   fluo: {
     name: 'Appareil d’éclairage à fluorescence', ref: 'G', category: 'eclairage', prefix: 'E',
@@ -95,7 +99,7 @@ const SYMBOLS = {
   },
   projector: {
     name: 'Projecteur', ref: 'G', category: 'eclairage', prefix: 'E',
-    w: 40, h: 40, file: 'symbols/projector.svg',
+    w: 30, h: 30, file: 'symbols/projector.svg',
   },
   emergency: {
     name: 'Éclairage de sécurité', ref: 'G', category: 'eclairage', prefix: 'E',
@@ -104,40 +108,75 @@ const SYMBOLS = {
 
   heater: {
     name: 'Appareil de chauffage', ref: 'G', category: 'appareils', prefix: 'R',
-    w: 40, h: 40, file: 'symbols/heater.svg',
+    w: 30, h: 30, file: 'symbols/heater.svg',
   },
   boiler: {
     name: 'Chauffe-eau', ref: 'G', category: 'appareils', prefix: 'CE',
-    w: 40, h: 40, file: 'symbols/boiler.svg',
+    w: 30, h: 30, file: 'symbols/boiler.svg',
   },
   fan: {
     name: 'Ventilateur', ref: 'G', category: 'appareils', prefix: 'V',
-    w: 40, h: 40, file: 'symbols/fan.svg',
+    w: 30, h: 30, file: 'symbols/fan.svg',
   },
   bell: {
     name: 'Sonnerie', ref: 'G', category: 'appareils', prefix: 'SO',
-    w: 40, h: 40, file: 'symbols/bell.svg',
+    w: 30, h: 30, file: 'symbols/bell.svg',
   },
   motor: {
     name: 'Moteur', ref: 'G', category: 'appareils', prefix: 'M',
-    w: 40, h: 40, file: 'symbols/motor.svg',
+    w: 30, h: 30, file: 'symbols/motor.svg',
   },
   kwh: {
     name: 'Compteur kWh', ref: 'G', category: 'appareils', prefix: 'W',
-    w: 40, h: 40, file: 'symbols/kwh.svg',
+    w: 30, h: 30, file: 'symbols/kwh.svg',
   },
   appliance: {
     name: 'Appareil électrodomestique fixe', ref: 'G', category: 'appareils', prefix: 'AP',
-    w: 40, h: 40, file: 'symbols/appliance.svg',
+    w: 30, h: 30, file: 'symbols/appliance.svg',
+  },
+
+  // Électroménager : sous-catégorie palette de « Appareils d’utilisation ». Mêmes
+  // dimensions que `appliance` (boîte 30 x 30), un dessin distinct par appareil.
+  fridge: {
+    name: 'Réfrigérateur', ref: 'G', category: 'electromenager', prefix: 'FR',
+    w: 30, h: 30, file: 'symbols/fridge.svg',
+  },
+  freezer: {
+    name: 'Congélateur', ref: 'G', category: 'electromenager', prefix: 'CG',
+    w: 40, h: 30, file: 'symbols/freezer.svg',
+  },
+  oven: {
+    name: 'Four', ref: 'G', category: 'electromenager', prefix: 'FO',
+    w: 30, h: 30, file: 'symbols/oven.svg',
+  },
+  microwave: {
+    name: 'Four à micro-ondes', ref: 'G', category: 'electromenager', prefix: 'MO',
+    w: 30, h: 30, file: 'symbols/microwave.svg',
+  },
+  dishwasher: {
+    name: 'Lave-vaisselle', ref: 'G', category: 'electromenager', prefix: 'LV',
+    w: 30, h: 30, file: 'symbols/dishwasher.svg',
+  },
+  washing_machine: {
+    name: 'Lave-linge', ref: 'G', category: 'electromenager', prefix: 'LL',
+    w: 30, h: 30, file: 'symbols/washing_machine.svg',
+  },
+  dryer: {
+    name: 'Sèche-linge', ref: 'G', category: 'electromenager', prefix: 'SL',
+    w: 30, h: 30, file: 'symbols/dryer.svg',
+  },
+  kitchenette: {
+    name: 'Kitchenette', ref: 'G', category: 'electromenager', prefix: 'KT',
+    w: 30, h: 30, file: 'symbols/kitchenette.svg',
   },
 
   transformer: {
     name: 'Transformateur', ref: 'H', category: 'sources', prefix: 'T',
-    w: 40, h: 40, file: 'symbols/transformer.svg',
+    w: 30, h: 40, file: 'symbols/transformer.svg',
   },
   solar: {
     name: 'Panneau solaire', ref: 'H', category: 'sources', prefix: 'PV',
-    w: 40, h: 40, file: 'symbols/solar.svg',
+    w: 30, h: 30, file: 'symbols/solar.svg',
   },
 
   // Câble / fil (ligne de câble, propriétés dédiées : conducteurs, section, type, montage).
@@ -148,9 +187,18 @@ const SYMBOLS = {
   },
 
   // Pseudo-symbole inséré entre deux éléments (pas dans la palette).
+  // « Carrefour » = simple point de dérivation : petit carré 5x5 (viewBox 5 5), centré sur
+  // le conducteur. Sa taille réelle pilote la place réservée, la hitbox et les « + ».
   node: {
     name: 'Node (point de dérivation)', ref: 'D', prefix: 'D', category: 'cables',
-    w: 20, h: 20, file: 'symbols/carrefour.svg',
+    w: 5, h: 5, file: 'symbols/carrefour.svg',
+  },
+  // « Node parallèle » = barre fine (filt de câble) dont les sorties se répartissent le long
+  // de la barre : 2 sorties par défaut, une nouvelle à chaque ajout. Comportement comme le
+  // tableau, aspect file, orientation modifiable.
+  node_parallel: {
+    name: 'Node parallèle', ref: 'D', prefix: 'D', category: 'cables',
+    w: 30.333, h: 12, file: 'symbols/node_parallel.svg',
   },
 };
 
@@ -159,6 +207,12 @@ export function symbolOf(type) {
   const def = SYMBOLS[type];
   if (!def) throw new Error(`Symbole inconnu : ${type}`);
   return def;
+}
+
+/** Définition d'un symbole pour un élément : la taille d'une prise suit son type. */
+export function defOf(node) {
+  const def = symbolOf(node.symbolType);
+  return node.symbolType === 'socket' ? { ...def, ...socketSize(node.socketType) } : def;
 }
 
 /** Nom d'affichage d'un symbole (pour les listes et le tableau BOM). */
@@ -172,18 +226,19 @@ export function symbolUrl(type) {
 }
 
 // Types de socle de prise de courant (propriété « type de prise »). Chaque type
-// correspond à un fichier SVG distinct. Le type par défaut est souligné ci-dessous.
+// correspond à un fichier SVG distinct, avec sa propre taille (viewBox). Le type
+// par défaut est souligné ci-dessous.
 export const SOCKET_TYPES = [
-  { key: 'generic', name: 'Générique', file: 'symbols/socket.svg' },
-  { key: 'waterproof', name: 'Etanche ou semi-étanche', file: 'symbols/socket_waterproof.svg' },
-  { key: 'earth', name: 'Avec protection terre', file: 'symbols/socket_earth.svg' },
-  { key: 'childproof', name: 'Avec protection enfant', file: 'symbols/socket_childproof.svg' },
-  { key: 'earth_childproof', name: 'Avec protection terre et enfant (défaut)', file: 'symbols/socket_earth_childproof.svg' },
-  { key: 'earth_childproof_double', name: 'Double avec protection terre et enfant', file: 'symbols/socket_earth_childproof_double.svg' },
-  { key: 'earth_childproof_triple', name: 'Triple avec protection terre et enfant', file: 'symbols/socket_earth_childproof_triple.svg' },
-  { key: 'switch', name: 'Avec interrupteur bipolaire', file: 'symbols/socket_switch.svg' },
-  { key: 'switch_lock', name: 'Avec interrupteur bipolaire de verrouillage', file: 'symbols/socket_switch_lock.svg' },
-  { key: 'transformer', name: 'Avec transformateur de séparation', file: 'symbols/socket_transfo.svg' },
+  { key: 'generic', name: 'Générique', file: 'symbols/socket.svg', w: 30, h: 25 },
+  { key: 'waterproof', name: 'Etanche ou semi-étanche', file: 'symbols/socket_waterproof.svg', w: 30, h: 25 },
+  { key: 'earth', name: 'Avec protection terre', file: 'symbols/socket_earth.svg', w: 30, h: 20 },
+  { key: 'childproof', name: 'Avec protection enfant', file: 'symbols/socket_childproof.svg', w: 30, h: 20 },
+  { key: 'earth_childproof', name: 'Avec protection terre et enfant (défaut)', file: 'symbols/socket_earth_childproof.svg', w: 30, h: 20 },
+  { key: 'earth_childproof_double', name: 'Double avec protection terre et enfant', file: 'symbols/socket_earth_childproof_double.svg', w: 30, h: 25 },
+  { key: 'earth_childproof_triple', name: 'Triple avec protection terre et enfant', file: 'symbols/socket_earth_childproof_triple.svg', w: 30, h: 30 },
+  { key: 'switch', name: 'Avec interrupteur bipolaire', file: 'symbols/socket_switch.svg', w: 30, h: 25 },
+  { key: 'switch_lock', name: 'Avec interrupteur bipolaire de verrouillage', file: 'symbols/socket_switch_lock.svg', w: 30, h: 25 },
+  { key: 'transformer', name: 'Avec transformateur de séparation', file: 'symbols/socket_transfo.svg', w: 30, h: 25 },
 ];
 
 export const DEFAULT_SOCKET_TYPE = 'earth_childproof';
@@ -196,6 +251,12 @@ function socketTypeOf(key) {
 /** URL absolue du fichier SVG correspondant au type de prise. */
 export function socketUrl(key) {
   return new URL(socketTypeOf(key).file, document.baseURI).href;
+}
+
+/** Taille (w/h) du symbole d'une prise, selon son type (repli sur `SYMBOLS.socket`). */
+export function socketSize(key) {
+  const t = socketTypeOf(key);
+  return { w: t.w || SYMBOLS.socket.w, h: t.h || SYMBOLS.socket.h };
 }
 
 // Types d'interrupteur (propriété « type d'interrupteur »). Chaque type correspond
@@ -240,4 +301,4 @@ export function filUrl(node) {
   return new URL(file, document.baseURI).href;
 }
 
-export { SYMBOLS };
+

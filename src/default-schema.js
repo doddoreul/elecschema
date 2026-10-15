@@ -25,6 +25,7 @@ export const DEFAULT_SCHEMA = {
       domaine: 'DOMESTIQUE',
       pays: 'BE',
       typeAlim: 'MONO',
+      norme: 'RGIE',
     },
     remarques: '',
   },
