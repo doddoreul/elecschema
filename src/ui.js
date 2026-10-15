@@ -1777,7 +1777,7 @@ const isParallel = node.symbolType === 'node_parallel';
     typeSel.value = node.socketType || DEFAULT_SOCKET_TYPE;
   } else {
     typeSel.disabled = true;
-    typeSel.innerHTML = `<option>${escHtml(supply ? 'Compteur (arrivée)' : (isNode ? 'Node' : symbolName(node.symbolType)))}</option>`;
+    typeSel.innerHTML = `<option>${escHtml(supply ? 'Compteur kWh' : (isNode ? 'Node' : symbolName(node.symbolType)))}</option>`;
   }
   $('#e-label-lbl').hidden = isNode || isParallel;
   $('#e-locked-lbl').hidden = isNode || isParallel;
