@@ -413,8 +413,8 @@ const NO_AUTO_LABEL = ['node', 'node_parallel', 'socket'];
 /** Quels types d'élément chaque type peut recevoir en enfant.
  *  `null` = tout est accepté. Le node (dérivation) et le fil/câble sont hors règles. */
 const ACCEPT_RULES = {
-  compteur: [],
-  rcd: [],
+  compteur: ['rcd'],
+  rcd: ['breaker', 'rcd'],
   breaker: null,
 };
 
@@ -445,11 +445,17 @@ function syncOutputs() {
 
 function canAccept(parentType, childType, dir) {
   // tableau / node_parallel : seulement différentiels, disjoncteurs et sectionneurs en sortie
-  // Un disjoncteur ou differentiel ne peut etre installe que sur un tableau.
+  // Un disjoncteur ou differentiel peut etre installe sur un tableau,
+  // sous un differentiel (disjoncteur ou differentiel), ou sous un disjoncteur.
   if (childType === 'breaker' || childType === 'rcd') {
-    if (parentType !== 'tableau') return false;
-    if (dir === 'bottom') return false;
-    return TABLEAU_OUTPUT_TYPES.includes(childType);
+    if (parentType === 'compteur') return childType === 'rcd';
+    if (parentType === 'tableau') {
+      if (dir === 'bottom') return false;
+      return TABLEAU_OUTPUT_TYPES.includes(childType);
+    }
+    if (parentType === 'rcd') return childType === 'breaker' || childType === 'rcd';
+    if (parentType === 'breaker') return true;
+    return false;
   }
   if (parentType === 'tableau') {
     if (dir === 'bottom') return childType === 'earth';
