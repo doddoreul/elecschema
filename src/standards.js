@@ -61,7 +61,7 @@ export function anchorKeysOf(node) {
   if (node.symbolType === 'fuse') return ['top'];
   if (['timer', 'clock_switch', 'contactor', 'thermostat', 'motion'].includes(node.symbolType)) return ['top'];
   // Un seul point d'ancrage, en face du point d'entree.
-  const SINGLE = ['socket', 'switch', 'switch_pilot', 'push', 'motor', 'sectionneur', 'breaker', 'rcd'];
+  const SINGLE = ['socket', 'switch', 'switch_pilot', 'push', 'motor', 'sectionneur', 'breaker', 'rcd', 'fil'];
   if (SINGLE.includes(node.symbolType)) {
     const d = node.dir ? baseDir(node.dir) : 'bottom';
     return ANCHOR_DIRECTIONS.includes(d) ? [d] : ['bottom'];
