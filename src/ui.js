@@ -125,14 +125,19 @@ const TAB_KEY = 'elexio.tab';   // onglet actif, conservé au refresh
 
 /** Persiste projet + fichier courant dans le localStorage (ne rien perdre au reload). */
 let autosaveFileTimer = null;
-let lastAssetsSig = '';   // empreinte des images référencées à la dernière écriture du miroir
+let lastAssetsSig = '';
+let lastPersistedJson = null;
+let lastDiskMirrorJson = null;   // empreinte des images référencées à la dernière écriture du miroir
 
 function persistSnapshot() {
   const rec = JSON.stringify({ project, file: currentFile });
-  try {
-    localStorage.setItem(AUTOSAVE_KEY, rec);
-  } catch (err) {
-    console.warn('Autosave local impossible :', err);
+  if (rec !== lastPersistedJson) {
+    try {
+      localStorage.setItem(AUTOSAVE_KEY, rec);
+      lastPersistedJson = rec;
+    } catch (err) {
+      console.warn('Autosave local impossible :', err);
+    }
   }
   // Miroir persistant : fichier disque (bureau) et/ou IndexedDB (navigateur, filet de
   // sécurité permanent). Le projet et le reste sont différés (400 ms) pour ne pas
@@ -146,6 +151,8 @@ function persistSnapshot() {
   const writeDiskMirror = () => {
     if (!hasDisk) return;
     const disk = JSON.stringify({ project, file: currentFile, assets });
+    if (disk === lastDiskMirrorJson) return;
+    lastDiskMirrorJson = disk;
     window.elexio.autosaveWrite(disk).catch((err) => console.warn('Autosave disque impossible :', err));
   };
   if (sig !== lastAssetsSig) {
@@ -934,7 +941,43 @@ function loadProject(data, filePath, assets = {}) {
 /** Décode un fichier (.elx base64 ou JSON legacy) et charge le projet.
  *  Vérifie la version du modèle : migration automatique, alerte si fichier trop
  *  récent. Retourne true si le projet a été chargé. */
-function importProjectText(text, filePath) {
+/** Validation légère d'un projet importé (sans modifier les données valides). */
+function validateProject(data) {
+  const knownTypes = new Set([...Object.keys(SYMBOLS), 'compteur']);
+  const ids = new Set();
+  const nodes = [];
+  if (!data.supply || typeof data.supply !== 'object') return 'Compteur manquant.';
+  if (data.supply.id == null || (typeof data.supply.id !== 'number' && typeof data.supply.id !== 'string')) return 'Identifiant du compteur invalide.';
+  nodes.push({ isSupply: true, n: data.supply });
+  if (!Array.isArray(data.elements)) return 'Liste d\u2019éléments invalide.';
+  for (const e of data.elements) {
+    if (!e || typeof e !== 'object') return 'Élément mal formé.';
+    if (e.id == null || (typeof e.id !== 'number' && typeof e.id !== 'string')) return 'Identifiant d\u2019élément invalide.';
+    if (ids.has(e.id)) return `Identifiant dupliqué : ${e.id}.`;
+    ids.add(e.id);
+    if (!knownTypes.has(e.symbolType)) return `Type de symbole inconnu : ${e.symbolType}.`;
+    if (e.dir != null && !/^(right|left|top|bottom|top-\d+)$/.test(String(e.dir))) return `Direction invalide pour ${e.id}.`;
+    nodes.push({ isSupply: false, n: e });
+  }
+  const idSet = new Set([data.supply.id, ...ids]);
+  if (ids.has(data.supply.id)) return 'Identifiant du compteur dupliqué parmi les éléments.';
+  for (const { isSupply, n } of nodes) {
+    if (!n.children || typeof n.children !== 'object' || Array.isArray(n.children)) return `Ancrages invalides pour ${n.id}.`;
+    for (const [key, val] of Object.entries(n.children)) {
+      if (val == null) continue;
+      if (!idSet.has(val)) return `Ancrage inconnu dans ${n.id} -> ${val}.`;
+    }
+    if (!isSupply) {
+      const parent = n.parent;
+      if (parent == null) return `Parent manquant pour ${n.id}.`;
+      if (!idSet.has(parent)) return `Parent inconnu pour ${n.id}.`;
+      if (parent === n.id) return `Parent circulaire pour ${n.id}.`;
+    }
+  }
+  return null;
+}
+
+function importProjectText (text, filePath) {
   let decoded;
   try {
     decoded = decodeElx(text);
@@ -945,6 +988,12 @@ function importProjectText(text, filePath) {
   const data = decoded.project;
   if (!data || typeof data !== 'object' || (!data.supply && !Array.isArray(data.elements) && !Array.isArray(data.circuits))) {
     alert('Ouverture impossible.\n\nStructure de projet invalide.');
+    return false;
+  }
+  try { migrateProject(data); normalizeTypes(data); } catch (err) { alert('Ouverture impossible.\n\n' + err.message); return false; }
+  const validity = validateProject(data);
+  if (validity) {
+    alert('Ouverture impossible.\n\n' + validity);
     return false;
   }
   const compat = checkCompatibility(decoded.meta);

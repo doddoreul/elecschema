@@ -19,7 +19,7 @@ export const SYMBOL_CATEGORIES = [
   { id: 'cables', name: 'Câbles (lignes)' },
 ];
 
-const SYMBOLS = {
+export const SYMBOLS = {
   board: {
     name: 'Tableau de répartition', ref: 'B', category: 'tableaux', prefix: 'TD',
     w: 120, h: 40, file: 'symbols/board.svg',
@@ -301,4 +301,4 @@ export function filUrl(node) {
   return new URL(file, document.baseURI).href;
 }
 
-export { SYMBOLS };
+

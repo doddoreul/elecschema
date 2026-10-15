@@ -309,3 +309,9 @@ test('format .elx : assets invalides ignorés à la lecture', () => {
   const text = Buffer.from(JSON.stringify(env), 'utf8').toString('base64');
   assert.deepEqual(Object.keys(decodeElx(text).assets), ['ok']);
 });
+test('plan : conversion cm -> mm exacte (1:100 et 1:50)', () => {
+  assert.equal(cmToPaperMm(1000, 100), 100);
+  assert.equal(cmToPaperMm(500, 100), 50);
+  assert.equal(cmToPaperMm(500, 50), 100);
+  assert.equal(scaleBar(100).mm, cmToPaperMm(scaleBar(100).cm, 100));
+});

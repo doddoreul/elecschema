@@ -104,3 +104,15 @@ test('layout : chaîne prise -> fil -> protection : distance réduite sans cheva
   assert.equal(layoutForced(p), false, 'pas de tracé contraint');
   assert.deepEqual(overlaps(p, L.rects), [], 'aucun chevauchement');
 });
+test('layout : node_parallel -> entrées et sorties correctement disposées', () => {
+  const p = emptyProject();
+  const add = makeAdder(p);
+  const np = add('node_parallel', p.supply, 'right');
+  const b1 = add('breaker', np, 'top-1');
+  add('socket', b1, 'top');
+  const b2 = add('breaker', np, 'top-2');
+  add('socket', b2, 'top');
+  const L = computeLayout(p);
+  assert.equal(layoutForced(p), false);
+  assert.deepEqual(overlaps(p, L.rects), []);
+});
