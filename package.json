@@ -1,7 +1,7 @@
 {
   "name": "elexio",
   "productName": "Elexio",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "description": "Éditeur de schémas unifilaires pour installations domestiques (RGIE/AREI, Belgique). 100 % local.",
   "author": "Usage personnel",
